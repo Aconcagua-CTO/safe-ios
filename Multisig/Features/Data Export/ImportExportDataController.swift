@@ -158,14 +158,14 @@ class ImportExportDataController {
     }
     
     func deriveKey(from plaintext: String, salt: Data, rounds: Int) -> Data? {
-        var salt = salt.bytes
+        var saltBytes: [UInt8] = [UInt8](salt)
         var derivedKey = [UInt8](repeating: 0, count: 32)
         let status = CCKeyDerivationPBKDF(
             CCPBKDFAlgorithm(kCCPBKDF2),
             plaintext,
             plaintext.lengthOfBytes(using: .utf8),
-            &salt,
-            salt.count,
+            &saltBytes,
+            saltBytes.count,
             CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
             UInt32(rounds),
             &derivedKey,

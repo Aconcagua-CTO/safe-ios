@@ -1115,7 +1115,7 @@ class WebConnectionController: ServerDelegateV2, RequestHandler, WebConnectionSu
         do {
             var signature = try result.get(String.self)
             
-            var signatureBytes = Data(hex: signature).bytes
+            var signatureBytes = [UInt8](Foundation.Data(hex: signature))
             
             if signatureBytes.count == 65 {
                 var v = signatureBytes.last!
@@ -1175,7 +1175,7 @@ class WebConnectionController: ServerDelegateV2, RequestHandler, WebConnectionSu
         do {
             var signature = try response.result(as: String.self)
 
-            var signatureBytes = Data(hex: signature).bytes
+            var signatureBytes = [UInt8](Foundation.Data(hex: signature))
 
             if signatureBytes.count == 65 {
                 var v = signatureBytes.last!

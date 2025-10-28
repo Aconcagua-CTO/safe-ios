@@ -493,7 +493,7 @@ class TransactionExecutionController {
 
         let preimage = preimageForSigning()
         let publicKey = try EthereumPublicKey(
-            message: preimage.bytes,
+            message: [UInt8](preimage),
             v: EthereumQuantity(quantity: BigUInt(signature.v)),
             r: EthereumQuantity(signature.r),
             s: EthereumQuantity(signature.s))

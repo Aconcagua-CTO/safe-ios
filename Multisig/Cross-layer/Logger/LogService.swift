@@ -102,7 +102,7 @@ public final class LogService: Logger {
     public let level: LogLevel
 
     /// Actual loggers
-    private (set) var loggers = [LogWriter]()
+    private(set) var loggers = [LogWriter]()
 
     /// Creates new `LogService` with the specified level.
     ///

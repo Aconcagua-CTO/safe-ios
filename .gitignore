@@ -83,3 +83,8 @@ fastlane/test_output
 
 Firebase/
 .idea/
+
+.Multisig/Cross-layer/Configuration/apis*.json
+
+DerivedData/
+.DerivedData/

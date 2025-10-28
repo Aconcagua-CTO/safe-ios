@@ -189,7 +189,7 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
                     return
                 }
                 let preimage = "\u{19}Ethereum Signed Message:\n\(request.message.count)".data(using: .utf8)! + request.message
-                let signatureParts = try pk._store.sign(message: preimage.bytes)
+                let signatureParts = try pk._store.sign(message: [UInt8](preimage))
                 let signature = Data(signatureParts.r) + Data(signatureParts.s) + Data([UInt8(signatureParts.v)])
                 confirm(signature:  signature)
             } catch {

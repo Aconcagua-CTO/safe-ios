@@ -594,7 +594,9 @@ extension SCGModels.TransactionDetails {
     var ecdsaConfirmations: [SCGModels.Confirmation] {
         guard let multisigInfo = multisigInfo else { return [] }
         return multisigInfo.confirmations.filter {
-            $0.signature.data.bytes.last ?? 0 > 26
+            // Convert Data to [UInt8] to safely access last byte (v)
+            let lastByte = [UInt8]($0.signature.data).last ?? 0
+            return lastByte > 26
         }
     }
 

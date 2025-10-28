@@ -38,7 +38,7 @@ class NetworkHostStatusObserver {
         }
     }
 
-    private (set) var status: Status  = .unknown
+    private(set) var status: Status  = .unknown
 
     /// Constructor
     /// - Parameter host: Pass the URL's host name to observe.

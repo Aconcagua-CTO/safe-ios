@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import Multisig
 
 class MockJSONHttpClient {
 

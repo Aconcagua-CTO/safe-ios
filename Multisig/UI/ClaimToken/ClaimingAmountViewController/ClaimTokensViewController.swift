@@ -21,17 +21,17 @@ class ClaimTokensViewController: LoadableViewController {
     }
 
     // Selected delegate address (guardian or a custom address)
-    private (set) var delegateAddress: Address?
-    private (set) var guardian: Guardian?
+    private(set) var delegateAddress: Address?
+    private(set) var guardian: Guardian?
 
     // Selected safe for which claiming happens.
     private var safe: Safe!
 
     // Unix timestamp to base the amount calculations.
-    private (set) var timestamp: TimeInterval!
+    private(set) var timestamp: TimeInterval!
 
     // Claim data fetched from the data source
-    private (set) var claimData: ClaimingAppController.ClaimingData?
+    private(set) var claimData: ClaimingAppController.ClaimingData?
 
     // whether user used max button
     var hasSelectedMaxAmount: Bool = false

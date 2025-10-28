@@ -16,8 +16,8 @@ import SafeWeb3
 
 class TransactionDetailCellBuilder {
 
-    private (set) weak var vc: UIViewController!
-    private (set) weak var tableView: UITableView!
+    private(set) weak var vc: UIViewController!
+    private(set) weak var tableView: UITableView!
 
     // needed for proper safe selection for known addresses functionality. Also used to select the block explorer url.
     private(set) var chain: Chain
