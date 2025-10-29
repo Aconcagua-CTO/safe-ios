@@ -46,6 +46,11 @@ final class FirebaseTrackingHandler: TrackingHandler {
     /// Tracks an event with parameters, verifying that event name, parameter count, parameter names and values
     /// are conforming to Firebase's limitations specified in the FIRAnalytics.h
     func track(event: String, parameters: [String: Any]?, file: StaticString = #file, line: UInt = #line, function: StaticString = #function) {
+        // Skip if Firebase is not configured
+        guard FirebaseApp.app() != nil else {
+            return
+        }
+        
         // check event name
         assert(!reservedNames.contains(event), "reserved name: \(event)")
         check(name: event)
@@ -70,6 +75,11 @@ final class FirebaseTrackingHandler: TrackingHandler {
     }
 
     func setUserProperty(_ value: String, for property: UserProperty, file: StaticString = #file, line: UInt = #line, function: StaticString = #function) {
+        // Skip if Firebase is not configured
+        guard FirebaseApp.app() != nil else {
+            return
+        }
+        
         assert(propertyNameLengthRange.contains(property.rawValue.count), "wrong property name length")
         assert(propertyValueLengthRange.contains(value.count), "wrong property value length")
         checkPrefix(value: value)
@@ -78,6 +88,11 @@ final class FirebaseTrackingHandler: TrackingHandler {
     }
 
     func setTrackingEnabled(_ value: Bool) {
+        // Skip if Firebase is not configured
+        guard FirebaseApp.app() != nil else {
+            return
+        }
+        
         Analytics.setAnalyticsCollectionEnabled(value)
         Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(value)
     }

@@ -11,7 +11,20 @@ class IntercomConfig {
     static var pushNotificationUserInfo: [AnyHashable : Any]?
 
     static func setUp() {
-        Intercom.setApiKey(App.configuration.protected[.INTERCOM_API_KEY], forAppId: App.configuration.protected[.INTERCOM_APP_ID])
+        guard let protected = App.configuration.protected else {
+            LogService.shared.info("Intercom setup skipped: protected configuration not available")
+            return
+        }
+        
+        let apiKey = protected[.INTERCOM_API_KEY]
+        let appId = protected[.INTERCOM_APP_ID]
+        
+        guard !apiKey.isEmpty && !appId.isEmpty else {
+            LogService.shared.info("Intercom setup skipped: API credentials not configured")
+            return
+        }
+        
+        Intercom.setApiKey(apiKey, forAppId: appId)
 
         #if DEBUG
         Intercom.enableLogging()

@@ -26,7 +26,13 @@ class RemoteNotificationHandler {
 
     func setUpMessaging(delegate: MessagingDelegate & UNUserNotificationCenterDelegate) {
         logDebug("Setting up notification handling")
-        Messaging.messaging().delegate = delegate
+        
+        // Skip Firebase Messaging setup if Firebase is not configured
+        if FirebaseApp.app() != nil {
+            Messaging.messaging().delegate = delegate
+        } else {
+            logDebug("Firebase Messaging skipped: Firebase not configured")
+        }
 
         // https://firebase.google.com/docs/cloud-messaging/ios/client
         // for devices running iOS 10 and above, you must assign your delegate object to the UNUserNotificationCenter

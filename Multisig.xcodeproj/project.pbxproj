@@ -5334,16 +5334,17 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"",
+				"$(SRCROOT)/Multisig/Cross-layer/Analytics/Firebase/$(FIREBASE_CONFIG).plist",
 			);
 			name = "[FIREBASE] Copy config file";
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "FIREBASE_SRC=\"${SRCROOT}/Multisig/Cross-layer/Analytics/Firebase/${FIREBASE_CONFIG}.plist\"\nFIREBASE_DST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\nif [ -f \"${FIREBASE_SRC}\" ]; then\n    rsync -a \"${FIREBASE_SRC}\" \"${FIREBASE_DST}/GoogleService-Info.plist\"\nfi\n";
+			shellScript = "FIREBASE_SRC=\"${SRCROOT}/Multisig/Cross-layer/Analytics/Firebase/${FIREBASE_CONFIG}.plist\"\nFIREBASE_DST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\"\nif [ -f \"${FIREBASE_SRC}\" ]; then\n    cp -f \"${FIREBASE_SRC}\" \"${FIREBASE_DST}\"\nfi\n";
 			showEnvVarsInLog = 0;
 		};
 		B343BEB42A7A5E49006BF46B /* [FIREBASE] Upload dSYMs */ = {
