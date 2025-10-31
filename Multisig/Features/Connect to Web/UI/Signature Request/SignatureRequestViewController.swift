@@ -226,7 +226,22 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
                 signature[64] -= 4
                 self?.confirm(signature: signature)
             }
-            
+        case .tangem:
+            let hexToSign = request.message.toHexStringWithPrefix()
+            let request = SignRequest(title: "Sign Message",
+                                      tracking: ["action": "signMessage"],
+                                      signer: keyInfo,
+                                      hexToSign: hexToSign)
+
+            let tangemSignerVC = TangemSignerViewController(request: request)
+
+            present(tangemSignerVC, animated: true)
+
+            tangemSignerVC.completion = { [weak self] hexSignature in
+                let signature = Foundation.Data(hexWC: hexSignature)
+                self?.confirm(signature: signature)
+            }
+
         case .keystone:
             let signInfo = KeystoneSignInfo(
                 signData: request.message.toHexString(),

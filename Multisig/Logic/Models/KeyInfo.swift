@@ -20,6 +20,7 @@ enum KeyType: Int, CaseIterable {
     case keystone = 4
     case web3AuthApple = 5
     case web3AuthGoogle = 6
+    case tangem = 7
 
     static var privateKeyTypes: [KeyType] {
         [.deviceImported, .deviceGenerated, .web3AuthApple, .web3AuthGoogle]
@@ -72,6 +73,21 @@ extension KeyInfo {
     struct LedgerKeyMetadata: Codable {
         let uuid: UUID
         let path: String
+
+        var data: Data {
+            try! JSONEncoder().encode(self)
+        }
+
+        static func from(data: Data) -> Self? {
+            try? JSONDecoder().decode(Self.self, from: data)
+        }
+    }
+
+    struct TangemKeyMetadata: Codable {
+        let cardId: String
+        let walletPublicKey: Data
+        let derivationPath: String?
+        let walletIndex: Int?
 
         var data: Data {
             try! JSONEncoder().encode(self)
@@ -291,6 +307,38 @@ extension KeyInfo {
         item.keyID = "ledger:\(address.checksummed)"
         item.keyType = .ledgerNanoX
         item.metadata = LedgerKeyMetadata(uuid: ledgerDeviceUUID, path: path).data
+
+        item.save()
+
+        return item
+    }
+
+    @discardableResult
+    static func `import`(tangem cardId: String,
+                         walletPublicKey: Data,
+                         address: Address,
+                         name: String,
+                         derivationPath: String?,
+                         walletIndex: Int?) throws -> KeyInfo? {
+        let context = App.shared.coreDataStack.viewContext
+
+        let fr = KeyInfo.fetchRequest().by(address: address)
+        let item: KeyInfo
+
+        if (try context.fetch(fr).first) != nil {
+            throw GSError.DuplicateKey()
+        } else {
+            item = KeyInfo(context: context)
+            item.name = name
+        }
+
+        item.address = address
+        item.keyID = "tangem:\(address.checksummed)"
+        item.keyType = .tangem
+        item.metadata = TangemKeyMetadata(cardId: cardId,
+                                          walletPublicKey: walletPublicKey,
+                                          derivationPath: derivationPath,
+                                          walletIndex: walletIndex).data
 
         item.save()
 

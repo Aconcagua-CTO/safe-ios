@@ -194,6 +194,8 @@ extension Tracker {
             Tracker.shared.setUserProperty("\(count)", for: TrackingUserProperty.numKeysWeb3AuthApple)
         case .web3AuthGoogle:
             Tracker.shared.setUserProperty("\(count)", for: TrackingUserProperty.numKeysWeb3AuthGoogle)
+        case .tangem:
+            Tracker.shared.setUserProperty("\(count)", for: TrackingUserProperty.numKeysTangem)
         }
     }
 

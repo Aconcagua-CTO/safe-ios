@@ -167,6 +167,36 @@ class OwnerKeyController {
         }
     }
 
+    @discardableResult
+    static func importKey(tangemCardId: String,
+                          walletPublicKey: Data,
+                          address: Address,
+                          name: String,
+                          derivationPath: String?,
+                          walletIndex: Int?) -> Bool {
+        do {
+            try KeyInfo.import(tangem: tangemCardId,
+                               walletPublicKey: walletPublicKey,
+                               address: address,
+                               name: name,
+                               derivationPath: derivationPath,
+                               walletIndex: walletIndex)
+
+            Tracker.setNumKeys(KeyInfo.count(.tangem), type: .tangem)
+            postNotification(.ownerKeyImported)
+            Tracker.trackEvent(.tangemKeyImported)
+            return true
+        } catch {
+            if let err = error as? GSError.DuplicateKey {
+                App.shared.snackbar.show(error: err)
+            } else {
+                let err = GSError.error(description: "Failed to add Tangem owner", error: error)
+                App.shared.snackbar.show(error: err)
+            }
+            return false
+        }
+    }
+
     static func importKey(keystone address: Address, path: String, name: String, sourceFingerprint: UInt32) -> Bool {
         do {
             try KeyInfo.import(keystone: address, path: path, name: name, sourceFingerprint: sourceFingerprint)
@@ -327,6 +357,7 @@ class OwnerKeyController {
         Tracker.setNumKeys(KeyInfo.count(.keystone), type: .keystone)
         Tracker.setNumKeys(KeyInfo.count(.web3AuthApple), type: .web3AuthApple)
         Tracker.setNumKeys(KeyInfo.count(.web3AuthGoogle), type: .web3AuthGoogle)
+        Tracker.setNumKeys(KeyInfo.count(.tangem), type: .tangem)
         postNotification(.ownerKeyRemoved)
     }
     

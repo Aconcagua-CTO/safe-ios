@@ -78,6 +78,8 @@ extension KeyType {
             return "key-type-web3auth-apple"
         case .web3AuthGoogle:
             return "key-type-web3auth-google"
+        case .tangem:
+            return "key-type-ledger"
         }
     }
 }

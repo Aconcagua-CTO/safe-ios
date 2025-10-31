@@ -1,0 +1,11 @@
+framework module TangemSdk {
+  umbrella header "TangemSdk.h"
+  export *
+
+  module * { export * }
+}
+
+module TangemSdk.Swift {
+  header "TangemSdk-Swift.h"
+  requires objc
+}

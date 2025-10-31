@@ -442,6 +442,6 @@ class WalletConnectManager {
 
 extension Bundle {
     var displayName: String {
-        return object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Safe Multisig"
+        return object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Boveda Multisig"
     }
 }

@@ -68,6 +68,7 @@ fileprivate extension KeyType {
         case .walletConnect: return "Connect WalletConnect"
         case .web3AuthApple: return "Login via Web2"
         case .web3AuthGoogle: return "Login via Web2"
+        case .tangem: return "Connect Tangem Card"
         }
     }
 }

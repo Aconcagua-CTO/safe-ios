@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -195,7 +195,10 @@
 		049A9DD026020C0B00CA5723 /* SelectFiatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049A9DCF26020C0B00CA5723 /* SelectFiatViewController.swift */; };
 		049A9DDA2602211500CA5723 /* FiatCodesRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049A9DD92602211500CA5723 /* FiatCodesRequest.swift */; };
 		049BE2032912C3B00004B84D /* WalletConnectKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049BE2022912C3B00004B84D /* WalletConnectKeyFlow.swift */; };
-		049BE205291588540004B84D /* LedgerKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049BE204291588540004B84D /* LedgerKeyFlow.swift */; };
+        049BE205291588540004B84D /* LedgerKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049BE204291588540004B84D /* LedgerKeyFlow.swift */; };
+        04FAF12D2BDA01AF00A1F111 /* TangemKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF12A2BDA01AF00A1F111 /* TangemKeyFlow.swift */; };
+        04FAF12E2BDA01AF00A1F111 /* TangemScanViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF12B2BDA01AF00A1F111 /* TangemScanViewController.swift */; };
+        04FAF12F2BDA01AF00A1F111 /* TangemSignerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF12C2BDA01AF00A1F111 /* TangemSignerViewController.swift */; };
 		049EB0FF25AF713700F66CEA /* TimeZone+Offset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 049EB0FE25AF713700F66CEA /* TimeZone+Offset.swift */; };
 		04AECBBA2A76B990008D5A35 /* SelectTopUpAddressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04AECBB82A76B990008D5A35 /* SelectTopUpAddressViewController.swift */; };
 		04AECBBE2A7867DB008D5A35 /* MoonpayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04AECBBD2A7867DB008D5A35 /* MoonpayService.swift */; };
@@ -265,6 +268,12 @@
 		04FA9CCE2A45C7520027F315 /* SafeActionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FA9CCC2A45C7520027F315 /* SafeActionViewController.swift */; };
 		04FA9CCF2A45C7520027F315 /* SafeActionViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 04FA9CCD2A45C7520027F315 /* SafeActionViewController.xib */; };
 		04FA9CD12A45F7170027F315 /* CreateSafeFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FA9CD02A45F7170027F315 /* CreateSafeFlow.swift */; };
+	   04FAF0A22BD9E00000A1F111 /* TangemSdk.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */; };
+		04FAF0B32BD9E2F800A1F111 /* TangemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF0AE2BD9E1F100A1F111 /* TangemService.swift */; };
+		04FAF0B42BD9E2F800A1F111 /* TangemLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF0AF2BD9E1F100A1F111 /* TangemLogger.swift */; };
+		04FAF0C12BD9E50000A1F111 /* Bls_Signature.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */; };
+		04FAF0C22BD9E50000A1F111 /* TangemSdk.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		04FAF0C32BD9E50000A1F111 /* Bls_Signature.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		04FC26B625CABE2300CDA9A0 /* AdvancedSafeSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FC26B425CABE2300CDA9A0 /* AdvancedSafeSettingsViewController.swift */; };
 		04FEFE7C28C5FD570028A349 /* LegalDisclaimerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FEFE7A28C5FD570028A349 /* LegalDisclaimerViewController.swift */; };
 		04FEFE7D28C5FD570028A349 /* LegalDisclaimerViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 04FEFE7B28C5FD570028A349 /* LegalDisclaimerViewController.xib */; };
@@ -1109,6 +1118,18 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		04FAF0C42BD9E50000A1F111 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				04FAF0C22BD9E50000A1F111 /* TangemSdk.xcframework in Embed Frameworks */,
+				04FAF0C32BD9E50000A1F111 /* Bls_Signature.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -1289,7 +1310,10 @@
 		049A9DCF26020C0B00CA5723 /* SelectFiatViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectFiatViewController.swift; sourceTree = "<group>"; };
 		049A9DD92602211500CA5723 /* FiatCodesRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiatCodesRequest.swift; sourceTree = "<group>"; };
 		049BE2022912C3B00004B84D /* WalletConnectKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletConnectKeyFlow.swift; sourceTree = "<group>"; };
-		049BE204291588540004B84D /* LedgerKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerKeyFlow.swift; sourceTree = "<group>"; };
+        049BE204291588540004B84D /* LedgerKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerKeyFlow.swift; sourceTree = "<group>"; };
+        04FAF12A2BDA01AF00A1F111 /* TangemKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemKeyFlow.swift; sourceTree = "<group>"; };
+        04FAF12B2BDA01AF00A1F111 /* TangemScanViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemScanViewController.swift; sourceTree = "<group>"; };
+        04FAF12C2BDA01AF00A1F111 /* TangemSignerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemSignerViewController.swift; sourceTree = "<group>"; };
 		049EB0FE25AF713700F66CEA /* TimeZone+Offset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TimeZone+Offset.swift"; sourceTree = "<group>"; };
 		04AECBB82A76B990008D5A35 /* SelectTopUpAddressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectTopUpAddressViewController.swift; sourceTree = "<group>"; };
 		04AECBBD2A7867DB008D5A35 /* MoonpayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoonpayService.swift; sourceTree = "<group>"; };
@@ -1355,6 +1379,10 @@
 		04FA9CCC2A45C7520027F315 /* SafeActionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeActionViewController.swift; sourceTree = "<group>"; };
 		04FA9CCD2A45C7520027F315 /* SafeActionViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = SafeActionViewController.xib; sourceTree = "<group>"; };
 		04FA9CD02A45F7170027F315 /* CreateSafeFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSafeFlow.swift; sourceTree = "<group>"; };
+       04FAF0AE2BD9E1F100A1F111 /* TangemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemService.swift; sourceTree = "<group>"; };
+	   04FAF0AF2BD9E1F100A1F111 /* TangemLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemLogger.swift; sourceTree = "<group>"; };
+	   04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = TangemSdk.xcframework; sourceTree = "<group>"; };
+		04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Bls_Signature.xcframework; sourceTree = "<group>"; };
 		04FC26B425CABE2300CDA9A0 /* AdvancedSafeSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSafeSettingsViewController.swift; sourceTree = "<group>"; };
 		04FEFE7A28C5FD570028A349 /* LegalDisclaimerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDisclaimerViewController.swift; sourceTree = "<group>"; };
 		04FEFE7B28C5FD570028A349 /* LegalDisclaimerViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = LegalDisclaimerViewController.xib; sourceTree = "<group>"; };
@@ -1577,7 +1605,7 @@
 		0A9366B8279073E3001918A9 /* TextValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextValidator.swift; sourceTree = "<group>"; };
 		0A9366BA27908717001918A9 /* OwnerKeySelectionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerKeySelectionPolicy.swift; sourceTree = "<group>"; };
 		0A9366BC279090CC001918A9 /* OwnerKeySelectionPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OwnerKeySelectionPolicyTests.swift; sourceTree = "<group>"; };
-		0A93DD532445CC8A00688050 /* .app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = .app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A93DD532445CC8A00688050 /* Multisig_PROD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Multisig_PROD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A93DD562445CC8A00688050 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		0A93DD582445CC8A00688050 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		0A93DD5F2445CC8B00688050 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -2160,7 +2188,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0463F5C126296924009C04FA /* FirebaseRemoteConfig in Frameworks */,
+           04FAF0A22BD9E00000A1F111 /* TangemSdk.xcframework in Frameworks */,
+			04FAF0C12BD9E50000A1F111 /* Bls_Signature.xcframework in Frameworks */,
+			0463F5C126296924009C04FA /* FirebaseRemoteConfig in Frameworks */,
 				55D3FF65260B2551008ABD2B /* Kingfisher in Frameworks */,
 				0497B2B929A641C9007109ED /* WalletConnectPush in Frameworks */,
 				0497B2B529A641C9007109ED /* WalletConnectNetworking in Frameworks */,
@@ -2747,6 +2777,17 @@
 				04D968D3276B872D00CE4A9E /* TransactionViewController.xib */,
 			);
 			path = TransactionViewController;
+			sourceTree = "<group>";
+		};
+		04FAF0AD2BD9E1E500A1F111 /* Tangem */ = {
+			isa = PBXGroup;
+			children = (
+				04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */,
+               04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */,
+               04FAF0AE2BD9E1F100A1F111 /* TangemService.swift */,
+               04FAF0AF2BD9E1F100A1F111 /* TangemLogger.swift */,
+			);
+			path = Tangem;
 			sourceTree = "<group>";
 		};
 		0A0391C527C564AA003C871A /* InstructionsViewController */ = {
@@ -3382,7 +3423,7 @@
 		0A93DD542445CC8A00688050 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0A93DD532445CC8A00688050 /* .app */,
+				0A93DD532445CC8A00688050 /* Multisig_PROD.app */,
 				0A93DD6C2445CC8C00688050 /* MultisigTests.xctest */,
 				0A9BC3532460581500EB9C5D /* MultisigIntegrationTests.xctest */,
 				0AF2731324DAABDC007E4012 /* NotificationServiceExtension.appex */,
@@ -3978,6 +4019,7 @@
 			children = (
 				47DF358528B9481700EBEF3E /* Keystone */,
 				55FBC2D626BA9815002C2553 /* Ledger */,
+				04FAF0AD2BD9E1E500A1F111 /* Tangem */,
 				0AD6EF1D25CAF5EC00EE5512 /* AppReviewController.swift */,
 				0455A44427282EA9008B772D /* FileManagerWrapper.swift */,
 				0AC5F56A25DD4A4B00DEF0D7 /* AuthenticationController.swift */,
@@ -4346,8 +4388,9 @@
 				049A9D2D25F81EF700CA5723 /* EditOwnerKeyViewController */,
 				5541367A265E566B00796F91 /* GenerateOwnerKey */,
 				55413679265E558A00796F91 /* ImportOwnerKey */,
-				55FBC2D326BA915B002C2553 /* LedgerOwnerKey */,
-				47646ED228AA725B009DC437 /* KeystoneOwnerKey */,
+                55FBC2D326BA915B002C2553 /* LedgerOwnerKey */,
+                04FAF1292BDA010E00A1F111 /* TangemOwnerKey */,
+                47646ED228AA725B009DC437 /* KeystoneOwnerKey */,
 				04626EB3265E6B8D00CC7FC8 /* OwnerKeyDetailsViewController */,
 				049A9D1425F7C67800CA5723 /* OwnerKeysListViewController */,
 				0ADD19B6265EA23200EB0F2B /* PrivateKeyViewController */,
@@ -4372,6 +4415,16 @@
 			path = LedgerOwnerKey;
 			sourceTree = "<group>";
 		};
+        04FAF1292BDA010E00A1F111 /* TangemOwnerKey */ = {
+            isa = PBXGroup;
+            children = (
+                04FAF12A2BDA01AF00A1F111 /* TangemKeyFlow.swift */,
+                04FAF12B2BDA01AF00A1F111 /* TangemScanViewController.swift */,
+                04FAF12C2BDA01AF00A1F111 /* TangemSignerViewController.swift */,
+            );
+            path = TangemOwnerKey;
+            sourceTree = "<group>";
+        };
 		55FBC2D626BA9815002C2553 /* Ledger */ = {
 			isa = PBXGroup;
 			children = (
@@ -4820,6 +4873,7 @@
 				0A93DD4F2445CC8A00688050 /* Sources */,
 				0A93DD502445CC8A00688050 /* Frameworks */,
 				0A93DD512445CC8A00688050 /* Resources */,
+				04FAF0C42BD9E50000A1F111 /* Embed Frameworks */,
 				0ACDC01924926081002035A2 /* [FIREBASE] Copy config file */,
 				0AF2732824DAABDC007E4012 /* Embed Foundation Extensions */,
 				B343BEB42A7A5E49006BF46B /* [FIREBASE] Upload dSYMs */,
@@ -4830,7 +4884,7 @@
 				0AF2731924DAABDC007E4012 /* PBXTargetDependency */,
 			);
 			name = Multisig;
-			packageProductDependencies = (
+            packageProductDependencies = (
 				55D3FE8B260A0F88008ABD2B /* SwiftCryptoTokenFormatter */,
 				55D3FF64260B2551008ABD2B /* Kingfisher */,
 				55D3FF8F260B2B21008ABD2B /* TrustKit */,
@@ -4867,7 +4921,7 @@
 				B34229712BD2B78300B57830 /* MoonPaySdk */,
 			);
 			productName = Multisig;
-			productReference = 0A93DD532445CC8A00688050 /* .app */;
+			productReference = 0A93DD532445CC8A00688050 /* Multisig_PROD.app */;
 			productType = "com.apple.product-type.application";
 		};
 		0A93DD6B2445CC8C00688050 /* MultisigTests */ = {
@@ -4967,8 +5021,8 @@
 				Base,
 			);
 			mainGroup = 0A93DD4A2445CC8A00688050;
-			packageReferences = (
-				55D3FE8A260A0F88008ABD2B /* XCRemoteSwiftPackageReference "SwiftCryptoTokenFormatter" */,
+		packageReferences = (
+			55D3FE8A260A0F88008ABD2B /* XCRemoteSwiftPackageReference "SwiftCryptoTokenFormatter" */,
 				55D3FF63260B2550008ABD2B /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				55D3FF8E260B2B21008ABD2B /* XCRemoteSwiftPackageReference "TrustKit" */,
 				55888DFD260C4F6200940347 /* XCRemoteSwiftPackageReference "SwiftAccessPolicy" */,
@@ -4988,7 +5042,7 @@
 				0497B2AB29A641C9007109ED /* XCRemoteSwiftPackageReference "WalletConnectSwiftV2" */,
 				04C22B2B2A367FF800F58A15 /* XCRemoteSwiftPackageReference "customauth-swift-sdk" */,
 				04C22B2E2A36807500F58A15 /* XCRemoteSwiftPackageReference "SafeWeb3" */,
-				04AECBB52A744B21008D5A35 /* XCRemoteSwiftPackageReference "mobile-sdk-ios" */,
+               04AECBB52A744B21008D5A35 /* XCRemoteSwiftPackageReference "mobile-sdk-ios" */,
 			);
 			productRefGroup = 0A93DD542445CC8A00688050 /* Products */;
 			projectDirPath = "";
@@ -5379,6 +5433,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				04FAF0B32BD9E2F800A1F111 /* TangemService.swift in Sources */,
+				04FAF0B42BD9E2F800A1F111 /* TangemLogger.swift in Sources */,
 				046FFE0B287F6E91007428D7 /* IncommingTransactionRequestTypeTableViewCell.swift in Sources */,
 				0AFA729E24BF363400A370EE /* SlicedText.swift in Sources */,
 				6AFD26E228589AFF00336FFE /* AddOwnerView.swift in Sources */,
@@ -5673,8 +5729,11 @@
 				550FB1A526691CD800C13D54 /* SigningKeyTableViewCell.swift in Sources */,
 				6A72656129CC7F15008B2821 /* ChoosePaymentViewController.swift in Sources */,
 				0A04507A278DAD4000650F71 /* SecondaryDetailDisclosureCell.swift in Sources */,
-				04AECBC22A78F6C0008D5A35 /* CurrenciesRequest.swift in Sources */,
-				049BE205291588540004B84D /* LedgerKeyFlow.swift in Sources */,
+                04AECBC22A78F6C0008D5A35 /* CurrenciesRequest.swift in Sources */,
+                049BE205291588540004B84D /* LedgerKeyFlow.swift in Sources */,
+                04FAF12D2BDA01AF00A1F111 /* TangemKeyFlow.swift in Sources */,
+                04FAF12E2BDA01AF00A1F111 /* TangemScanViewController.swift in Sources */,
+                04FAF12F2BDA01AF00A1F111 /* TangemSignerViewController.swift in Sources */,
 				0A2F1A70267A53A800C09F03 /* GSButton.swift in Sources */,
 				6A7A48A02823A297003278C8 /* SafeOwnerCell.swift in Sources */,
 				55B66E52247E478800249E98 /* LaunchView.swift in Sources */,
@@ -6303,6 +6362,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
+				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Multisig/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -6311,8 +6371,10 @@
 				);
 				MARKETING_VERSION = 0.2.0;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.multisig.dev.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
 				PROVISIONING_PROFILE_SPECIFIER = "";
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -6328,6 +6390,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
+				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Multisig/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -6336,6 +6399,7 @@
 				);
 				MARKETING_VERSION = 0.2.0;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.multisig.dev.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -6498,6 +6562,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
+				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Multisig/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -6506,6 +6571,7 @@
 				);
 				MARKETING_VERSION = 0.2.0;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.multisig.dev.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -6623,6 +6689,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
+				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Multisig/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -6631,6 +6698,7 @@
 				);
 				MARKETING_VERSION = 0.2.0;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.multisig.dev.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -7177,8 +7245,10 @@
 				);
 				MARKETING_VERSION = 0.2.0;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.multisig.prod.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
 				PROVISIONING_PROFILE_SPECIFIER = "";
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MULTISIG_DEV_LOGS";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -7299,21 +7369,25 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
+				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Multisig/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
-				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
-				PRODUCT_MODULE_NAME = Multisig;
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug.Development;
+		MARKETING_VERSION = 0.2.0;
+		OTHER_LDFLAGS = "$(inherited)";
+		PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
+		PRODUCT_MODULE_NAME = Multisig;
+		PROVISIONING_PROFILE_SPECIFIER = "";
+		SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) MULTISIG_DEV_LOGS";
+		SWIFT_DISABLE_EXPLICIT_MODULES = YES;
+		SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+		SWIFT_VERSION = 5.0;
+		TARGETED_DEVICE_FAMILY = "1,2";
+	};
+	name = Debug.Development;
 		};
 		0AF7F776247FC50E00527014 /* Debug.Development */ = {
 			isa = XCBuildConfiguration;
@@ -7777,9 +7851,9 @@
 		};
 		D80B5A12276B5FAD00D6E024 /* SkeletonView */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D80B5A11276B5FAD00D6E024 /* XCRemoteSwiftPackageReference "SkeletonView" */;
-			productName = SkeletonView;
-		};
+	package = D80B5A11276B5FAD00D6E024 /* XCRemoteSwiftPackageReference "SkeletonView" */;
+	productName = SkeletonView;
+};
 /* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */

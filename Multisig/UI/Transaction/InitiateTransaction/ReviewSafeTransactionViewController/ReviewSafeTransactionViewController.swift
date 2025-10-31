@@ -316,7 +316,23 @@ class ReviewSafeTransactionViewController: UIViewController {
             vc.onClose = { [weak self] in
                 self?.endConfirm()
             }
-            
+        case .tangem:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let vc = TangemSignerViewController(request: request)
+
+            presentModal(vc)
+
+            vc.completion = { [weak self] signature in
+                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature)
+            }
+
+            vc.onClose = { [weak self] in
+                self?.endConfirm()
+            }
+
         case .keystone:
             let signInfo = KeystoneSignInfo(
                 signData: transaction.safeTxHash.hash.toHexString(),

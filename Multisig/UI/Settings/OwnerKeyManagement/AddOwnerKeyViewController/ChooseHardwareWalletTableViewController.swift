@@ -14,6 +14,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
     enum Row {
         case ledger
         case keystone
+        case tangem
 
         var title: String {
             switch self {
@@ -21,6 +22,8 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 return "Connect Ledger Nano X"
             case .keystone:
                 return "Connect Keystone"
+            case .tangem:
+                return "Connect Tangem Card"
             }
         }
 
@@ -30,6 +33,8 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 return UIImage(named: KeyType.keystone.imageName)!
             case .ledger:
                 return UIImage(named: KeyType.ledgerNanoX.imageName)!
+            case .tangem:
+                return UIImage(named: KeyType.tangem.imageName)!
             }
         }
     }
@@ -39,6 +44,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
 
     private var connectKeystoneFlow: ConnectKeystoneFlow!
     private var ledgerKeyFlow: LedgerKeyFlow!
+    private var tangemKeyFlow: TangemKeyFlow!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -53,7 +59,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
         tableView.tableFooterView = UIView()
 
         sections = [
-            (section: "", items: [.ledger, .keystone])
+            (section: "", items: [.ledger, .keystone, .tangem])
         ]
     }
 
@@ -99,6 +105,13 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 completion()
             }
             push(flow: connectKeystoneFlow)
+
+        case .tangem:
+            tangemKeyFlow = TangemKeyFlow { [unowned self] _ in
+                tangemKeyFlow = nil
+                completion()
+            }
+            push(flow: tangemKeyFlow)
         }
     }
 }

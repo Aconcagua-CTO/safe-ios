@@ -522,6 +522,8 @@ extension KeyType {
             return "Social Key"
         case .web3AuthGoogle:
             return "Social Key"
+        case .tangem:
+            return "Tangem Card"
         }
     }
 }

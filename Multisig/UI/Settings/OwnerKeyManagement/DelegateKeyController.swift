@@ -182,6 +182,26 @@ class DelegateKeyController {
                     completion(.failure(GSError.AddDelegateKeyCancelled()))
                 }
             }
+        case .tangem:
+            let request = SignRequest(title: title,
+                                      tracking: ["action": "confirm_push"],
+                                      signer: keyInfo,
+                                      hexToSign: hexMessage)
+            let vc = TangemSignerViewController(request: request)
+            presenter?.present(vc, animated: true, completion: nil)
+
+            var isSuccess = false
+
+            vc.completion = { signature in
+                isSuccess = true
+                completion(.success(Data(hex: signature)))
+            }
+
+            vc.onClose = {
+                if !isSuccess {
+                    completion(.failure(GSError.AddDelegateKeyCancelled()))
+                }
+            }
         case .walletConnect:
             let signVC = SignatureRequestToWalletViewController(hexMessage, keyInfo: keyInfo, chain: chain!)
             signVC.requiresChainIdMatch = false

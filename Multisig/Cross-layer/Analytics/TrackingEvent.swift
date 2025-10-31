@@ -18,6 +18,7 @@ enum TrackingUserProperty: String, UserProperty {
     case numKeysKeystone = "num_keys_keystone" // string, number of Keystone keys, "0" on fresh install
     case numKeysWeb3AuthApple = "num_keys_web3auth_apple" // string, number of Web3Auth keys of Apple login, "0" on fresh install
     case numKeysWeb3AuthGoogle = "num_keys_web3auth_google" // string, number of Web3Auth keys of Goolge login, "0" on fresh install
+    case numKeysTangem = "num_keys_tangem" // string, number of Tangem keys, "0" on fresh install
     case passcodeIsSet = "passcode_is_set" // string, "true" or "false" depending on if app passcode is set
     case walletConnectForDappsEnabled = "wc_for_dapps_enabled" // string, "true" or "false"
     case walletConnectForKeysEnabled = "wc_for_keys_enabled" // string, "true" or "false"
@@ -55,6 +56,7 @@ enum TrackingEvent: String, Trackable {
     case reviewExecutionAdvanced                    = "screen_exec_tx_review_advanced"
     case reviewExecutionSelectKey                   = "screen_select_exec_key"
     case reviewExecutionLedger                      = "screen_exec_tx_ledger_confirm"
+    case reviewExecutionTangem                      = "screen_exec_tx_tangem_confirm"
     case executeFailure                             = "user_exec_tx_failed"
     case reviewExecutionFieldEdited                 = "user_edit_exec_tx_fee_fields"
     case reviewExecutionSelectedKeyChanged          = "user_select_exec_key_change"
@@ -123,6 +125,7 @@ enum TrackingEvent: String, Trackable {
     case connectOwnerOnboarding                     = "screen_owner_walletconnect_info"
     case ledgerOwnerOnboarding                      = "screen_owner_ledger_nano_x_info"
     case keystoneOwnerOnboarding                    = "screen_owner_keystone_info"
+    case tangemOwnerOnboarding                      = "screen_owner_tangem_info"
 
     case ownerEnterSeed                             = "screen_owner_enter_seed"
     case ownerConfirmPrivateKey                     = "screen_owner_confirm_private_key"
@@ -185,12 +188,13 @@ enum TrackingEvent: String, Trackable {
 
     case keystoneQRScanner                          = "screen_keystone_scan"
     case keystoneKeyImported                        = "user_keystone_key_imported"
+    case tangemKeyImported                          = "user_tangem_key_imported"
 
     // MARK: Confirm transactions
 
     // chain_id (String): Chain id
     // source (String): one of [“tx_details”, “incoming”, “ctw”]
-    // key_type (String): one of [“imported”, “generated”, “ledger_nano_x”, “connected”]
+    // key_type (String): one of [“imported”, “generated”, “ledger_nano_x”, “connected”, “tangem”]
     // wallet (String?): name of the wallet (first 100 chars) for “connected” keys
     case userTransactionConfirmed                   = "user_transaction_confirmed"
 
@@ -198,7 +202,7 @@ enum TrackingEvent: String, Trackable {
 
     // chain_id (String): Chain id
     // source (String) = “tx_details”
-    // key_type (String): one of [“imported”, “generated”, “ledger_nano_x”, “connected”]
+    // key_type (String): one of [“imported”, “generated”, “ledger_nano_x”, “connected”, “tangem”]
     // wallet (String?): name of the wallet (first 100 chars) for “connected” keys
     case userTransactionRejected                    = "user_transaction_rejected"
 
@@ -206,7 +210,7 @@ enum TrackingEvent: String, Trackable {
 
     // chain_id (String): Chain id
     // source (String): one of [“tx_details”, “ctw”]
-    // keyType: one of [imported, generated, wallet_connect, ledger_nano_x]
+    // keyType: one of [imported, generated, wallet_connect, ledger_nano_x, tangem]
     // wallet (String?): name of the wallet (first 100 chars)
     case userTransactionExecuteSubmitted            = "user_transaction_exec_submitted"
     case successTxSigner                            = "screen_tx_signer_success"
@@ -520,6 +524,8 @@ extension KeyType {
             return "web3AuthApple"
         case .web3AuthGoogle:
             return "web3AuthGoogle"
+        case .tangem:
+            return "tangem"
         }
     }
 }

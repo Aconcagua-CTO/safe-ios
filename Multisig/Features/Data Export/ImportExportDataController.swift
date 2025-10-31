@@ -59,6 +59,10 @@ struct SerializedDataFile: Codable {
         var wallet: String?
         var connectionURL: String?
         var connectionChainId: Int64?
+        var tangemCardId: String?
+        var tangemWalletPublicKey: Data?
+        var tangemDerivationPath: String?
+        var tangemWalletIndex: Int?
     }
     
     struct SerializedContact: Codable {
@@ -291,6 +295,17 @@ class ImportExportDataController {
                 }
                 data.path = metadata.path
                 data.source = metadata.sourceFingerprint
+            case .tangem:
+                guard let rawMetadata = key.metadata,
+                      let metadata = KeyInfo.TangemKeyMetadata.from(data: rawMetadata) else {
+                    logs.append("Skipping key named '\(key.name!)' with address \(key.address): " +
+                                "could not load tangem key metadata")
+                    continue
+                }
+                data.tangemCardId = metadata.cardId
+                data.tangemWalletPublicKey = metadata.walletPublicKey
+                data.tangemDerivationPath = metadata.derivationPath
+                data.tangemWalletIndex = metadata.walletIndex
             }
             
             keys.append(data)
@@ -518,6 +533,23 @@ class ImportExportDataController {
                     if !didAdd {
                         logs.append("Skipped key with name '\(key.name)' and address \(address): " +
                                     "could not create keystone metadata.")
+                        continue
+                    }
+                case .tangem:
+                    if let cardId = key.tangemCardId,
+                       let walletPublicKey = key.tangemWalletPublicKey {
+                        didAdd = OwnerKeyController.importKey(
+                            tangemCardId: cardId,
+                            walletPublicKey: walletPublicKey,
+                            address: address,
+                            name: name,
+                            derivationPath: key.tangemDerivationPath,
+                            walletIndex: key.tangemWalletIndex)
+                    }
+
+                    if !didAdd {
+                        logs.append("Skipped key with name '\(key.name)' and address \(address): " +
+                                    "could not create tangem metadata.")
                         continue
                     }
                 }

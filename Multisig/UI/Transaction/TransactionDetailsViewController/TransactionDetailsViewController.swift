@@ -386,7 +386,30 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     self?.reloadData()
                 }
             }
-            
+        case .tangem:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let vc = TangemSignerViewController(request: request)
+
+            present(vc, animated: true, completion: {
+                Tracker.trackEvent(.reviewExecutionTangem)
+            })
+
+            var didSignTangem = false
+
+            vc.completion = { [weak self] signature in
+                didSignTangem = true
+                self?.confirmAndRefresh(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
+            }
+
+            vc.onClose = { [weak self] in
+                if didSignTangem {
+                    self?.reloadData()
+                }
+            }
+
         case .keystone:
             let signInfo = KeystoneSignInfo(
                 signData: transaction.safeTxHash.hash.toHexString(),

@@ -13,7 +13,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Safe</string>
+	<string>Boveda</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -172,13 +172,15 @@
 	<key>MOONPAY_SERVICE_URL</key>
 	<string>$(MOONPAY_SERVICE_URL)</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Allow Safe to connect hardware devices and sign transactions.</string>
+	<string>Allow Boveda to connect hardware devices and sign transactions.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Enable Bluetooth to connect your hardware wallet</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Safe need to use camera to scan QR code.</string>
+	<string>Boveda need to use camera to scan QR code.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>This will allow Safe to access your Face ID to open app and sign transactions.</string>
+	<string>This will allow Boveda to access your Face ID to open app and sign transactions.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Boveda needs NFC to communicate with Tangem hardware wallets.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>The app needs access to the photo library if you need to share your screenshot with our support team.</string>
 	<key>ONRAMPING_INFO_URL</key>
