@@ -82,3 +82,22 @@
 
 
 /* ===== END OF IDN2 ==== */
+
+/* ===== AUTHENTICATION ==== */
+
+"auth_email_required" = "Email is required";
+"auth_password_required" = "Password is required";
+"auth_invalid_email" = "Invalid email";
+"auth_user_not_found" = "User not found";
+"auth_invalid_credentials" = "Email or password incorrect";
+"auth_login_failed" = "Failed to sign in";
+"auth_welcome_title" = "Welcome";
+"auth_login_subtitle" = "Sign in to your account";
+"auth_email_placeholder" = "Email";
+"auth_password_placeholder" = "Password";
+"auth_login_button" = "Sign In";
+"auth_forgot_password" = "Forgot password?";
+"auth_register_link" = "Don't have an account? Register";
+"auth_password_reset_sent" = "Password reset email sent";
+
+/* ===== END OF AUTHENTICATION ==== */

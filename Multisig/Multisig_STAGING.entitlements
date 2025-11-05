@@ -12,13 +12,13 @@
 	<array>
 		<string>applinks:safe-wallet-web.staging.5afe.dev</string>
 	</array>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.io.gnosis.multisig.staging.mainnet</string>
-	</array>
 	<key>com.apple.developer.nfc.readersession.formats</key>
 	<array>
 		<string>ISO7816</string>
+	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.manuelrm.bovedapp.staging.mainnet</string>
 	</array>
 </dict>
 </plist>

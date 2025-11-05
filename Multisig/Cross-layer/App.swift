@@ -23,6 +23,9 @@ class App {
 
     let gnosisSafe = GnosisSafe()
     let auth = AuthenticationController()
+    
+    // Lazy initialization - Firebase must be configured first in AppDelegate
+    lazy var authRepository: AuthRepository = AuthRepositoryImpl()
 
     // MARK: - Data Layer
 

@@ -33,6 +33,9 @@ struct AppConfiguration {
         @ConfigurationKey("GNOSIS_SAFE_WEB_URL")
         var webAppURL: URL
         
+        @ConfigurationKey("AUTH_API_BASE_URL")
+        var authApiBaseURL: URL
+        
         @ConfigurationKey("CONFIG_KEY")
         var configKey: String
 

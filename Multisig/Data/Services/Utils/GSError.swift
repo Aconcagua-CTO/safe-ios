@@ -796,4 +796,66 @@ enum GSError {
         let loggable = false
     }
 
+    // MARK: - Auth Errors
+
+    struct AuthEmailRequired: DetailedLocalizedError {
+        let description = NSLocalizedString("auth_email_required", comment: "")
+        let reason = "Email field is empty"
+        let howToFix = "Please enter your email address"
+        let domain = clientErrorDomain
+        let code = 3001
+        let loggable = false
+    }
+
+    struct AuthPasswordRequired: DetailedLocalizedError {
+        let description = NSLocalizedString("auth_password_required", comment: "")
+        let reason = "Password field is empty"
+        let howToFix = "Please enter your password"
+        let domain = clientErrorDomain
+        let code = 3002
+        let loggable = false
+    }
+
+    struct AuthInvalidEmail: DetailedLocalizedError {
+        let description = NSLocalizedString("auth_invalid_email", comment: "")
+        let reason = "Email format is invalid"
+        let howToFix = "Please enter a valid email address"
+        let domain = clientErrorDomain
+        let code = 3003
+        let loggable = false
+    }
+
+    struct AuthUserNotFound: DetailedLocalizedError {
+        let description = NSLocalizedString("auth_user_not_found", comment: "")
+        let reason = "User account not found"
+        let howToFix = "Please check your email or register a new account"
+        let domain = clientErrorDomain
+        let code = 3004
+        let loggable = false
+    }
+
+    struct AuthInvalidCredentials: DetailedLocalizedError {
+        let description = NSLocalizedString("auth_invalid_credentials", comment: "")
+        let reason = "Email or password is incorrect"
+        let howToFix = "Please check your credentials and try again"
+        let domain = clientErrorDomain
+        let code = 3005
+        let loggable = false
+    }
+
+    struct AuthGenericError: DetailedLocalizedError {
+        let description: String
+        let reason: String
+        let howToFix: String
+        let domain = clientErrorDomain
+        let code = 3006
+        let loggable = true
+        
+        init(description: String, reason: String = "", howToFix: String = "Please try again later") {
+            self.description = description
+            self.reason = reason
+            self.howToFix = howToFix
+        }
+    }
+
 }

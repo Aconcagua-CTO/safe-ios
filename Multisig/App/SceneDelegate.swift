@@ -320,6 +320,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func onAppUpdateCompletion() {
+        // Check authentication state first
+        if !App.shared.authRepository.isAuthenticated() {
+            AuthLogger.info("User not authenticated, showing login screen")
+            showWindow(makeLoginWindow())
+            return
+        }
+        
+        AuthLogger.info("User authenticated, proceeding with normal app flow")
+        
         if !AppSettings.termsAccepted {
             showWindow(makeTermsWindow())
             // TODO: Enable when implemented new security center
@@ -334,6 +343,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         } else {
             showMainContentWindow()
         }
+    }
+    
+    func makeLoginWindow() -> UIWindow {
+        let loginWindow = makeWindow(scene: scene!)
+        let loginVC = LoginViewController()
+        loginWindow.rootViewController = UINavigationController(rootViewController: loginVC)
+        return loginWindow
     }
 
     func showMainContentWindow() {

@@ -24,6 +24,11 @@ SERVICE_ENV = STAGING
 
 // Configuration Values
 
+// Authentication API (Firebase Functions)
+_AUTH_API_BASE_URL_DEV         = https:/$()/us-central1-lanin-6339b.cloudfunctions.net/users/
+_AUTH_API_BASE_URL_STAGING     = https:/$()/us-central1-lanin-6339b.cloudfunctions.net/users/
+_AUTH_API_BASE_URL_PROD        = https:/$()/us-central1-lanin-6339b.cloudfunctions.net/users/
+
 // Safe Client Gateway Service
 _CLIENT_GATEWAY_URL_DEV        = https:/$()/safe-client.staging.5afe.dev/
 _CLIENT_GATEWAY_URL_STAGING    = https:/$()/safe-client.staging.5afe.dev/
@@ -78,6 +83,7 @@ _LOG_LEVEL_PROD             = ERROR
 _LOG_LEVEL_DEV              = DEBUG
 
 // Configuration variables for the app
+AUTH_API_BASE_URL           = $(_AUTH_API_BASE_URL_$(SERVICE_ENV):default=$(_AUTH_API_BASE_URL_PROD))
 CLIENT_GATEWAY_URL          = $(_CLIENT_GATEWAY_URL_$(SERVICE_ENV):default=$(_CLIENT_GATEWAY_URL_PROD))
 CLAIMING_DATA_URL           = $(_CLAIMING_DATA_URL_$(SERVICE_ENV):default=$(_CLAIMING_DATA_URL_PROD))
 RELAY_URL                   = $(_RELAY_URL_$(SERVICE_ENV):default=$(_RELAY_URL_PROD))
@@ -164,7 +170,9 @@ PRODUCT_BUNDLE_IDENTIFIER           = $(_APP_BUNDLE_ID_$(SERVICE_ENV):default=$(
 // or Face ID when multiple apps with the same executable name are installed.
 APP_PRODUCT_NAME                    = Multisig_$(SERVICE_ENV)
 
-PRODUCT_NAME = $(APP_PRODUCT_NAME)
+// Keep PRODUCT_NAME as Multisig to maintain XIB compatibility
+PRODUCT_NAME = Multisig
+PRODUCT_MODULE_NAME = Multisig
 
 ASSETCATALOG_COMPILER_APPICON_NAME  = AppIcon_$(SERVICE_ENV)
 

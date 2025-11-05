@@ -1,0 +1,26 @@
+/* 
+  File.strings
+  Multisig - Spanish Localization
+  Created on [Date]
+  Copyright © [Year] Gnosis Ltd. All rights reserved.
+*/
+
+/* ===== AUTHENTICATION ==== */
+
+"auth_email_required" = "El email es requerido";
+"auth_password_required" = "La contraseña es requerida";
+"auth_invalid_email" = "Email inválido";
+"auth_user_not_found" = "Usuario no encontrado";
+"auth_invalid_credentials" = "Email o contraseña incorrectos";
+"auth_login_failed" = "Error al iniciar sesión";
+"auth_welcome_title" = "Bienvenido";
+"auth_login_subtitle" = "Ingresá a tu cuenta";
+"auth_email_placeholder" = "Email";
+"auth_password_placeholder" = "Contraseña";
+"auth_login_button" = "Ingresá";
+"auth_forgot_password" = "¿Olvidaste tu contraseña?";
+"auth_register_link" = "¿No tenés cuenta? Registrate";
+"auth_password_reset_sent" = "Email de recuperación enviado";
+
+/* ===== END OF AUTHENTICATION ==== */
+

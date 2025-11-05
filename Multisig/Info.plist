@@ -10,6 +10,8 @@
 	<string>$(APP_GROUP_ID)</string>
 	<key>APP_STORE_REVIEW_URL</key>
 	<string>$(APP_STORE_REVIEW_URL)</string>
+	<key>AUTH_API_BASE_URL</key>
+	<string>$(AUTH_API_BASE_URL)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -171,6 +173,8 @@
 	<true/>
 	<key>MOONPAY_SERVICE_URL</key>
 	<string>$(MOONPAY_SERVICE_URL)</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Boveda needs NFC to communicate with Tangem hardware wallets.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Allow Boveda to connect hardware devices and sign transactions.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -179,8 +183,6 @@
 	<string>Boveda need to use camera to scan QR code.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>This will allow Boveda to access your Face ID to open app and sign transactions.</string>
-	<key>NFCReaderUsageDescription</key>
-	<string>Boveda needs NFC to communicate with Tangem hardware wallets.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>The app needs access to the photo library if you need to share your screenshot with our support team.</string>
 	<key>ONRAMPING_INFO_URL</key>

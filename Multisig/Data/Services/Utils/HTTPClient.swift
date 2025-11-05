@@ -98,13 +98,16 @@ class HTTPClient {
         }
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.httpMethod
+        
+        // Add headers for all requests (including GET)
+        request.headers.forEach { header, value in
+            urlRequest.setValue(value, forHTTPHeaderField: header)
+        }
+        
         if request.httpMethod != "GET" {
             urlRequest.httpBody = request.body
             if let str = String(data: urlRequest.httpBody!, encoding: .utf8) {
                 logger?.debug(str)
-            }
-            request.headers.forEach { header, value in
-                urlRequest.setValue(value, forHTTPHeaderField: header)
             }
         }
         return urlRequest
