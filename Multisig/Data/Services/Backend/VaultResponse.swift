@@ -17,7 +17,7 @@ struct VaultResponse: Codable {
     let name: String                       // User-friendly name
     let chainId: String                    // Numeric chain ID as string (137, 30, etc.)
     let contractVersion: String?           // Contract version (nullable)
-    let state: String                      // Vault state (active, inactive, etc.)
+    let state: Int                         // Vault state (1 = active, 0 = inactive, etc.)
     let vaultType: String?                 // Type of vault (savings, credit, etc.)
     let contractNetwork: String?          // Network name (POLYGON, ROOTSTOCK, etc.)
 }

@@ -211,6 +211,14 @@ struct AppConfiguration {
         @ConfigurationKey("WALLETCONNECT_REGISTRY_URL")
         var registryURL: URL
     }
+    
+    struct Secrets {
+        @ConfigurationKey("INFURA_API_KEY_FALLBACK")
+        var infuraApiKeyFallback: String
+        
+        @ConfigurationKey("WALLETCONNECT_PROJECT_ID_FALLBACK")
+        var walletConnectProjectIdFallback: String
+    }
 
     struct FeatureToggles {
         @AppSetting(\.toggle_securityCenter)
@@ -247,7 +255,24 @@ struct AppConfiguration {
     let contact = Contact()
     let app = App()
     let walletConnect = WalletConnect()
+    let secrets = Secrets()
     let claim = Claim()
     let web3auth = Web3Auth()
     var protected: Protected!
+    
+    var infuraApiKey: String? {
+        if let protectedKey = protected?[.INFURA_API_KEY], !protectedKey.isEmpty {
+            return protectedKey
+        }
+        let fallback = secrets.infuraApiKeyFallback
+        return fallback.isEmpty ? nil : fallback
+    }
+    
+    var walletConnectProjectId: String? {
+        if let protectedId = protected?[.WALLETCONNECT_PROJECT_ID], !protectedId.isEmpty {
+            return protectedId
+        }
+        let fallback = secrets.walletConnectProjectIdFallback
+        return fallback.isEmpty ? nil : fallback
+    }
 }

@@ -237,3 +237,7 @@ For this forked Safe iOS app:
 
 **For now, I recommend continuing with the Simulator unless you specifically need to test NFC/Tangem card features!**
 
+
+
+
+

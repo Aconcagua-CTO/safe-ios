@@ -19,6 +19,8 @@ _APP_BUNDLE_ID_DEV      = com.manuelrm.bovedapp.dev.mainnet.NotificationServiceE
 
 // Xcode Build Settings
 PRODUCT_BUNDLE_IDENTIFIER           = $(_APP_BUNDLE_ID_$(SERVICE_ENV):default=$(_APP_BUNDLE_ID_PROD))
+PRODUCT_MODULE_NAME                 = NotificationServiceExtension
+PRODUCT_NAME                        = NotificationServiceExtension
 
 // App Groups
 _APP_GROUP_ID_PROD     = group.com.manuelrm.bovedapp.prod.mainnet

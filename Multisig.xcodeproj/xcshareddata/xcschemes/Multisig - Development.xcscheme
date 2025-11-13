@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0A93DD522445CC8A00688050"
-               BuildableName = "Multisig_PROD.app"
+               BuildableName = "Multisig.app"
                BlueprintName = "Multisig"
                ReferencedContainer = "container:Multisig.xcodeproj">
             </BuildableReference>
@@ -49,11 +49,23 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0A93DD522445CC8A00688050"
-            BuildableName = "Multisig_PROD.app"
+            BuildableName = "Multisig.app"
             BlueprintName = "Multisig"
             ReferencedContainer = "container:Multisig.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "OS_ACTIVITY_DT_MODE"
+            value = "YES"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "CFNETWORK_DIAGNOSTICS"
+            value = "0"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release.Development"
@@ -66,7 +78,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0A93DD522445CC8A00688050"
-            BuildableName = "Multisig_PROD.app"
+            BuildableName = "Multisig.app"
             BlueprintName = "Multisig"
             ReferencedContainer = "container:Multisig.xcodeproj">
          </BuildableReference>

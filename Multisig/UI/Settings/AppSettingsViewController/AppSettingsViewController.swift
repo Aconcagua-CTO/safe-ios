@@ -40,6 +40,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             case chainPrefix(String)
             case appearance(String)
             case experimental(String)
+            case logout(String)
         }
         
         enum Support: SectionItem {
@@ -107,6 +108,11 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             // we do not have experimental features at the moment
             //Section.App.experimental("Experimental")
         ])
+        
+        // Add logout option if user is authenticated
+        if App.shared.authRepository.isAuthenticated() {
+            appSection.items.append(Section.App.logout("Sign Out"))
+        }
         
         let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support("Support & Feedback"), items: [
             Section.Support.chatWithUs("Chat with us"),
@@ -256,6 +262,9 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.experimental(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-package", indexPath: indexPath)
             
+        case Section.App.logout(let name):
+            return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
+            
         case Section.Support.chatWithUs(let name):
             if IntercomConfig.unreadConversationCount() > 0 {
                 return tableView.basicCell(name: name, icon: "ico-app-settings-message-circle-with-badge", indexPath: indexPath)
@@ -321,6 +330,9 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.experimental:
             let experimentalViewController = ExperimentalViewController()
             show(experimentalViewController, sender: self)
+            
+        case Section.App.logout:
+            handleLogout()
             
         case Section.Support.chatWithUs:
             Tracker.trackEvent(.userOpenIntercom)
@@ -489,5 +501,49 @@ extension AppSettingsViewController: NavigationRouter {
         popNavigationStack()
         
         showAddressBook()
+    }
+    
+    private func handleLogout() {
+        AuthLogger.info("User initiated logout from settings")
+        
+        // Show confirmation alert
+        let alert = UIAlertController(
+            title: "Sign Out",
+            message: "Are you sure you want to sign out?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive) { [weak self] _ in
+            self?.performLogout()
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    private func performLogout() {
+        AuthLogger.info("Performing logout...")
+        
+        App.shared.authRepository.signOut { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    AuthLogger.success("Logout successful, showing login screen")
+                    // Navigate to login screen via SceneDelegate
+                    if let sceneDelegate = self.view.window?.windowScene?.delegate as? SceneDelegate {
+                        sceneDelegate.onAppUpdateCompletion()
+                    }
+                case .failure(let error):
+                    AuthLogger.error("Logout failed", error: error)
+                    // Show error message
+                    SnackbarViewController.show(
+                        "Failed to sign out: \(error.localizedDescription)",
+                        duration: 4.0
+                    )
+                }
+            }
+        }
     }
 }

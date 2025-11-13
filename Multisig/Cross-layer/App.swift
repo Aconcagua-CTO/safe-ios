@@ -26,6 +26,12 @@ class App {
     
     // Lazy initialization - Firebase must be configured first in AppDelegate
     lazy var authRepository: AuthRepository = AuthRepositoryImpl()
+    
+    // Lazy initialization - depends on authRepository
+    lazy var vaultsRepository: VaultsRepository = {
+        let vaultsService = VaultsService(authRepository: authRepository, logger: LogService.shared)
+        return VaultsRepositoryImpl(vaultsService: vaultsService, authRepository: authRepository)
+    }()
 
     // MARK: - Data Layer
 

@@ -92,9 +92,20 @@ class HTTPClient {
             url = requestURL
         } else {
             var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-            urlComponents.path = request.urlPath
+            // Properly append path instead of replacing it
+            let basePath = urlComponents.path
+            let requestPath = request.urlPath
+            if requestPath.hasPrefix("/") {
+                urlComponents.path = requestPath
+            } else {
+                let combinedPath = (basePath.hasSuffix("/") ? basePath : basePath + "/") + requestPath
+                urlComponents.path = combinedPath
+            }
             urlComponents.query = request.query
-            url = urlComponents.url!
+            guard let constructedURL = urlComponents.url else {
+                fatalError("Failed to construct URL from baseURL: \(baseURL), path: \(request.urlPath), query: \(request.query ?? "nil")")
+            }
+            url = constructedURL
         }
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.httpMethod

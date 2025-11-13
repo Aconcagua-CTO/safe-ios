@@ -29,32 +29,74 @@ class VaultsRepositoryImpl: VaultsRepository {
     private let vaultsService: VaultsService
     private let authRepository: AuthRepository
     
+    // Track if a sync is currently in progress to prevent concurrent syncs
+    private var isSyncing: Bool = false
+    private let syncQueue = DispatchQueue(label: "io.gnosis.multisig.vaultSync", qos: .userInitiated)
+    
     init(vaultsService: VaultsService, authRepository: AuthRepository) {
         self.vaultsService = vaultsService
         self.authRepository = authRepository
     }
     
     func syncVaultsFromBackend(completion: @escaping (Result<Void, Error>) -> Void) {
-        let startTime = Date()
-        
-        // Get userId directly from AuthRepository (more reliable than cached preferences)
-        guard let user = authRepository.getCurrentUser(),
-              let userId = user.uid as String? else {
-            VaultLogger.error("No user logged in")
-            completion(.failure(NSError(domain: "VaultsRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "No user logged in"])))
+        syncQueue.async { [weak self] in
+            guard let self = self else {
+                completion(.failure(NSError(domain: "VaultsRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "Repository deallocated"])))
+                return
+            }
+            
+            // Check if a sync is already in progress
+            if self.isSyncing {
+                VaultLogger.warning("Vault sync already in progress, skipping new sync request")
+                completion(.success(()))
+                return
+            }
+            
+            // Mark sync as in progress
+            self.isSyncing = true
+            VaultLogger.info("Starting new vault sync operation")
+            
+            self.syncVaultsFromBackendWithRetry(attempt: 1) { result in
+                // Mark sync as complete
+                self.syncQueue.async {
+                    self.isSyncing = false
+                    VaultLogger.info("Vault sync operation completed, ready for next sync")
+                }
+                completion(result)
+            }
+        }
+    }
+    
+    private func syncVaultsFromBackendWithRetry(attempt: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+        // Check feature flag: if useLocalVaults is enabled, skip backend sync
+        if AppSettings.useLocalVaults {
+            VaultLogger.info("Feature flag 'useLocalVaults' is enabled - skipping backend sync, using local vaults")
+            completion(.success(()))
             return
         }
         
-        VaultLogger.info("==================== STARTING VAULT SYNC ====================")
+        let startTime = Date()
+        
+        // Get userId directly from AuthRepository (more reliable than cached preferences)
+        guard let user = authRepository.getCurrentUser() else {
+            VaultLogger.error("No user logged in - cannot sync vaults")
+            let error = GSError.VaultSyncFailed(reason: "No user logged in")
+            // Don't retry if there's no user - this is not a network error
+            showErrorIfFinalAttempt(error: error, attempt: ApiConfig.vaultSyncMaxRetries)
+            completion(.failure(error))
+            return
+        }
+        let userId = user.uid
+        
+        VaultLogger.info("==================== STARTING VAULT SYNC (Attempt \(attempt)/\(ApiConfig.vaultSyncMaxRetries)) ====================")
         VaultLogger.info("User ID: \(userId)")
         VaultLogger.info("Timestamp: \(Date().timeIntervalSince1970)")
         VaultLogger.network("Backend URL: \(ApiConfig.vaultsApiURL.absoluteString)")
         VaultLogger.network("Full endpoint: \(ApiConfig.vaultsApiURL.absoluteString)by-user/\(userId)")
         
         #if DEBUG
-        VaultLogger.debug("Debug mode: ON - Using LOCAL backend")
-        #else
-        VaultLogger.debug("Release mode - Using PRODUCTION backend")
+        let environment = App.configuration.services.environment
+        VaultLogger.debug("Environment: \(environment)")
         #endif
         
         // Store currently selected safe before sync
@@ -95,12 +137,36 @@ class VaultsRepositoryImpl: VaultsRepository {
                 
                 // Map backend vaults to Safe entities
                 VaultLogger.info("Starting vault mapping process...")
-                self.mapAndSyncVaults(response.items, selectedSafeAddress: selectedSafeAddress, selectedSafeChainId: selectedSafeChainId, completion: completion)
+                self.mapAndSyncVaults(response.items, selectedSafeAddress: selectedSafeAddress, selectedSafeChainId: selectedSafeChainId, startTime: startTime, completion: completion)
                 
             case .failure(let error):
                 let errorTime = Date().timeIntervalSince(startTime)
-                VaultLogger.error("Failed to fetch vaults after \(String(format: "%.0f", errorTime * 1000))ms", error: error)
-                completion(.failure(error))
+                VaultLogger.error("Failed to fetch vaults after \(String(format: "%.0f", errorTime * 1000))ms (Attempt \(attempt)/\(ApiConfig.vaultSyncMaxRetries))", error: error)
+                
+                // Check if we should retry
+                if attempt < ApiConfig.vaultSyncMaxRetries {
+                    let retryDelay = ApiConfig.vaultSyncRetryDelay
+                    VaultLogger.warning("Retrying in \(retryDelay) seconds...")
+                    
+                    // Schedule retry after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + retryDelay) {
+                        self.syncVaultsFromBackendWithRetry(attempt: attempt + 1, completion: completion)
+                    }
+                } else {
+                    // Final attempt failed, show error to user
+                    VaultLogger.error("All \(ApiConfig.vaultSyncMaxRetries) retry attempts failed")
+                    let syncError = GSError.VaultSyncFailed(reason: error.localizedDescription)
+                    self.showErrorIfFinalAttempt(error: syncError, attempt: attempt)
+                    completion(.failure(syncError))
+                }
+            }
+        }
+    }
+    
+    private func showErrorIfFinalAttempt(error: DetailedLocalizedError, attempt: Int) {
+        if attempt >= ApiConfig.vaultSyncMaxRetries {
+            DispatchQueue.main.async {
+                SnackbarViewController.show(error.localizedDescription, duration: 5.0)
             }
         }
     }
@@ -109,6 +175,7 @@ class VaultsRepositoryImpl: VaultsRepository {
         _ vaultResponses: [VaultResponse],
         selectedSafeAddress: String?,
         selectedSafeChainId: String?,
+        startTime: Date,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
         DispatchQueue.main.async { [weak self] in
@@ -124,7 +191,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                     VaultLogger.debug("  ID: \(vault.id)")
                     VaultLogger.debug("  Name: \(vault.name)")
                     VaultLogger.debug("  ChainId: \(vault.chainId)")
-                    VaultLogger.debug("  Version: \(vault.version ?? "nil")")
+                    VaultLogger.debug("  Version: \(vault.contractVersion ?? "nil")")
                     VaultLogger.debug("  State: \(vault.state)")
                     VaultLogger.debug("  Type: \(vault.vaultType ?? "nil")")
                     #endif
@@ -151,7 +218,6 @@ class VaultsRepositoryImpl: VaultsRepository {
                     VaultLogger.success("Mapped vault \(index + 1): \(vault.id.prefix(10))... -> Safe(\(vault.name), chain: \(vault.chainId))")
                 }
                 
-                let mappingTime = Date().timeIntervalSince1970
                 VaultLogger.info("Successfully mapped \(mappedSafes.count)/\(vaultResponses.count) vaults to Safe entities")
                 
                 if mappedSafes.count < vaultResponses.count {
@@ -219,8 +285,9 @@ class VaultsRepositoryImpl: VaultsRepository {
                     }
                 }
                 
-                let totalTime = Date().timeIntervalSince(Date(timeIntervalSince1970: 0))
+                let totalTime = Date().timeIntervalSince(startTime)
                 VaultLogger.success("==================== SYNC COMPLETED ====================")
+                VaultLogger.success("Total time: \(String(format: "%.0f", totalTime * 1000))ms")
                 VaultLogger.success("Vaults synced: \(mappedSafes.count)")
                 VaultLogger.success("Previous vaults: \(deletedCount)")
                 VaultLogger.success("Net change: \(mappedSafes.count - deletedCount)")
@@ -228,9 +295,9 @@ class VaultsRepositoryImpl: VaultsRepository {
                 completion(.success(()))
                 
             } catch {
-                let errorTime = Date().timeIntervalSince1970
+                let errorTime = Date().timeIntervalSince(startTime)
                 VaultLogger.error("==================== SYNC FAILED ====================")
-                VaultLogger.error("Error after sync attempt: \(error.localizedDescription)", error: error)
+                VaultLogger.error("Error after \(String(format: "%.0f", errorTime * 1000))ms: \(error.localizedDescription)", error: error)
                 #if DEBUG
                 VaultLogger.error("Exception type: \(type(of: error))")
                 #endif

@@ -329,6 +329,20 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         AuthLogger.info("User authenticated, proceeding with normal app flow")
         
+        // Trigger vault sync on app startup if user is authenticated (non-blocking)
+        // Wrap in async to avoid blocking the main thread during initialization
+        DispatchQueue.main.async {
+            App.shared.vaultsRepository.syncVaultsFromBackend { result in
+                switch result {
+                case .success:
+                    VaultLogger.info("Vault sync completed successfully on app startup")
+                case .failure(let error):
+                    VaultLogger.error("Vault sync failed on app startup", error: error)
+                    // Don't block app flow - sync failures are logged but don't affect app startup
+                }
+            }
+        }
+        
         if !AppSettings.termsAccepted {
             showWindow(makeTermsWindow())
             // TODO: Enable when implemented new security center
@@ -338,9 +352,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             showWindow(makeFaceIDUnlockWindow())
         } else if App.shared.securityCenter.shouldShowPasscode() {
             showWindow(makeEnterPasscodeWindow())
-        } else if !AppSettings.onboardingCompleted {
-            showOnboardingWindow()
         } else {
+            // If user is authenticated, skip onboarding and go directly to main content
+            // Onboarding is only for new/unauthenticated users
             showMainContentWindow()
         }
     }

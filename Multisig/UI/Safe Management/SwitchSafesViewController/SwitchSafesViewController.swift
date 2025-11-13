@@ -13,6 +13,12 @@ final class SwitchSafesViewController: UITableViewController {
 
     private var chainSafes = Chain.ChainSafes()
     private let addSafeSection = 0
+    
+    /// Whether to show the "Add Safe Account" section
+    /// Hidden when using backend vault sync (useLocalVaults = false)
+    private var shouldShowAddSafeSection: Bool {
+        AppSettings.useLocalVaults
+    }
 
     var onCreateSafe: (() -> ())?
     var onAddSafe: (() -> ())?
@@ -66,24 +72,26 @@ final class SwitchSafesViewController: UITableViewController {
     // MARK: - UITableViewDataSource
 
     override func numberOfSections(in tableView: UITableView) -> Int {
-        chainSafes.count + 1 /* for Add Safe button */
+        chainSafes.count + (shouldShowAddSafeSection ? 1 : 0)
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if section == addSafeSection {
+        if shouldShowAddSafeSection && section == addSafeSection {
             return 1
         } else {
-            return chainSafes[section - 1].safes.count
+            let chainIndex = shouldShowAddSafeSection ? section - 1 : section
+            return chainSafes[chainIndex].safes.count
         }
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        if indexPath.section == addSafeSection {
+        if shouldShowAddSafeSection && indexPath.section == addSafeSection {
             return tableView.dequeueReusableCell(withIdentifier: "AddSafe", for: indexPath)
         }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
-        let safe = chainSafes[indexPath.section - 1].safes[indexPath.row]
+        let chainIndex = shouldShowAddSafeSection ? indexPath.section - 1 : indexPath.section
+        let safe = chainSafes[chainIndex].safes[indexPath.row]
         cell.setName(safe.displayName)
         cell.setProgress(enabled: false)
 
@@ -109,12 +117,12 @@ final class SwitchSafesViewController: UITableViewController {
     // MARK: - UITableViewDelegate
 
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        indexPath.section == addSafeSection ? 54 : 66
+        (shouldShowAddSafeSection && indexPath.section == addSafeSection) ? 54 : 66
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if indexPath.section == addSafeSection {
+        if shouldShowAddSafeSection && indexPath.section == addSafeSection {
             let alertController = UIAlertController(
                 title: nil,
                 message: nil,
@@ -139,7 +147,8 @@ final class SwitchSafesViewController: UITableViewController {
             
             self.present(alertController, animated: true)
         } else {
-            let safe = chainSafes[indexPath.section - 1].safes[indexPath.row]
+            let chainIndex = shouldShowAddSafeSection ? indexPath.section - 1 : indexPath.section
+            let safe = chainSafes[chainIndex].safes[indexPath.row]
             if !safe.isSelected {
                 safe.select()
                 didTapCloseButton()
@@ -148,25 +157,27 @@ final class SwitchSafesViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        guard section != addSafeSection else { return nil }
+        guard !(shouldShowAddSafeSection && section == addSafeSection) else { return nil }
 
         let view = tableView.dequeueHeaderFooterView(NetworkIndicatorHeaderView.self)
-        let chain = chainSafes[section - 1].chain
+        let chainIndex = shouldShowAddSafeSection ? section - 1 : section
+        let chain = chainSafes[chainIndex].chain
         view.text = chain.name
         view.dotColor = chain.backgroundColor
         return view
     }
 
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        section == addSafeSection ? 0 : NetworkIndicatorHeaderView.height
+        (shouldShowAddSafeSection && section == addSafeSection) ? 0 : NetworkIndicatorHeaderView.height
     }
 
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        indexPath.section != addSafeSection
+        !(shouldShowAddSafeSection && indexPath.section == addSafeSection)
     }
 
     override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        let safe = chainSafes[indexPath.section - 1].safes[indexPath.row]
+        let chainIndex = shouldShowAddSafeSection ? indexPath.section - 1 : indexPath.section
+        let safe = chainSafes[chainIndex].safes[indexPath.row]
 
         var actions = [UIContextualAction]()
 

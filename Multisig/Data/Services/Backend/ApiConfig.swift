@@ -10,20 +10,36 @@ import Foundation
 
 /**
  * API Configuration for backend endpoints
- * Matches the Firebase Cloud Functions deployment
+ * Matches the Firebase Cloud Functions deployment across all environments
+ *
+ * Environments:
+ * - Development (lanin-6339b): Local emulator or deployed sandbox
+ * - Staging (catedral-fb): QA environment  
+ * - Production (aconcagua-365314): Production environment
+ *
+ * Note: Uses runtime environment detection via AppConfiguration.Services.ServiceEnvironment
  */
 struct ApiConfig {
     
     // Base URL for Firebase Cloud Functions
-    // Project: lanin-6339b
-    // For local testing: use "http://192.168.1.34:5002/lanin-6339b/us-central1/" (local network IP)
-    // For production: use "https://us-central1-lanin-6339b.cloudfunctions.net/"
+    // Automatically selects environment based on build configuration (SERVICE_ENV)
+    // All environments use deployed Firebase Cloud Functions (no local emulator)
     private static let firebaseBaseURL: String = {
-        #if DEBUG
-        return "http://192.168.1.34:5002/lanin-6339b/us-central1/"  // Local backend on host PC for debug builds
-        #else
-        return "https://us-central1-lanin-6339b.cloudfunctions.net/"  // Production for release builds
-        #endif
+        let environment = App.configuration.services.environment
+        
+        switch environment {
+        case .development:
+            // Development/Sandbox environment - lanin-6339b
+            return "https://us-central1-lanin-6339b.cloudfunctions.net/"
+            
+        case .staging:
+            // Staging/QA environment - catedral-fb
+            return "https://us-central1-catedral-fb.cloudfunctions.net/"
+            
+        case .production:
+            // Production environment - aconcagua-365314
+            return "https://us-central1-aconcagua-365314.cloudfunctions.net/"
+        }
     }()
     
     // Individual endpoint URLs
@@ -40,5 +56,11 @@ struct ApiConfig {
     
     // Request timeout in seconds
     static let timeoutSeconds: TimeInterval = 30
+    
+    // Maximum number of retry attempts for vault sync
+    static let vaultSyncMaxRetries = 3
+    
+    // Delay between retry attempts (in seconds)
+    static let vaultSyncRetryDelay: TimeInterval = 2.0
 }
 

@@ -101,3 +101,11 @@
 "auth_password_reset_sent" = "Password reset email sent";
 
 /* ===== END OF AUTHENTICATION ==== */
+
+/* ===== VAULT SYNC ==== */
+
+"vault_sync_failed" = "Failed to sync vaults";
+"vault_sync_network_error" = "Network error occurred";
+"vault_sync_retry" = "Please check your connection and try again";
+
+/* ===== END OF VAULT SYNC ==== */

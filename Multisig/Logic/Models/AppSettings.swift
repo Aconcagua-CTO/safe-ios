@@ -71,6 +71,16 @@ extension AppSettings {
     @UserDefault(key: "io.gnosis.multisig.relayBannerWasShown")
     static var relayBannerWasShown: Bool?
     
+    @UserDefault(key: "io.gnosis.multisig.useLocalVaults")
+    private static var _useLocalVaults: Bool?
+    
+    /// Feature flag: Use local vaults instead of syncing from backend
+    /// Default: false (use backend)
+    static var useLocalVaults: Bool {
+        get { _useLocalVaults ?? false }
+        set { _useLocalVaults = newValue }
+    }
+    
     @UserDefault(key: "global.safe.ios.connectToWebDeprecationMessageShown")
     static var didShowDeprecateConnectToWeb: Bool? {
         didSet {

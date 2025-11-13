@@ -21,6 +21,10 @@ struct AdvancedAppSettings: View {
 
     var body: some View {
         List {
+            Section(header: SectionHeader("VAULTS")) {
+                ToggleVaultSourceRow()
+            }
+            
             Section(header: SectionHeader("TRACKING")) {
                 ToggleTrackingRow()
             }
@@ -79,6 +83,28 @@ struct AdvancedAppSettings: View {
                 .frame(height: 60)
                 .toggleStyle(SwitchToggleStyle(tint: Color.success))
             }
+        }
+    }
+    
+    struct ToggleVaultSourceRow: View {
+        @State
+        private var useLocalVaults = AppSettings.useLocalVaults
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $useLocalVaults.didSet { enabled in
+                    AppSettings.useLocalVaults = enabled
+                }) {
+                    Text("Use Local Vaults").headline()
+                }
+                .frame(height: 60)
+                .toggleStyle(SwitchToggleStyle(tint: Color.success))
+                
+                Text("When enabled, the app will use locally stored vaults instead of syncing from the backend. Turn this off to enable backend vault synchronization (default).")
+                    .body(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 4)
         }
     }
 

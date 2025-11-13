@@ -52,7 +52,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>3</string>
+	<string>1</string>
 	<key>CLAIMING_DATA_URL</key>
 	<string>$(CLAIMING_DATA_URL)</string>
 	<key>CLAIM_CHAT_URL</key>
@@ -97,6 +97,8 @@
 	<string>$(GNOSIS_SAFE_WEB_URL)</string>
 	<key>GUARD_URL</key>
 	<string>$(GUARD_URL)</string>
+	<key>INFURA_API_KEY_FALLBACK</key>
+	<string>$(INFURA_API_KEY_FALLBACK)</string>
 	<key>HELP_CENTER_URL</key>
 	<string>$(HELP_CENTER_URL)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -175,6 +177,11 @@
 	<string>$(MOONPAY_SERVICE_URL)</string>
 	<key>NFCReaderUsageDescription</key>
 	<string>Boveda needs NFC to communicate with Tangem hardware wallets.</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>A000000812010208</string>
+		<string>D2760000850101</string>
+	</array>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Allow Boveda to connect hardware devices and sign transactions.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -291,6 +298,8 @@
 	<string>$(UNEXPECTED_DELEGATE_URL)</string>
 	<key>WALLETCONNECT_BRIDGE_URL</key>
 	<string>$(WALLETCONNECT_BRIDGE_URL)</string>
+	<key>WALLETCONNECT_PROJECT_ID_FALLBACK</key>
+	<string>$(WALLETCONNECT_PROJECT_ID_FALLBACK)</string>
 	<key>WALLETCONNECT_REGISTRY_URL</key>
 	<string>$(WALLETCONNECT_REGISTRY_URL)</string>
 	<key>WEB3AUTH_APPLE_VERIFIER</key>

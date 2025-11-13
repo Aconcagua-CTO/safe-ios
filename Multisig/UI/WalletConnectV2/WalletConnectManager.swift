@@ -36,7 +36,11 @@ class WalletConnectManager {
     private init() { }
     
     func config() {
-        let projectId = App.configuration.protected[.WALLETCONNECT_PROJECT_ID]
+        guard let projectId = App.configuration.walletConnectProjectId, !projectId.isEmpty else {
+            LogService.shared.info("WalletConnect setup skipped: WalletConnect project id not available")
+            return
+        }
+        
         Networking.configure(projectId: projectId, socketFactory: SocketFactory())
         Pair.configure(metadata: metadata)
         Web3Wallet.configure(metadata: metadata, crypto: NullCryptoProvider())

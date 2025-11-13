@@ -8,6 +8,7 @@
 import Foundation
 import CoreNFC
 import TangemSdk
+import secp256k1
 
 struct TangemCardSummary {
     struct Wallet {
@@ -196,11 +197,19 @@ final class TangemService {
         }
         // If compressed (33 bytes), decompress it
         if publicKey.count == 33 {
-            // Manual decompression since secp256k1.decompressKey is internal
-            // For now, we'll use the Tangem SDK's public key as-is
-            // The SDK should already provide uncompressed keys
-            TangemLogger.warning("Received compressed public key, expected uncompressed")
-            return publicKey
+            TangemLogger.debug("Decompressing compressed public key (33 bytes) to uncompressed (65 bytes)")
+            // Parse the compressed public key
+            guard var secp256k1Pubkey = SECP256K1.parsePublicKey(serializedKey: publicKey) else {
+                TangemLogger.error("Failed to parse compressed public key")
+                throw TangemServiceError.underlying(TangemSdkError.cryptoUtilsError("Failed to parse compressed public key"))
+            }
+            // Serialize as uncompressed (65 bytes)
+            guard let uncompressedKey = SECP256K1.serializePublicKey(publicKey: &secp256k1Pubkey, compressed: false) else {
+                TangemLogger.error("Failed to decompress public key")
+                throw TangemServiceError.underlying(TangemSdkError.cryptoUtilsError("Failed to decompress public key"))
+            }
+            TangemLogger.debug("Successfully decompressed public key from 33 to 65 bytes")
+            return uncompressedKey
         }
         TangemLogger.error("Unexpected public key length: \(publicKey.count)")
         throw TangemServiceError.underlying(TangemSdkError.cryptoUtilsError("Invalid public key length"))

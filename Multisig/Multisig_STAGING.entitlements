@@ -9,12 +9,12 @@
 		<string>Default</string>
 	</array>
 	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>applinks:safe-wallet-web.staging.5afe.dev</string>
-	</array>
+	<array/>
 	<key>com.apple.developer.nfc.readersession.formats</key>
 	<array>
-		<string>ISO7816</string>
+		<string>NDEF</string>
+		<string>TAG</string>
+		<string>PACE</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>

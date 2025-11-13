@@ -858,4 +858,19 @@ enum GSError {
         }
     }
 
+    // MARK: - Vault Sync Errors
+    
+    struct VaultSyncFailed: DetailedLocalizedError {
+        let description = NSLocalizedString("vault_sync_failed", comment: "")
+        let reason: String
+        let howToFix = NSLocalizedString("vault_sync_retry", comment: "")
+        let domain = networkErrorDomain
+        let code = 4001
+        let loggable = true
+        
+        init(reason: String = NSLocalizedString("vault_sync_network_error", comment: "")) {
+            self.reason = reason
+        }
+    }
+
 }

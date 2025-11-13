@@ -66,8 +66,16 @@ class LoginViewModel: ObservableObject {
                 AuthLogger.stateTransition("State: Loading → Success")
                 self.authState = .success(user: user)
                 
-                // Note: Vault sync would be handled here if vault sync service exists
-                // Similar to Android implementation
+                // Trigger vault sync after successful login (non-blocking)
+                App.shared.vaultsRepository.syncVaultsFromBackend { result in
+                    switch result {
+                    case .success:
+                        AuthLogger.info("Vault sync completed successfully after login")
+                    case .failure(let error):
+                        AuthLogger.error("Vault sync failed after login", error: error)
+                        // Don't block login flow - sync failures are logged but don't affect authentication
+                    }
+                }
                 
             case .failure(let error):
                 AuthLogger.error("Sign-in failed", error: error)
