@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AdvancedAppSettings: View {
 
@@ -30,6 +31,9 @@ struct AdvancedAppSettings: View {
             }
 
             DataSharingInfo()
+
+            // MARK: - Tangem Card Options
+            TangemCardOptionsSection()
 
             // NOTE: disabling to debug crash reporting in production environment
             if !(App.configuration.services.environment == .production) ||
@@ -135,6 +139,133 @@ fileprivate extension Binding {
                 execute($0)
             }
         )
+    }
+}
+
+// MARK: - Tangem Card Options Section
+
+struct TangemCardOptionsSection: View {
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        Section(header: SectionHeader("TANGEM CARD")) {
+            Button(action: {
+                TangemLogger.info("📖 TANGEM OPTIONS: User tapped Read Card from Advanced Settings")
+                presentTangemCardReader()
+            }) {
+                Text("Read Card").body()
+            }
+            
+            Button(action: {
+                TangemLogger.info("🔧 TANGEM OPTIONS: User tapped Activate Card from Advanced Settings")
+                presentTangemActivation()
+            }) {
+                Text("Activate Card").body()
+            }
+            
+            Button(action: {
+                TangemLogger.info("🔥 TANGEM OPTIONS: User tapped Factory Reset from Advanced Settings")
+                presentTangemFactoryReset()
+            }) {
+                Text("Factory Reset").body()
+                    .foregroundColor(.red)
+            }
+        }
+    }
+    
+    private func presentTangemCardReader() {
+        DispatchQueue.main.async {
+            guard let topViewController = self.topViewController() else {
+                TangemLogger.error("📖 TANGEM OPTIONS: ❌ Unable to locate active window to present card reader")
+                return
+            }
+            
+            let tangemVC = TangemCardReaderViewController()
+            let navVC = UINavigationController(rootViewController: tangemVC)
+            topViewController.present(navVC, animated: true)
+        }
+    }
+    
+    private func presentTangemActivation() {
+        DispatchQueue.main.async {
+            guard let topViewController = self.topViewController() else {
+                TangemLogger.error("🔧 TANGEM OPTIONS: ❌ Unable to locate active window to present activation flow")
+                return
+            }
+            
+            let tangemVC = TangemActivationViewController()
+            tangemVC.onActivationComplete = { info in
+                importActivatedCardAsOwner(info)
+            }
+            let navVC = UINavigationController(rootViewController: tangemVC)
+            topViewController.present(navVC, animated: true)
+        }
+    }
+    
+    private func presentTangemFactoryReset() {
+        DispatchQueue.main.async {
+            guard let topViewController = self.topViewController() else {
+                TangemLogger.error("🔥 TANGEM OPTIONS: ❌ Unable to locate active window to present factory reset flow")
+                return
+            }
+            
+            let tangemVC = TangemFactoryResetViewController()
+            let navVC = UINavigationController(rootViewController: tangemVC)
+            topViewController.present(navVC, animated: true)
+        }
+    }
+    
+    private func topViewController() -> UIViewController? {
+        let foregroundScenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }
+        
+        if let top = foregroundScenes
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow })?
+            .rootViewController {
+            return findTopViewController(from: top)
+        }
+        
+        let anySceneRoot = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.windows.first?.rootViewController }
+            .first
+        
+        return anySceneRoot.flatMap { findTopViewController(from: $0) }
+    }
+    
+    private func findTopViewController(from root: UIViewController) -> UIViewController? {
+        if let presented = root.presentedViewController {
+            return findTopViewController(from: presented)
+        }
+        if let nav = root as? UINavigationController {
+            return nav.topViewController ?? nav
+        }
+        if let tab = root as? UITabBarController {
+            return tab.selectedViewController
+        }
+        return root
+    }
+    
+    private func importActivatedCardAsOwner(_ info: ActivatedCardInfo) {
+        let defaultName = "Tangem Card \(info.cardId.suffix(8))"
+        
+        // Directly import using OwnerKeyController
+        let success = OwnerKeyController.importKey(
+            tangemCardId: info.cardId,
+            walletPublicKey: info.wallet.publicKey,
+            address: info.ethereumAddress,
+            name: defaultName,
+            derivationPath: nil,
+            walletIndex: info.wallet.index
+        )
+        
+        if success {
+            NotificationCenter.default.post(name: .ownerKeyImported, object: nil)
+            TangemLogger.info("🔧 TANGEM OPTIONS: ✅ Owner imported successfully")
+        } else {
+            TangemLogger.error("🔧 TANGEM OPTIONS: ❌ Failed to import owner")
+        }
     }
 }
 

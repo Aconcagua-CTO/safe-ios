@@ -270,13 +270,25 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         tableView.deselectRow(at: indexPath, animated: true)
         guard let cardId = cardId else { return }
         let item = walletItems[indexPath.row]
+        let derivationPath = defaultDerivationPath(for: item.wallet)
         let selection = TangemWalletSelection(cardId: cardId,
                                               walletPublicKey: item.rawPublicKey,
                                               address: item.address,
-                                              derivationPath: nil,
+                                              derivationPath: derivationPath,
                                               walletIndex: item.wallet.index)
+        let pathLog = derivationPath ?? "nil"
+        TangemLogger.debug("Derived default path for wallet index \(item.wallet.index): \(pathLog)")
         TangemLogger.info("User selected Tangem wallet index=\(item.wallet.index) cardId=\(cardId)")
         onWalletSelected?(selection)
     }
+}
+
+// MARK: - Derivation Path Helpers
+
+private func defaultDerivationPath(for wallet: TangemCardSummary.Wallet) -> String? {
+    // Expert recommendation: Always provide derivation path for SignRaw, even without chain code.
+    // COS 6.x requires explicit derivation path for SignRaw commands.
+    // Mirror Android behavior: derive Ethereum default path using wallet index.
+    return "m/44'/60'/0'/0/\(wallet.index)"
 }
 

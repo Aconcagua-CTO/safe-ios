@@ -41,7 +41,11 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
         emptyView.setImage(UIImage(named: "ico-no-keys")!)
 
         addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(didTapAddButton(_:)))
-        navigationItem.rightBarButtonItem = addButton
+        
+        // Add Tangem menu button
+        let tangemMenuButton = UIBarButtonItem(title: "Tangem", style: .plain, target: self, action: #selector(didTapTangemMenu(_:)))
+        
+        navigationItem.rightBarButtonItems = [addButton, tangemMenuButton]
 
         for notification in [NSNotification.Name.selectedSafeChanged,
                                 .selectedSafeUpdated,
@@ -63,6 +67,68 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
             self.dismiss(animated: true, completion: nil)
         }
         present(vc, animated: true)
+    }
+    
+    @objc private func didTapTangemMenu(_ sender: Any) {
+        let alertController = UIAlertController(title: "Tangem Card Options", message: nil, preferredStyle: .actionSheet)
+        
+        alertController.addAction(UIAlertAction(title: "Read Card", style: .default) { [weak self] _ in
+            self?.showCardReader()
+        })
+        
+        alertController.addAction(UIAlertAction(title: "Activate Card", style: .default) { [weak self] _ in
+            self?.showCardActivation()
+        })
+        
+        alertController.addAction(UIAlertAction(title: "Factory Reset", style: .destructive) { [weak self] _ in
+            self?.showFactoryReset()
+        })
+        
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        if let popover = alertController.popoverPresentationController {
+            popover.barButtonItem = sender as? UIBarButtonItem
+        }
+        
+        present(alertController, animated: true)
+    }
+    
+    private func showCardReader() {
+        let vc = TangemCardReaderViewController()
+        show(vc, sender: self)
+    }
+    
+    private func showCardActivation() {
+        let vc = TangemActivationViewController()
+        vc.onActivationComplete = { [weak self] info in
+            // Import as owner after activation
+            self?.importActivatedCardAsOwner(info)
+        }
+        show(vc, sender: self)
+    }
+    
+    private func showFactoryReset() {
+        let vc = TangemFactoryResetViewController()
+        show(vc, sender: self)
+    }
+    
+    private func importActivatedCardAsOwner(_ info: ActivatedCardInfo) {
+        let defaultName = "Tangem Card \(info.cardId.suffix(8))"
+        
+        // Directly import using OwnerKeyController
+        let success = OwnerKeyController.importKey(
+            tangemCardId: info.cardId,
+            walletPublicKey: info.wallet.publicKey,
+            address: info.ethereumAddress,
+            name: defaultName,
+            derivationPath: nil,
+            walletIndex: info.wallet.index
+        )
+        
+        if success {
+            NotificationCenter.default.post(name: .ownerKeyImported, object: nil)
+            reloadData()
+        }
     }
 
     override func reloadData() {

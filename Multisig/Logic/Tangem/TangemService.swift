@@ -8,13 +8,87 @@
 import Foundation
 import CoreNFC
 import TangemSdk
+import struct TangemSdk.SigningMethod
 import secp256k1
+
+// MARK: - Comprehensive Card Info Types
+
+/// Comprehensive information about a Tangem card including all available properties
+struct ComprehensiveCardInfo {
+    let basicInfo: TangemCardSummary
+    let rawCard: Card
+    
+    // Card-level details
+    let batchId: String
+    let isAccessCodeSet: Bool
+    let isPasscodeSet: Bool?
+    let securityDelay: Int
+    let maxWalletsCount: Int
+    let isHDWalletAllowed: Bool
+    let isBackupAllowed: Bool
+    let isKeysImportAllowed: Bool
+    let isFilesAllowed: Bool
+    let isSettingAccessCodeAllowed: Bool
+    let isSettingPasscodeAllowed: Bool
+    let isRemovingUserCodesAllowed: Bool
+    let isLinkedTerminalEnabled: Bool
+    let supportedEncryptionModes: [String]
+    let linkedTerminalStatus: String
+    let backupStatus: BackupStatusInfo?
+    let cardPublicKey: Data
+    let issuerName: String
+    let manufactureDate: String?
+    let isUserCodeRecoveryAllowed: Bool
+    
+    // Wallet-level details (for each wallet)
+    let comprehensiveWallets: [ComprehensiveWalletInfo]
+}
+
+/// Comprehensive information about a Tangem wallet
+struct ComprehensiveWalletInfo {
+    let wallet: TangemCardSummary.Wallet
+    let totalSignedHashes: Int?
+    let remainingSignatures: Int?
+    let isImported: Bool
+    let hasBackup: Bool
+    let isPermanent: Bool
+    let chainCode: Data?
+    let extendedPublicKey: ExtendedPublicKey?
+    let derivedKeysCount: Int
+}
+
+/// Backup status information
+enum BackupStatusInfo {
+    case noBackup
+    case cardLinked(cardsCount: Int)
+    case active(cardsCount: Int)
+    
+    var description: String {
+        switch self {
+        case .noBackup:
+            return "No Backup"
+        case .cardLinked(let count):
+            return "Cards Linked (\(count))"
+        case .active(let count):
+            return "Active (\(count) cards)"
+        }
+    }
+}
+
+/// Information about an activated card
+struct ActivatedCardInfo {
+    let cardId: String
+    let wallet: TangemCardSummary.Wallet
+    let ethereumAddress: Address
+    let accessCodeSet: Bool
+}
 
 struct TangemCardSummary {
     struct Wallet {
         let index: Int
         let curve: EllipticCurve
         let publicKey: Data
+        let chainCode: Data?
         let isImported: Bool
         let remainingSignatures: Int?
     }
@@ -70,7 +144,8 @@ final class TangemService {
     static let shared = TangemService()
 
     private struct CachedCard {
-        let info: TangemCardSummary
+        let summary: TangemCardSummary
+        let card: Card
         let timestamp: Date
     }
 
@@ -82,18 +157,24 @@ final class TangemService {
     private init() {
         var config = Config()
         config.handleErrors = true
+        config.linkedTerminal = true
+        TangemLogger.debug("TangemService ▶️ Configuring TangemSdk (linkedTerminal=\(String(describing: config.linkedTerminal)), accessPolicy=\(config.accessCodeRequestPolicy.rawValue))")
+#if MULTISIG_DEV_LOGS
+        let verboseLevels: [Log.Level] = [.error, .warning, .command, .session, .nfc, .debug, .tlv]
+        config.logConfig = .custom(logLevel: verboseLevels, loggers: [TangemSdkLogAdapter()])
+#endif
         sdk = TangemSdk(config: config)
         networkService = NetworkService(session: URLSession(configuration: .default), additionalHeaders: [:])
     }
 
     // MARK: - Public API
 
-    func cachedCard(for cardId: String) -> TangemCardSummary? {
-        guard let cachedCard = cachedCard else { return nil }
-        guard cachedCard.info.cardId == cardId else { return nil }
-        guard Date().timeIntervalSince(cachedCard.timestamp) < cacheValidity else { return nil }
+    func cachedCard(with cardId: String) -> TangemCardSummary? {
+        guard let cached = cachedCard else { return nil }
+        guard cached.card.cardId == cardId else { return nil }
+        guard Date().timeIntervalSince(cached.timestamp) < cacheValidity else { return nil }
         TangemLogger.debug("Using cached Tangem card info for cardId=\(cardId)")
-        return cachedCard.info
+        return cached.summary
     }
 
     func clearCache() {
@@ -105,7 +186,7 @@ final class TangemService {
                   initialMessage: Message? = nil) async throws -> TangemCardSummary {
         if !forceRefresh, let cached = cachedCard, Date().timeIntervalSince(cached.timestamp) < cacheValidity {
             TangemLogger.debug("Returning cached Tangem card summary")
-            return cached.info
+            return cached.summary
         }
 
         let card: Card = try await perform("scan card") { [self] sdk, completion in
@@ -113,9 +194,37 @@ final class TangemService {
         }
 
         let summary = makeSummary(from: card)
-        cachedCard = CachedCard(info: summary, timestamp: Date())
+        cachedCard = CachedCard(summary: summary, card: card, timestamp: Date())
         TangemLogger.info("Scanned Tangem card \(summary.cardId) with \(summary.wallets.count) wallet(s)")
         return summary
+    }
+
+    /// Scan card and return comprehensive information including all card properties
+    func scanCardComprehensive(forceRefresh: Bool = false,
+                               initialMessage: Message? = nil) async throws -> ComprehensiveCardInfo {
+        TangemLogger.info("📖 COMPREHENSIVE CARD READER: Starting comprehensive card scan")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: Parameters - forceRefresh: \(forceRefresh)")
+        
+        let card: Card = try await perform("scan card comprehensive") { [self] sdk, completion in
+            TangemLogger.debug("📖 COMPREHENSIVE CARD READER: Calling SDK scanCard()")
+            sdk.scanCard(initialMessage: initialMessage, networkService: self.networkService, completion: completion)
+        }
+
+        TangemLogger.info("📖 COMPREHENSIVE CARD READER: ✅ Card scanned successfully - Card ID: \(card.cardId)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: ═══ CARD ANALYSIS ═══")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Card ID: \(card.cardId)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Batch ID: \(card.batchId)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Firmware: \(card.firmwareVersion.stringValue)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Manufacturer: \(card.manufacturer.name)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Wallets count: \(card.wallets.count)")
+        
+        let basicInfo = makeSummary(from: card)
+        let comprehensiveInfo = makeComprehensiveInfo(from: card, basicInfo: basicInfo)
+        
+        TangemLogger.info("📖 COMPREHENSIVE CARD READER: ✅ Comprehensive card info created successfully")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: ═══ END CARD ANALYSIS ═══")
+        
+        return comprehensiveInfo
     }
 
     func createWallet(on cardId: String,
@@ -156,6 +265,69 @@ final class TangemService {
         invalidateCache(for: cardId)
     }
 
+    /// Reset card to factory settings - deletes all wallets and resets backup system
+    /// ⚠️ WARNING: This operation is IRREVERSIBLE and will cause PERMANENT DATA LOSS!
+    func resetCardToFactory(cardId: String? = nil) async throws -> Card {
+        TangemLogger.info("🔥 FACTORY RESET: Starting factory reset operation")
+        TangemLogger.debug("🔥 FACTORY RESET: Parameters - cardId: \(cardId ?? "nil (any card)")")
+        
+        let task = TangemFactoryResetTask()
+        
+        let card: Card = try await perform("factory reset") { sdk, completion in
+            TangemLogger.debug("🔥 FACTORY RESET: Starting card session with factory reset task")
+            sdk.startSession(with: task, cardId: cardId, initialMessage: nil, completion: completion)
+        }
+        
+        TangemLogger.info("🔥 FACTORY RESET: ✅ Factory reset completed successfully - Card ID: \(card.cardId)")
+        invalidateCache(for: card.cardId)
+        return card
+    }
+
+    /// Activate a card by creating a new wallet and optionally setting access code
+    /// Returns information about the activated card including Ethereum address
+    func activateCard(accessCode: String? = nil) async throws -> ActivatedCardInfo {
+        TangemLogger.info("🔧 CARD ACTIVATION: Starting card activation")
+        TangemLogger.debug("🔧 CARD ACTIVATION: Parameters - accessCode: \(accessCode != nil ? "provided" : "nil (will prompt)")")
+        
+        // Step 1: Scan card to verify it's empty
+        TangemLogger.debug("🔧 CARD ACTIVATION: Step 1 - Scanning card to verify it's empty")
+        let activationResult: TangemActivationTask.Result = try await perform("activate card") { sdk, completion in
+            let task = TangemActivationTask(accessCode: accessCode)
+            sdk.startSession(with: task, cardId: nil, initialMessage: nil, completion: completion)
+        }
+        
+        let card = activationResult.card
+        let walletSummary = makeWallet(from: activationResult.wallet)
+        
+        TangemLogger.info("🔧 CARD ACTIVATION: ✅ Wallet created successfully")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Card ID: \(card.cardId)")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Wallet index: \(walletSummary.index)")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Curve: \(walletSummary.curve.rawValue)")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Access code set: \(activationResult.accessCodeSet)")
+        
+        // Step 3: Derive Ethereum address
+        TangemLogger.debug("🔧 CARD ACTIVATION: Step 3 - Deriving Ethereum address")
+        let normalizedKey = try normalizedWalletPublicKey(walletSummary.publicKey)
+        let ethereumAddress = try ethereumAddress(fromNormalizedPublicKey: normalizedKey)
+        TangemLogger.info("🔧 CARD ACTIVATION: ✅ Derived Ethereum address: \(ethereumAddress.checksummed)")
+        
+        TangemLogger.info("🔧 CARD ACTIVATION: ✅ Card activation completed successfully")
+        TangemLogger.debug("🔧 CARD ACTIVATION: ═══ ACTIVATION SUMMARY ═══")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Card ID: \(card.cardId)")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Ethereum Address: \(ethereumAddress.checksummed)")
+        TangemLogger.debug("🔧 CARD ACTIVATION: - Access Code Set: \(activationResult.accessCodeSet)")
+        TangemLogger.debug("🔧 CARD ACTIVATION: ═══ END ACTIVATION SUMMARY ═══")
+        
+        invalidateCache(for: card.cardId)
+        
+        return ActivatedCardInfo(
+            cardId: card.cardId,
+            wallet: walletSummary,
+            ethereumAddress: ethereumAddress,
+            accessCodeSet: activationResult.accessCodeSet
+        )
+    }
+
     func deriveWalletPublicKey(cardId: String,
                                walletPublicKey: Data,
                                derivationPath: String) async throws -> Data {
@@ -176,18 +348,67 @@ final class TangemService {
     func signHash(cardId: String,
                   walletPublicKey: Data,
                   hash: Data,
-                  derivationPath: String?) async throws -> TangemSignResult {
-        let path = try makeDerivationPath(from: derivationPath)
-        let response: SignHashResponse = try await perform("sign hash") { sdk, completion in
-            sdk.sign(hash: hash,
-                     walletPublicKey: walletPublicKey,
-                     cardId: cardId,
-                     derivationPath: path,
-                     completion: completion)
+                  derivationPath: String?,
+                  walletIndex: Int? = nil,
+                  initialMessage: Message? = nil) async throws -> TangemSignResult {
+        let signingMethod: SigningMethod = .signHash
+        TangemLogger.debug("TangemService.signHash ▶️ Preparing signing request")
+        TangemLogger.debug("TangemService.signHash ▶️ cardId=\(cardId), signingMethod=\(signingMethod.description) (raw=0x\(String(format: "%02X", signingMethod.rawValue)))")
+        TangemLogger.debug("TangemService.signHash ▶️ walletPublicKey (\(walletPublicKey.count) bytes) = \(walletPublicKey.tangemHexDescription())")
+        TangemLogger.debug("TangemService.signHash ▶️ hash (\(hash.count) bytes) = \(hash.tangemHexDescription())")
+        TangemLogger.debug("TangemService.signHash ▶️ derivationPath=\(derivationPath ?? "nil"), walletIndex=\(walletIndex.map(String.init) ?? "nil")")
+        if let cached = cachedCard, cached.card.cardId == cardId {
+            let firmwareLog = cached.summary.firmwareVersion ?? "unknown"
+            TangemLogger.debug("TangemService.signHash ▶️ Using cached card summary: wallets=\(cached.summary.wallets.count) firmware=\(firmwareLog)")
+        } else {
+            TangemLogger.debug("TangemService.signHash ▶️ No cached card summary available for cardId \(cardId)")
         }
 
-        TangemLogger.info("Signed hash using Tangem card \(cardId)")
-        return TangemSignResult(signature: response.signature, totalSignedHashes: response.totalSignedHashes)
+        var normalizedPath = derivationPath?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let path = normalizedPath, path.compare("primary", options: .caseInsensitive) == .orderedSame {
+            let fallbackIndex = walletIndex ?? 0
+            normalizedPath = "m/44'/60'/0'/0/\(fallbackIndex)"
+            TangemLogger.debug("TangemService.signHash ▶️ Normalizing derivation path 'primary' → \(normalizedPath!)")
+        }
+        if let path = normalizedPath, path.isEmpty {
+            normalizedPath = nil
+        }
+
+        if signingMethod.contains(.signRaw) {
+            let ensuredPath = normalizedPath ?? "m/44'/60'/0'/0/\(walletIndex ?? 0)"
+            if normalizedPath == nil {
+                TangemLogger.debug("TangemService.signHash ▶️ Forcing default derivation path for SignRaw: \(ensuredPath)")
+            }
+            normalizedPath = ensuredPath
+        }
+
+        let derivedPath = try makeDerivationPath(from: normalizedPath)
+        if let derivedPath {
+            TangemLogger.debug("TangemService.signHash ▶️ Effective derivation path TLV: \(derivedPath.rawPath)")
+        } else {
+            TangemLogger.debug("TangemService.signHash ▶️ No derivation path TLV will be included (primary wallet)")
+        }
+
+        let result: TangemSignTask.Result = try await perform("sign hash") { sdk, completion in
+            let task = TangemSignTask(expectedCardId: cardId,
+                                      walletPublicKey: walletPublicKey,
+                                      walletIndex: walletIndex,
+                                      hash: hash,
+                                      derivationPath: derivedPath,
+                                      signingMethod: signingMethod)
+            sdk.startSession(with: task,
+                             cardId: cardId,
+                             initialMessage: initialMessage,
+                             completion: completion)
+        }
+
+        TangemLogger.debug("TangemService.signHash ✅ Received signature from cardId=\(result.cardId) totalSigned=\(result.totalSignedHashes ?? -1)")
+        TangemLogger.debug("TangemService.signHash ✅ Signature (\(result.signature.count) bytes) = \(result.signature.tangemHexDescription())")
+        if result.cardId != cardId {
+            TangemLogger.warning("TangemService.signHash ⚠️ CardId mismatch in response. expected=\(cardId) actual=\(result.cardId)")
+        }
+        TangemLogger.info("Signed hash using Tangem card \(cardId) with method \(signingMethod.description)")
+        return TangemSignResult(signature: result.signature, totalSignedHashes: result.totalSignedHashes)
     }
 
     func normalizedWalletPublicKey(_ publicKey: Data) throws -> Data {
@@ -260,7 +481,7 @@ final class TangemService {
     }
 
     private func invalidateCache(for cardId: String) {
-        if cachedCard?.info.cardId == cardId {
+        if cachedCard?.card.cardId == cardId {
             clearCache()
         }
     }
@@ -281,8 +502,105 @@ final class TangemService {
             index: wallet.index,
             curve: wallet.curve,
             publicKey: wallet.publicKey,
+            chainCode: wallet.chainCode,
             isImported: wallet.isImported,
             remainingSignatures: wallet.remainingSignatures
+        )
+    }
+
+    private func makeComprehensiveInfo(from card: Card, basicInfo: TangemCardSummary) -> ComprehensiveCardInfo {
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: Building comprehensive card info")
+        
+        // Extract backup status
+        let backupStatus: BackupStatusInfo?
+        if let cardBackupStatus = card.backupStatus {
+            switch cardBackupStatus {
+            case .noBackup:
+                backupStatus = .noBackup
+            case .cardLinked(let cardsCount):
+                backupStatus = .cardLinked(cardsCount: cardsCount)
+            case .active(let cardsCount):
+                backupStatus = .active(cardsCount: cardsCount)
+            @unknown default:
+                backupStatus = nil
+            }
+        } else {
+            backupStatus = nil
+        }
+        
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Backup status: \(backupStatus?.description ?? "nil")")
+        
+        // Extract encryption modes
+        let encryptionModes = card.settings.supportedEncryptionModes.map { $0.rawValue }
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Supported encryption modes: \(encryptionModes.joined(separator: ", "))")
+        
+        // Extract linked terminal status
+        let linkedTerminalStatus = card.linkedTerminalStatus.rawValue
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Linked terminal status: \(linkedTerminalStatus)")
+        
+        // Build comprehensive wallet info
+        let comprehensiveWallets = card.wallets.map { wallet in
+            makeComprehensiveWallet(from: wallet)
+        }
+        
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Comprehensive wallets created: \(comprehensiveWallets.count)")
+        
+        let comprehensiveInfo = ComprehensiveCardInfo(
+            basicInfo: basicInfo,
+            rawCard: card,
+            batchId: card.batchId,
+            isAccessCodeSet: card.isAccessCodeSet,
+            isPasscodeSet: card.isPasscodeSet,
+            securityDelay: card.settings.securityDelay,
+            maxWalletsCount: card.settings.maxWalletsCount,
+            isHDWalletAllowed: card.settings.isHDWalletAllowed,
+            isBackupAllowed: card.settings.isBackupAllowed,
+            isKeysImportAllowed: card.settings.isKeysImportAllowed,
+            isFilesAllowed: card.settings.isFilesAllowed,
+            isSettingAccessCodeAllowed: card.settings.isSettingAccessCodeAllowed,
+            isSettingPasscodeAllowed: card.settings.isSettingPasscodeAllowed,
+            isRemovingUserCodesAllowed: card.settings.isRemovingUserCodesAllowed,
+            isLinkedTerminalEnabled: card.settings.isLinkedTerminalEnabled,
+            supportedEncryptionModes: encryptionModes,
+            linkedTerminalStatus: linkedTerminalStatus,
+            backupStatus: backupStatus,
+            cardPublicKey: card.cardPublicKey,
+            issuerName: card.issuer.name,
+            manufactureDate: card.manufacturer.manufactureDate.description,
+            isUserCodeRecoveryAllowed: card.userSettings.isUserCodeRecoveryAllowed,
+            comprehensiveWallets: comprehensiveWallets
+        )
+        
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: ✅ Comprehensive card info built successfully")
+        return comprehensiveInfo
+    }
+
+    private func makeComprehensiveWallet(from wallet: Card.Wallet) -> ComprehensiveWalletInfo {
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: Building comprehensive wallet info for index \(wallet.index)")
+        
+        let walletSummary = makeWallet(from: wallet)
+        
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: Wallet[\(wallet.index)] details:")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Total signed hashes: \(wallet.totalSignedHashes ?? -1)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Remaining signatures: \(wallet.remainingSignatures ?? -1)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Is imported: \(wallet.isImported)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Has backup: \(wallet.hasBackup)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Is permanent: \(wallet.settings.isPermanent)")
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Chain code present: \(wallet.chainCode != nil)")
+        // DerivedKeys is a dictionary-like structure, get its count
+        let derivedKeysCount = wallet.derivedKeys.keys.count
+        TangemLogger.debug("📖 COMPREHENSIVE CARD READER: - Derived keys count: \(derivedKeysCount)")
+        
+        return ComprehensiveWalletInfo(
+            wallet: walletSummary,
+            totalSignedHashes: wallet.totalSignedHashes,
+            remainingSignatures: wallet.remainingSignatures,
+            isImported: wallet.isImported,
+            hasBackup: wallet.hasBackup,
+            isPermanent: wallet.settings.isPermanent,
+            chainCode: wallet.chainCode,
+            extendedPublicKey: nil, // ExtendedPublicKey not available on Card.Wallet directly
+            derivedKeysCount: derivedKeysCount
         )
     }
 

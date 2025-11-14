@@ -1,6 +1,7 @@
 import UIKit
 import SafeWeb3
 import TangemSdk
+import struct TangemSdk.SigningMethod
 
 final class TangemSignerViewController: UINavigationController {
     var completion: ((String) -> Void)?
@@ -184,38 +185,46 @@ private final class TangemSignContentViewController: UIViewController {
 
     private func startSigning() {
         signingTask?.cancel()
-        state = .verifyingCard
+        state = .waitingForSignature
+        TangemLogger.debug("TangemSigner ▶️ Starting signing flow for request: signerAddress=\(request.signer.address.checksummed)")
 
         signingTask = Task { [weak self] in
             guard let self else { return }
             do {
                 let metadata = try self.metadata()
+                let walletIndexLog = metadata.walletIndex.map { String($0) } ?? "nil"
+                let derivationPathLog = metadata.derivationPath ?? "nil"
+                TangemLogger.debug("TangemSigner ▶️ Metadata: cardId=\(metadata.cardId), walletIndex=\(walletIndexLog), derivationPath=\(derivationPathLog)")
+                TangemLogger.debug("TangemSigner ▶️ Metadata wallet public key (\(metadata.walletPublicKey.count) bytes) = \(metadata.walletPublicKey.tangemHexDescription())")
+                
                 let normalizedPublicKey = try self.service.normalizedWalletPublicKey(metadata.walletPublicKey)
-
-                let verificationMessage = Message(
-                    header: "Safe Wallet",
-                    body: "Hold your Tangem card near the top of your iPhone to verify it."
-                )
-
-                let summary = try await self.service.scanCard(forceRefresh: true, initialMessage: verificationMessage)
-                guard summary.cardId == metadata.cardId else {
-                    throw TangemServiceError.cardMismatch(expected: metadata.cardId, actual: summary.cardId)
-                }
-
-                guard let _ = summary.wallets.first(where: { self.service.matches(storedPublicKey: metadata.walletPublicKey, with: $0) }) else {
-                    throw TangemSignerError.walletNotFound
-                }
-
+                TangemLogger.debug("TangemSigner ▶️ Normalized wallet public key (\(normalizedPublicKey.count) bytes) = \(normalizedPublicKey.tangemHexDescription())")
+                
                 let payload = try self.makeSigningPayload()
+                let payloadDescription: String = {
+                    switch payload.kind {
+                    case .hash:
+                        return "hash"
+                    case .transaction(let chainId, let isLegacy):
+                        return "transaction(chainId:\(chainId), isLegacy:\(isLegacy))"
+                    }
+                }()
+                TangemLogger.debug("TangemSigner ▶️ Signing payload: kind=\(payloadDescription), hash=\(payload.hash.tangemHexDescription())")
 
-                await MainActor.run {
-                    self.state = .waitingForSignature
-                }
-
+                let signingMessage = Message(
+                    header: "Safe Wallet",
+                    body: "Hold your Tangem card near the top of your iPhone to sign."
+                )
+                
+                TangemLogger.debug("TangemSigner ▶️ Invoking TangemService.signHash (signingMethod=signHash)")
                 let result = try await self.service.signHash(cardId: metadata.cardId,
                                                              walletPublicKey: metadata.walletPublicKey,
                                                              hash: payload.hash,
-                                                             derivationPath: metadata.derivationPath)
+                                                             derivationPath: metadata.derivationPath,
+                                                             walletIndex: metadata.walletIndex,
+                                                             initialMessage: signingMessage)
+                TangemLogger.debug("TangemSigner ▶️ Tangem service returned signature (\(result.signature.count) bytes) totalSigned=\(result.totalSignedHashes ?? -1)")
+                TangemLogger.debug("TangemSigner ▶️ Raw signature = \(result.signature.tangemHexDescription())")
 
                 await MainActor.run {
                     self.state = .signing
@@ -292,33 +301,43 @@ private final class TangemSignContentViewController: UIViewController {
             throw TangemSignerError.invalidSignature
         }
 
+        TangemLogger.debug("TangemSigner ▶️ Processing signature. Expected address=\(expectedAddress.checksummed)")
+        TangemLogger.debug("TangemSigner ▶️ Hash (\(hash.count) bytes) = \(hash.tangemHexDescription())")
+        TangemLogger.debug("TangemSigner ▶️ Normalized public key (\(normalizedPublicKey.count) bytes) = \(normalizedPublicKey.tangemHexDescription())")
+        
         let ownerAddress = try service.ethereumAddress(fromNormalizedPublicKey: normalizedPublicKey)
         guard ownerAddress == expectedAddress else {
+            TangemLogger.error("TangemSigner ❌ Signer mismatch. Derived address=\(ownerAddress.checksummed) expected=\(expectedAddress.checksummed)")
             throw TangemSignerError.signerMismatch
         }
+        TangemLogger.debug("TangemSigner ▶️ Derived signer address matches expected address (\(ownerAddress.checksummed))")
 
         // Tangem signature is r (32 bytes) + s (32 bytes)
-        let r = result.signature.prefix(32)
-        let s = result.signature.suffix(32)
+        let rSlice = result.signature.prefix(32)
+        let sSlice = result.signature.suffix(32)
+        let rData = Foundation.Data(Array(rSlice))
+        let sData = Foundation.Data(Array(sSlice))
+        TangemLogger.debug("TangemSigner ▶️ Signature components: r=\(rData.tangemHexDescription()), s=\(sData.tangemHexDescription())")
 
         // Recover the correct v by testing both possible values (0 and 1)
-        let recoveryId = try findRecoveryId(r: Foundation.Data(r),
-                                            s: Foundation.Data(s),
+        let recoveryId = try findRecoveryId(r: rData,
+                                            s: sData,
                                             hash: hash,
                                             expectedAddress: ownerAddress)
+        TangemLogger.debug("TangemSigner ▶️ Recovery ID selected: \(recoveryId)")
 
         // For Safe transactions: v should be 27 or 28
         let vForSafe = UInt8(27 + recoveryId)
+        TangemLogger.debug("TangemSigner ▶️ Computed Safe-compatible v=\(vForSafe)")
 
         // Construct full signature for hex format: r + s + v
         var signatureData = Foundation.Data()
-        let rData = Foundation.Data(Array(r))
-        let sData = Foundation.Data(Array(s))
         signatureData.append(rData)
         signatureData.append(sData)
         signatureData.append(vForSafe)
 
         let signatureHex = signatureData.toHexStringWithPrefix()
+        TangemLogger.debug("TangemSigner ▶️ Final signature payload = \(signatureHex)")
 
         switch request.payload {
         case .hash:
@@ -330,28 +349,60 @@ private final class TangemSignContentViewController: UIViewController {
     }
 
     private func findRecoveryId(r: Data, s: Data, hash: Data, expectedAddress: Address) throws -> Int {
-        // Test both recovery IDs (0 and 1) to find which one recovers the correct address
+        let rBytes = Array(r)
+        let sBytes = Array(s)
+
+        for recoveryId in 0...1 {
+            let v = UInt8(27 + recoveryId)
+            TangemLogger.debug("TangemSigner ▶️ Attempting recoveryId=\(recoveryId) using SECP256K1")
+            guard let signature = SECP256K1.marshalSignature(v: v, r: rBytes, s: sBytes) else {
+                TangemLogger.warning("TangemSigner ⚠️ marshalSignature failed for recoveryId=\(recoveryId)")
+                continue
+            }
+
+            if let recoveredKey = SECP256K1.recoverPublicKey(hash: hash, signature: signature, compressed: false) {
+                do {
+                    let recoveredAddress = try service.ethereumAddress(fromNormalizedPublicKey: recoveredKey)
+                    TangemLogger.debug("TangemSigner ▶️ SECP256K1 recovered address=\(recoveredAddress.checksummed) (expected=\(expectedAddress.checksummed))")
+                    if recoveredAddress == expectedAddress {
+                        TangemLogger.debug("TangemSigner ▶️ Found correct recovery ID: \(recoveryId)")
+                        return recoveryId
+                    }
+                } catch {
+                    TangemLogger.error("TangemSigner ⚠️ Failed to derive address from recovered public key", error: error)
+                }
+            } else {
+                TangemLogger.debug("TangemSigner ⚠️ SECP256K1 recovery returned nil for recoveryId=\(recoveryId)")
+            }
+        }
+
+        TangemLogger.debug("TangemSigner ▶️ Falling back to SafeWeb3 recovery")
         for recoveryId in 0...1 {
             do {
-                let v = UInt8(27 + recoveryId)
                 let publicKey = try? EthereumPublicKey(
                     message: Array(hash),
                     v: EthereumQuantity(quantity: BigUInt(recoveryId)),
-                    r: EthereumQuantity(Array(r)),
-                    s: EthereumQuantity(Array(s))
+                    r: EthereumQuantity(rBytes),
+                    s: EthereumQuantity(sBytes)
                 )
 
-                if let pubKey = publicKey, Address(pubKey.address) == expectedAddress {
-                    TangemLogger.debug("Found correct recovery ID: \(recoveryId)")
-                    return recoveryId
+                if let pubKey = publicKey {
+                    TangemLogger.debug("TangemSigner ▶️ SafeWeb3 recovered address=\(pubKey.address) for recoveryId=\(recoveryId)")
+                    if Address(pubKey.address) == expectedAddress {
+                        TangemLogger.debug("TangemSigner ▶️ Found correct recovery ID (fallback): \(recoveryId)")
+                        return recoveryId
+                    }
                 }
             } catch {
+                TangemLogger.error("TangemSigner ⚠️ SafeWeb3 recovery error for recoveryId=\(recoveryId)", error: error)
                 continue
             }
         }
 
+        TangemLogger.error("TangemSigner ❌ Unable to recover signer for provided signature")
         throw TangemSignerError.invalidSignature
     }
+
 
     private func message(for error: Error) -> String {
         if let tangemError = error as? TangemServiceError {
