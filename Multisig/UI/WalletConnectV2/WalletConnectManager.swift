@@ -33,9 +33,12 @@ class WalletConnectManager {
     // Testable interface for approving a session
     var approver: Approver = ApproverImpl()
 
+    private(set) var isConfigured = false
+    
     private init() { }
     
     func config() {
+        isConfigured = false
         guard let projectId = App.configuration.walletConnectProjectId, !projectId.isEmpty else {
             LogService.shared.info("WalletConnect setup skipped: WalletConnect project id not available")
             return
@@ -45,6 +48,7 @@ class WalletConnectManager {
         Pair.configure(metadata: metadata)
         Web3Wallet.configure(metadata: metadata, crypto: NullCryptoProvider())
         setUpAuthSubscribing()
+        isConfigured = true
     }
     
     func setUpAuthSubscribing() {

@@ -64,11 +64,17 @@ class WebConnectionController: ServerDelegateV2, RequestHandler, WebConnectionSu
     private static let safeWebConnectionLoadingTimeout: TimeInterval = 30
     private static let walletConnectionLoadingTimeout: TimeInterval = 180
 
+    private let walletConnectV2Available = WalletConnectManager.shared.isConfigured
+
     init() {
         server = WalletConnectSwift.Server(delegate: self)
         server.register(handler: self)
         client = WalletConnectSwift.Client(delegate: self)
-        regsiterEventListeners()
+        if walletConnectV2Available {
+            regsiterEventListeners()
+        } else {
+            LogService.shared.info("WalletConnect V2 disabled: project id not configured. Desktop pairing limited.")
+        }
     }
 
     deinit {
@@ -281,9 +287,13 @@ class WebConnectionController: ServerDelegateV2, RequestHandler, WebConnectionSu
 
             case .dapp:
                 guard 
+                    walletConnectV2Available,
                     let chainId = connection.chainId,
                     let blockchain = Blockchain("eip155:\(chainId)")
                 else { throw WebConnectionError.configurationError }
+                guard walletConnectV2Available else {
+                    throw WebConnectionError.configurationError
+                }
                 Task { @MainActor in
                     do {
                         scheduleTimeout(connectionURL: connection.connectionURL, timeout: Self.walletConnectionLoadingTimeout)
@@ -490,6 +500,7 @@ class WebConnectionController: ServerDelegateV2, RequestHandler, WebConnectionSu
     
     func disconnect(_ connection: WebConnection) {
         guard let session = sessionTransformer.sessionV2(from: connection) else { return }
+        guard walletConnectV2Available else { return }
         Task { @MainActor in
             do {
                 try await Sign.instance.disconnect(topic: session.topic)

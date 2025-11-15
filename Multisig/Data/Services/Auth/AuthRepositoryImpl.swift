@@ -10,6 +10,36 @@ import Foundation
 import Firebase
 import FirebaseAuth
 
+final class DisabledAuthRepository: AuthRepository {
+
+    private func notAvailableError() -> Error {
+        return GSError.AuthGenericError(
+            description: NSLocalizedString("auth_login_failed", comment: ""),
+            reason: "Firebase authentication is not available in this build"
+        )
+    }
+
+    func signIn(email: String, password: String, completion: @escaping (Result<User, Error>) -> Void) {
+        completion(.failure(notAvailableError()))
+    }
+
+    func signOut(completion: @escaping (Result<Void, Error>) -> Void) {
+        completion(.success(()))
+    }
+
+    func getCurrentUser() -> User? { nil }
+
+    func isAuthenticated() -> Bool { false }
+
+    func sendPasswordResetEmail(email: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        completion(.failure(notAvailableError()))
+    }
+
+    func getIdToken(forceRefresh: Bool, completion: @escaping (Result<String, Error>) -> Void) {
+        completion(.failure(notAvailableError()))
+    }
+}
+
 /**
  * Implementation of AuthRepository
  * Manages Firebase Authentication and backend API calls
@@ -18,8 +48,8 @@ class AuthRepositoryImpl: AuthRepository {
     
     private let firebaseAuth: Auth
     
-    init(firebaseAuth: Auth = Auth.auth()) {
-        self.firebaseAuth = firebaseAuth
+    init(firebaseAuth: Auth? = nil) {
+        self.firebaseAuth = firebaseAuth ?? Auth.auth()
         AuthLogger.info("AuthRepositoryImpl initialized")
     }
     

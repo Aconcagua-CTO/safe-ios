@@ -5522,6 +5522,11 @@
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
 				"$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
 				"$(BUILT_PRODUCTS_DIR)/$(EXECUTABLE_PATH)",
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+				"$(DSTROOT)/Applications/$(PRODUCT_NAME).app/Info.plist",
+				"$(SRCROOT)/bin/crashlytics",
+				"$(SRCROOT)/bin/upload-symbols",
+				"$(SRCROOT)/Multisig/Cross-layer/Analytics/Firebase/$(FIREBASE_CONFIG).plist",
 			);
 			name = "[FIREBASE] Upload dSYMs";
 			outputFileListPaths = (
@@ -5530,7 +5535,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [[ ${CONFIGURATION} = Release* ]]; then \n    # script copied from SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\n    \"${SRCROOT}/bin/crashlytics\"\nelse\n    echo \"Firebase Crashlytics script skipped: not in production\"\nfi\n";
+			shellScript = "if [[ \"${CONFIGURATION}\" == Debug.* ]]; then\n  echo \"[Crashlytics] Skipping dSYM upload for ${CONFIGURATION}\"\n  exit 0\nfi\n\necho \"[Crashlytics] CONFIGURATION=${CONFIGURATION}\"\necho \"[Crashlytics] PRODUCT_BUNDLE_IDENTIFIER=${PRODUCT_BUNDLE_IDENTIFIER}\"\nPRIMARY_PLIST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\"\nFALLBACK_PLIST=\"${SRCROOT}/Multisig/Cross-layer/Analytics/Firebase/${FIREBASE_CONFIG}.plist\"\nGOOGLE_SERVICE_INFO_PLIST_PATH=\"${PRIMARY_PLIST}\"\n\nif [[ -f \"${PRIMARY_PLIST}\" ]]; then\n  echo \"[Crashlytics] Found primary plist at ${PRIMARY_PLIST}\"\nelse\n  echo \"[Crashlytics] Primary plist missing at ${PRIMARY_PLIST}\" >&2\n  GOOGLE_SERVICE_INFO_PLIST_PATH=\"${FALLBACK_PLIST}\"\nfi\n\nif ! /usr/libexec/PlistBuddy -c \"Print:GOOGLE_APP_ID\" \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" >/dev/null 2>&1; then\n  echo \"[Crashlytics] Primary plist unreadable, trying fallback at ${FALLBACK_PLIST}\" >&2\n  GOOGLE_SERVICE_INFO_PLIST_PATH=\"${FALLBACK_PLIST}\"\n  if ! /usr/libexec/PlistBuddy -c \"Print:GOOGLE_APP_ID\" \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" >/dev/null 2>&1; then\n    echo \"[Crashlytics] ERROR: Unable to read GOOGLE_APP_ID from either primary or fallback plist.\" >&2\n    exit 0\n  fi\nfi\n\necho \"[Crashlytics] Using plist ${GOOGLE_SERVICE_INFO_PLIST_PATH}\"\nexport GOOGLE_SERVICE_INFO_PLIST_PATH\n\nif [[ -z \"${GOOGLE_APP_ID}\" && -f \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" ]]; then\n  GOOGLE_APP_ID=$(/usr/libexec/PlistBuddy -c \"Print:GOOGLE_APP_ID\" \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" 2>/dev/null | tr -d '\\n\\r')\nfi\nif [[ -z \"${GOOGLE_APP_ID}\" && -f \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" ]]; then\n  GOOGLE_APP_ID=$(defaults read \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" GOOGLE_APP_ID 2>/dev/null | tr -d '\\n\\r')\nfi\nif [[ -n \"${GOOGLE_APP_ID}\" ]]; then\n  echo \"[Crashlytics] GOOGLE_APP_ID=${GOOGLE_APP_ID}\"\n  export GOOGLE_APP_ID\nelse\n  echo \"[Crashlytics] ERROR: GOOGLE_APP_ID missing for ${GOOGLE_SERVICE_INFO_PLIST_PATH}. Skipping upload-symbols\" >&2\n  exit 0\nfi\n\n# Export bundle identifier\nexport PRODUCT_BUNDLE_IDENTIFIER\necho \"[Crashlytics] PRODUCT_BUNDLE_IDENTIFIER=${PRODUCT_BUNDLE_IDENTIFIER}\"\n\necho \"[Crashlytics] Uploading dSYMs with ${GOOGLE_SERVICE_INFO_PLIST_PATH}\"\n\"${SRCROOT}/bin/crashlytics\" -gsp \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" -p ios\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -6503,7 +6508,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.manuelrm.bovedapp.prod.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
@@ -6531,7 +6536,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.manuelrm.bovedapp.prod.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
@@ -6703,7 +6708,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.manuelrm.bovedapp.staging.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
@@ -6830,7 +6835,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.manuelrm.bovedapp.staging.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
@@ -7375,7 +7380,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Multisig/$(CODE_SIGN_ENTITLEMENTS)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
 				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
@@ -7384,7 +7389,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.manuelrm.bovedapp.dev.mainnet;
 				PRODUCT_MODULE_NAME = Multisig;
@@ -7508,7 +7513,7 @@
 				CODE_SIGN_ENTITLEMENTS = Multisig/MultisigDebug.Development.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"Multisig/Preview Content\"";
 				DEVELOPMENT_TEAM = 52R5LKF3LF;
 				ENABLE_PREVIEWS = YES;
@@ -7517,7 +7522,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				OTHER_LDFLAGS = "$(inherited)";
 				PRESERVE_DEAD_CODE_INITS_AND_TERMS = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = com.manuelrm.bovedapp.dev.mainnet;

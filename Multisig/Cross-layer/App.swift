@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Firebase
 
 class App {
     static let shared = App()
@@ -25,7 +26,13 @@ class App {
     let auth = AuthenticationController()
     
     // Lazy initialization - Firebase must be configured first in AppDelegate
-    lazy var authRepository: AuthRepository = AuthRepositoryImpl()
+    lazy var authRepository: AuthRepository = {
+        if FirebaseApp.app() == nil {
+            LogService.shared.info("AuthRepository disabled: Firebase not configured")
+            return DisabledAuthRepository()
+        }
+        return AuthRepositoryImpl()
+    }()
     
     // Lazy initialization - depends on authRepository
     lazy var vaultsRepository: VaultsRepository = {
