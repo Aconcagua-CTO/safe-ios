@@ -149,15 +149,45 @@ final class TangemService {
         let timestamp: Date
     }
 
+    private let terminalKeyManager = TangemTerminalKeyManager()
     private let sdk: TangemSdk
     private let networkService: NetworkService
     private var cachedCard: CachedCard?
     private let cacheValidity: TimeInterval = 60
+    private let trustedTerminalModeEnabled: Bool
 
     private init() {
         var config = Config()
         config.handleErrors = true
+        // 🔐 Trusted terminal mode:
+        // Enabling linkedTerminal allows Tangem cards to treat this device/app as a trusted
+        // terminal after the first successful link, which lets the card skip the 15-second
+        // PIN2 security delay on subsequent operations. This mirrors Tangem's official app
+        // behavior and should reduce the number of required scans.
+        //
+        // ROLLBACK: If we see regressions, comment this line or set it back to `false`.
         config.linkedTerminal = true
+        trustedTerminalModeEnabled = config.linkedTerminal ?? false
+
+        terminalKeyManager.ensureKeysAvailable()
+        
+        // 🔐 BINARY PATCH APPLIED: Linked terminal enabled for HD wallets
+        // See: docs/PATCH-APPLICATION-LOG-2025-11-18.md
+        // WARNING: This patch modifies the Tangem SDK binary. DO NOT submit to App Store with this patch!
+        // Rollback: ./scripts/restore-tangem-sdk.sh
+        TangemLogger.info("🔐 TangemService ▶️ PATCH ACTIVE: Binary patch applied to enable linked terminal for HD wallets (firmware >= 4.52)")
+        
+        if let keys = terminalKeyManager.getKeys() {
+            TangemLogger.info("🔑 TangemService ▶️ Terminal keys available for linking")
+            TangemLogger.debug("🔑 Terminal public key prefix: \(keys.publicKey.prefix(16).tangemHexDescription())...")
+        } else {
+            TangemLogger.warning("⚠️ TangemService ▶️ NO terminal keys available! Linked terminal will not work.")
+        }
+        
+        TangemLogger.info("TangemService ▶️ Trusted terminal mode ENABLED (linkedTerminal=true). Tangem cards that support linked terminals should skip security delays once linked.")
+        // NOTE: Tangem SDK (3.x) does not expose a public config flag to resume NFC sessions
+        // after timeouts. If a future SDK release adds such an option, wire it up here.
+
         TangemLogger.debug("TangemService ▶️ Configuring TangemSdk (linkedTerminal=\(String(describing: config.linkedTerminal)), accessPolicy=\(config.accessCodeRequestPolicy.rawValue))")
 #if MULTISIG_DEV_LOGS
         let verboseLevels: [Log.Level] = [.error, .warning, .command, .session, .nfc, .debug, .tlv]
@@ -195,7 +225,27 @@ final class TangemService {
 
         let summary = makeSummary(from: card)
         cachedCard = CachedCard(summary: summary, card: card, timestamp: Date())
-        TangemLogger.info("Scanned Tangem card \(summary.cardId) with \(summary.wallets.count) wallet(s)")
+        
+        // 📊 LINKED TERMINAL STATUS LOGGING
+        TangemLogger.info("✅ Scanned Tangem card \(summary.cardId) with \(summary.wallets.count) wallet(s)")
+        TangemLogger.info("📊 CARD LINKED TERMINAL INFO:")
+        TangemLogger.info("  ├─ Firmware: \(card.firmwareVersion.stringValue)")
+        TangemLogger.info("  ├─ isLinkedTerminalEnabled (setting): \(card.settings.isLinkedTerminalEnabled)")
+        TangemLogger.info("  ├─ linkedTerminalStatus: \(card.linkedTerminalStatus.rawValue)")
+        TangemLogger.info("  └─ securityDelay: \(card.settings.securityDelay)ms")
+        
+        // 🔗 Interpret linked terminal status
+        switch card.linkedTerminalStatus {
+        case .none:
+            TangemLogger.info("🔗 STATUS: Terminal NOT linked - first signature will link this terminal")
+        case .current:
+            TangemLogger.info("🔗 STATUS: Terminal ALREADY LINKED! - signatures should be fast (<5s)")
+        case .other:
+            TangemLogger.warning("⚠️ STATUS: Card linked to DIFFERENT terminal - may need re-linking")
+        @unknown default:
+            TangemLogger.warning("⚠️ STATUS: Unknown linked terminal status")
+        }
+        
         return summary
     }
 
@@ -357,6 +407,15 @@ final class TangemService {
         TangemLogger.debug("TangemService.signHash ▶️ walletPublicKey (\(walletPublicKey.count) bytes) = \(walletPublicKey.tangemHexDescription())")
         TangemLogger.debug("TangemService.signHash ▶️ hash (\(hash.count) bytes) = \(hash.tangemHexDescription())")
         TangemLogger.debug("TangemService.signHash ▶️ derivationPath=\(derivationPath ?? "nil"), walletIndex=\(walletIndex.map(String.init) ?? "nil")")
+        if trustedTerminalModeEnabled {
+            if let cachedCard {
+                TangemLogger.debug("TangemService.signHash ▶️ Trusted terminal context: cached cardId=\(cachedCard.card.cardId) linkedStatus=\(cachedCard.card.linkedTerminalStatus.rawValue) securityDelay=\(cachedCard.card.settings.securityDelay)ms")
+            } else {
+                TangemLogger.debug("TangemService.signHash ▶️ Trusted terminal context: no cached card available (will rely on SDK to negotiate link)")
+            }
+        } else {
+            TangemLogger.debug("TangemService.signHash ▶️ Trusted terminal mode DISABLED (linkedTerminal=false). PIN2 delay is expected.")
+        }
         if let cached = cachedCard, cached.card.cardId == cardId {
             let firmwareLog = cached.summary.firmwareVersion ?? "unknown"
             TangemLogger.debug("TangemService.signHash ▶️ Using cached card summary: wallets=\(cached.summary.wallets.count) firmware=\(firmwareLog)")
@@ -382,33 +441,71 @@ final class TangemService {
             normalizedPath = ensuredPath
         }
 
-        let derivedPath = try makeDerivationPath(from: normalizedPath)
-        if let derivedPath {
-            TangemLogger.debug("TangemService.signHash ▶️ Effective derivation path TLV: \(derivedPath.rawPath)")
+        // CRITICAL: Do NOT pass the derivation path to the Tangem SDK!
+        // When a derivation path is provided, the card derives a CHILD key at that path and uses
+        // it for signing. The signature will then be valid for the derived child key, not for the
+        // base wallet key. Since our metadata stores the BASE wallet key (not a derived key),
+        // the signature will fail verification.
+        //
+        // For HD wallets where the base key itself was derived (imported wallet), we still use
+        // the base key directly without further derivation.
+        TangemLogger.debug("TangemService.signHash ▶️ Signing with base wallet key (NO derivation path) to match metadata")
+        if derivationPath != nil {
+            TangemLogger.debug("TangemService.signHash ▶️ Ignoring derivation path '\(derivationPath!)' - using base wallet key instead")
+        }
+
+        let payload = TangemSignPayload(
+            expectedCardId: cardId,
+            walletPublicKey: walletPublicKey,
+            walletIndex: walletIndex,
+            hashes: [hash],
+            derivationPath: nil,  // Always nil - use base wallet key
+            signingMethod: signingMethod
+        )
+
+        let responses: TangemMultipleSignTask.Response = try await perform("sign hash (single session)") { sdk, completion in
+            let task = TangemMultipleSignTask(payloads: [payload])
+            sdk.startSession(
+                with: task,
+                cardId: cardId,
+                initialMessage: initialMessage,
+                completion: completion
+            )
+        }
+
+        guard let response = responses.first else {
+            TangemLogger.error("TangemService.signHash ❌ No signing response received")
+            throw TangemServiceError.sdkError(.signHashesNotAvailable)
+        }
+
+        guard let signature = response.signatures.first else {
+            TangemLogger.error("TangemService.signHash ❌ Response contained no signatures")
+            throw TangemServiceError.sdkError(.signHashesNotAvailable)
+        }
+
+        TangemLogger.debug("TangemService.signHash ✅ Received signature from cardId=\(response.cardId) totalSigned=\(response.totalSignedHashes ?? -1)")
+        TangemLogger.debug("TangemService.signHash ✅ Signature (\(signature.count) bytes) = \(signature.tangemHexDescription())")
+        if response.cardId != cardId {
+            TangemLogger.warning("TangemService.signHash ⚠️ CardId mismatch in response. expected=\(cardId) actual=\(response.cardId)")
+        }
+        
+        // 🔗 LINKED TERMINAL POST-SIGNATURE STATUS
+        TangemLogger.info("✅ Signed hash using Tangem card \(cardId) with method \(signingMethod.description)")
+        if let cachedCard = cachedCard {
+            TangemLogger.info("🔗 POST-SIGNATURE LINKED TERMINAL STATUS:")
+            TangemLogger.info("  ├─ linkedTerminalStatus: \(cachedCard.card.linkedTerminalStatus.rawValue)")
+            TangemLogger.info("  └─ Expected next signature: \(cachedCard.card.linkedTerminalStatus == .current ? "FAST (<5s)" : "NORMAL (~15-20s)")")
+            
+            if cachedCard.card.linkedTerminalStatus == .current {
+                TangemLogger.info("🎉 SUCCESS! Terminal is now linked. Subsequent signatures will be fast!")
+            } else if cachedCard.card.linkedTerminalStatus == .none {
+                TangemLogger.warning("⚠️ Terminal status still 'none' - linking may have failed. Check if TAG_TerminalPublicKey was sent.")
+            }
         } else {
-            TangemLogger.debug("TangemService.signHash ▶️ No derivation path TLV will be included (primary wallet)")
+            TangemLogger.debug("No cached card info available after signing")
         }
-
-        let result: TangemSignTask.Result = try await perform("sign hash") { sdk, completion in
-            let task = TangemSignTask(expectedCardId: cardId,
-                                      walletPublicKey: walletPublicKey,
-                                      walletIndex: walletIndex,
-                                      hash: hash,
-                                      derivationPath: derivedPath,
-                                      signingMethod: signingMethod)
-            sdk.startSession(with: task,
-                             cardId: cardId,
-                             initialMessage: initialMessage,
-                             completion: completion)
-        }
-
-        TangemLogger.debug("TangemService.signHash ✅ Received signature from cardId=\(result.cardId) totalSigned=\(result.totalSignedHashes ?? -1)")
-        TangemLogger.debug("TangemService.signHash ✅ Signature (\(result.signature.count) bytes) = \(result.signature.tangemHexDescription())")
-        if result.cardId != cardId {
-            TangemLogger.warning("TangemService.signHash ⚠️ CardId mismatch in response. expected=\(cardId) actual=\(result.cardId)")
-        }
-        TangemLogger.info("Signed hash using Tangem card \(cardId) with method \(signingMethod.description)")
-        return TangemSignResult(signature: result.signature, totalSignedHashes: result.totalSignedHashes)
+        
+        return TangemSignResult(signature: signature, totalSignedHashes: response.totalSignedHashes)
     }
 
     func normalizedWalletPublicKey(_ publicKey: Data) throws -> Data {
@@ -629,6 +726,7 @@ final class TangemService {
                 }
 
                 TangemLogger.info("Starting Tangem operation: \(description)")
+                TangemLogger.debug("TangemService ▶️ SDK call '\(description)' (trustedTerminalMode=\(self.trustedTerminalModeEnabled))")
                 call(self.sdk) { result in
                     switch result {
                     case .success(let value):

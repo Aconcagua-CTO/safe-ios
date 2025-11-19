@@ -728,7 +728,14 @@
 		406FE2C52EC63BD200938806 /* TangemCardReaderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */; };
 		406FE2C62EC63BD200938806 /* TangemFactoryResetViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */; };
 		406FE2C82EC64C8500938806 /* TangemActivationTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C72EC64C8500938806 /* TangemActivationTask.swift */; };
-		406FE2CA2EC661DB00938806 /* TangemSignTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C92EC661DB00938806 /* TangemSignTask.swift */; };
+		40A3E0A82F0D6BD600D4A799 /* TangemMultipleSignTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */; };
+		4080E5FD2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */; };
+		40703C272EC8B02900CAAA33 /* TransactionFeeLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C242EC8B02900CAAA33 /* TransactionFeeLogger.swift */; };
+		40703C282EC8B02900CAAA33 /* FunctionSelectorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */; };
+		40703C292EC8B02900CAAA33 /* UInt256+Solidity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C252EC8B02900CAAA33 /* UInt256+Solidity.swift */; };
+		40703C2A2EC8B02900CAAA33 /* TransactionBatchBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C232EC8B02900CAAA33 /* TransactionBatchBuilder.swift */; };
+		40703C2C2EC8B07700CAAA33 /* function-selectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 40703C2B2EC8B07700CAAA33 /* function-selectors.json */; };
+		40703C342EC8B0C300CAAA33 /* ProtocolEncodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C322EC8B0C300CAAA33 /* ProtocolEncodingTests.swift */; };
 		409009D92EB5296400550983 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 409009D82EB5296400550983 /* FirebaseAuth */; };
 		409009DE2EB52C3700550983 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409009DD2EB52C3700550983 /* AuthState.swift */; };
 		409009ED2EB52E5A00550983 /* AuthLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409009E92EB52E5A00550983 /* AuthLogger.swift */; };
@@ -1840,7 +1847,16 @@
 		406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemCardReaderViewController.swift; sourceTree = "<group>"; };
 		406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemFactoryResetViewController.swift; sourceTree = "<group>"; };
 		406FE2C72EC64C8500938806 /* TangemActivationTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemActivationTask.swift; sourceTree = "<group>"; };
-		406FE2C92EC661DB00938806 /* TangemSignTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemSignTask.swift; sourceTree = "<group>"; };
+		40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemMultipleSignTask.swift; sourceTree = "<group>"; };
+		4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemTerminalKeyManager.swift; sourceTree = "<group>"; };
+		40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionSelectorCatalog.swift; sourceTree = "<group>"; };
+		40703C232EC8B02900CAAA33 /* TransactionBatchBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionBatchBuilder.swift; sourceTree = "<group>"; };
+		40703C242EC8B02900CAAA33 /* TransactionFeeLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFeeLogger.swift; sourceTree = "<group>"; };
+		40703C252EC8B02900CAAA33 /* UInt256+Solidity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UInt256+Solidity.swift"; sourceTree = "<group>"; };
+		40703C2B2EC8B07700CAAA33 /* function-selectors.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "function-selectors.json"; sourceTree = "<group>"; };
+		40703C2E2EC8B09700CAAA33 /* Ethereum */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Ethereum; sourceTree = "<group>"; };
+		40703C2F2EC8B09700CAAA33 /* SecureConfig */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = SecureConfig; sourceTree = "<group>"; };
+		40703C322EC8B0C300CAAA33 /* ProtocolEncodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolEncodingTests.swift; sourceTree = "<group>"; };
 		408FF8F32EC3A54B00B636DA /* MultisigDebug.Development.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MultisigDebug.Development.entitlements; sourceTree = "<group>"; };
 		409009DD2EB52C3700550983 /* AuthState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthState.swift; sourceTree = "<group>"; };
 		409009E82EB52E5A00550983 /* AuthenticatedHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedHTTPClient.swift; sourceTree = "<group>"; };
@@ -2826,7 +2842,8 @@
 		04FAF0AD2BD9E1E500A1F111 /* Tangem */ = {
 			isa = PBXGroup;
 			children = (
-				406FE2C92EC661DB00938806 /* TangemSignTask.swift */,
+				4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */,
+				40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */,
 				406FE2C72EC64C8500938806 /* TangemActivationTask.swift */,
 				406FE2BF2EC63B9600938806 /* TangemFactoryResetTask.swift */,
 				04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */,
@@ -2904,6 +2921,7 @@
 		0A0EFCA3246EADE900D3D8BF /* Logic */ = {
 			isa = PBXGroup;
 			children = (
+				40703C332EC8B0C300CAAA33 /* Fees */,
 				551DDEEA244F192300C719D3 /* Models */,
 				0A9366BC279090CC001918A9 /* OwnerKeySelectionPolicyTests.swift */,
 				0AADCDBF2858CE2600A0139B /* AddOwnerRequestValidatorTests.swift */,
@@ -3467,6 +3485,7 @@
 		0A93DD4A2445CC8A00688050 = {
 			isa = PBXGroup;
 			children = (
+				40703C302EC8B09700CAAA33 /* Packages */,
 				93B331A82A655FB600ADD507 /* ci_scripts */,
 				0A01DCE02770996E00A87D7A /* Ethereum */,
 				B3710B3B2AD58492002E503B /* SecureConfig */,
@@ -3976,6 +3995,34 @@
 			path = Buttons;
 			sourceTree = "<group>";
 		};
+		40703C262EC8B02900CAAA33 /* Fees */ = {
+			isa = PBXGroup;
+			children = (
+				40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */,
+				40703C232EC8B02900CAAA33 /* TransactionBatchBuilder.swift */,
+				40703C242EC8B02900CAAA33 /* TransactionFeeLogger.swift */,
+				40703C252EC8B02900CAAA33 /* UInt256+Solidity.swift */,
+			);
+			path = Fees;
+			sourceTree = "<group>";
+		};
+		40703C302EC8B09700CAAA33 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				40703C2E2EC8B09700CAAA33 /* Ethereum */,
+				40703C2F2EC8B09700CAAA33 /* SecureConfig */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		40703C332EC8B0C300CAAA33 /* Fees */ = {
+			isa = PBXGroup;
+			children = (
+				40703C322EC8B0C300CAAA33 /* ProtocolEncodingTests.swift */,
+			);
+			path = Fees;
+			sourceTree = "<group>";
+		};
 		409009EC2EB52E5A00550983 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -4129,6 +4176,8 @@
 		5532D4912448A1960067505A /* Logic */ = {
 			isa = PBXGroup;
 			children = (
+				40703C2B2EC8B07700CAAA33 /* function-selectors.json */,
+				40703C262EC8B02900CAAA33 /* Fees */,
 				47DF358528B9481700EBEF3E /* Keystone */,
 				55FBC2D626BA9815002C2553 /* Ledger */,
 				04FAF0AD2BD9E1E500A1F111 /* Tangem */,
@@ -5342,6 +5391,7 @@
 				93C38DC228C74CAA005188EC /* WhatIsSafeViewController.xib in Resources */,
 				6A1CFA5028081A1200B2C340 /* BackupSeedPhraseViewController.xib in Resources */,
 				6A7A48A12823A297003278C8 /* SafeOwnerCell.xib in Resources */,
+				40703C2C2EC8B07700CAAA33 /* function-selectors.json in Resources */,
 				0A68869F2588FAFB0045CAB5 /* EnterENSNameViewController.xib in Resources */,
 				0A06533727B6D1070008C5F1 /* ChooseOwnerDetailHeaderView.xib in Resources */,
 				0472B2D3286BD7C60049BA17 /* ClaimedAmountInputCell.xib in Resources */,
@@ -6137,6 +6187,10 @@
 				6A7D476D29B4951B00D690BE /* RelayRequest.swift in Sources */,
 				0ACC302227BFB5C300586795 /* Address+Solidity.swift in Sources */,
 				0AF1C8302540923C00E28669 /* LoadableViewController.swift in Sources */,
+				40703C272EC8B02900CAAA33 /* TransactionFeeLogger.swift in Sources */,
+				40703C282EC8B02900CAAA33 /* FunctionSelectorCatalog.swift in Sources */,
+				40703C292EC8B02900CAAA33 /* UInt256+Solidity.swift in Sources */,
+				40703C2A2EC8B02900CAAA33 /* TransactionBatchBuilder.swift in Sources */,
 				6AF6296129C0C5C7004C034A /* ROBenefitsViewController.swift in Sources */,
 				04D1309E25E2BB830032FA03 /* RejectionConfirmationViewController.swift in Sources */,
 				0AA9F25724991988005BD60F /* TokenBalance.swift in Sources */,
@@ -6170,7 +6224,7 @@
 				B0D614CA17A38979A1ECFCFB /* ActionPanelView.swift in Sources */,
 				B0D61EB5828298B8F501BA41 /* DesktopPairingHeaderView.swift in Sources */,
 				47DAEDE628C77456000940FB /* KeystoneSignFlow.swift in Sources */,
-				406FE2CA2EC661DB00938806 /* TangemSignTask.swift in Sources */,
+				40A3E0A82F0D6BD600D4A799 /* TangemMultipleSignTask.swift in Sources */,
 				B0D61FFF1935AA2484BD940A /* WebConnectionRepository.swift in Sources */,
 				B0D61076463C900689962202 /* WebConnectionController.swift in Sources */,
 				B0D6151108EEDB3F18FA7B6C /* WebConnectionToSessionTransformer.swift in Sources */,
@@ -6178,6 +6232,7 @@
 				B0D61701855BDBDFF8963B8B /* NavigationRouter.swift in Sources */,
 				B0D618BE28AD77EA68D0551C /* WebConnectionsViewController.swift in Sources */,
 				B0D61BA23BDD098DE8AD3008 /* CDWCRequest.swift in Sources */,
+				4080E5FD2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift in Sources */,
 				6A386C6A281ADAFD003FBCB3 /* ValueChangeTableViewCell.swift in Sources */,
 				47646ED428AA72DD009DC437 /* ConnectKeystoneFlow.swift in Sources */,
 				04AFFBD0282AFC0100429513 /* ReviewRemoveOwnerViewController.swift in Sources */,
@@ -6227,6 +6282,7 @@
 			files = (
 				0A9BC33D24603AE800EB9C5D /* ENSTests.swift in Sources */,
 				5596710D256E935F0097D3A2 /* MockSecureStore.swift in Sources */,
+				40703C342EC8B0C300CAAA33 /* ProtocolEncodingTests.swift in Sources */,
 				0A9BC34C246053DB00EB9C5D /* DataInitWithHexTests.swift in Sources */,
 				0A096CC32608F4750034E6BC /* SignerTests.swift in Sources */,
 				5532D4CD2449A1980067505A /* LogServiceTests.swift in Sources */,

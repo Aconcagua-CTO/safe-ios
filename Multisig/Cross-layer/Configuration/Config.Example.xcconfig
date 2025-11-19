@@ -17,7 +17,7 @@
 // to specify all of the configurations.
 
 // DEV | STAGING | PROD
-SERVICE_ENV = STAGING
+SERVICE_ENV = DEV
 
 
 // Keys
@@ -35,9 +35,9 @@ _CLIENT_GATEWAY_URL_STAGING    = https:/$()/safe-client.staging.5afe.dev/
 _CLIENT_GATEWAY_URL_PROD       = https:/$()/safe-client.safe.global/
 
 // Apps
-_APP_BUNDLE_ID_PROD     = io.gnosis.multisig.prod.mainnet
-_APP_BUNDLE_ID_STAGING  = io.gnosis.multisig.staging.mainnet
-_APP_BUNDLE_ID_DEV      = io.gnosis.multisig.dev.mainnet
+_APP_BUNDLE_ID_PROD     = com.manuelrm.bovedapp.prod.mainnet
+_APP_BUNDLE_ID_STAGING  = com.manuelrm.bovedapp.staging.mainnet
+_APP_BUNDLE_ID_DEV      = com.manuelrm.bovedapp.dev.mainnet
 
 // Claiming app service
 _CLAIMING_DATA_URL_DEV        = https:/$()/safe-claiming-app-data.staging.5afe.dev/
@@ -56,9 +56,9 @@ GELATO_SERVICE_URL            = https:/$()/relay.gelato.digital
 MOONPAY_SERVICE_URL           = https:/$()/api.moonpay.com
 
 // App Groups
-_APP_GROUP_ID_PROD     = group.io.gnosis.multisig.prod.mainnet
-_APP_GROUP_ID_STAGING  = group.io.gnosis.multisig.staging.mainnet
-_APP_GROUP_ID_DEV      = group.io.gnosis.multisig.dev.mainnet
+_APP_GROUP_ID_PROD     = group.com.manuelrm.bovedapp.prod.mainnet
+_APP_GROUP_ID_STAGING  = group.com.manuelrm.bovedapp.staging.mainnet
+_APP_GROUP_ID_DEV      = group.com.manuelrm.bovedapp.dev.mainnet
 
 APP_GROUP_ID            = $(_APP_GROUP_ID_$(SERVICE_ENV):default=$(_APP_GROUP_ID_PROD))
 
@@ -75,12 +75,25 @@ _FIREBASE_CONFIG_DEV        = GoogleService-Info.Development
 
 // Loggers (comma-separated). Available options: [crashlytics, console]
 _LOGGERS_PROD               = crashlytics
-_LOGGERS_DEV                = console
+_LOGGERS_DEV                = crashlytics, console
 
 // Log level. Available options: [DEBUG, INFO, ERROR, FATAL, OFF]
 // Check LogLevel.swift for more details
 _LOG_LEVEL_PROD             = ERROR
 _LOG_LEVEL_DEV              = DEBUG
+
+// Fee Configuration
+// Fee in basis points (100 BPS = 1%, 10 BPS = 0.1%)
+_FEE_BPS_DEV                = 10
+_FEE_BPS_STAGING            = 10
+_FEE_BPS_PROD               = 10
+FEE_BPS                     = $(_FEE_BPS_$(SERVICE_ENV):default=$(_FEE_BPS_PROD))
+
+// Treasury address for fee collection (per environment)
+_FEE_TREASURY_ADDRESS_DEV     = 0xd599d8c61b4616b06bf28735e6d9fc51d1bc6fde
+_FEE_TREASURY_ADDRESS_STAGING = 0xd599d8c61b4616b06bf28735e6d9fc51d1bc6fde
+_FEE_TREASURY_ADDRESS_PROD    = 0xd599d8c61b4616b06bf28735e6d9fc51d1bc6fde
+FEE_TREASURY_ADDRESS          = $(_FEE_TREASURY_ADDRESS_$(SERVICE_ENV):default=$(_FEE_TREASURY_ADDRESS_PROD))
 
 // Configuration variables for the app
 AUTH_API_BASE_URL           = $(_AUTH_API_BASE_URL_$(SERVICE_ENV):default=$(_AUTH_API_BASE_URL_PROD))
@@ -191,7 +204,7 @@ _WEB3AUTH_APPLE_VERIFIER_STAGING = apple-sub-staging
 _WEB3AUTH_APPLE_VERIFIER_PROD = apple-sub-prod
 WEB3AUTH_APPLE_VERIFIER = $(_WEB3AUTH_APPLE_VERIFIER_$(SERVICE_ENV):default=$(_WEB3AUTH_APPLE_VERIFIER_PROD))
 
-CONFIG_KEY_DEV = your-staging-config-key
-CONFIG_KEY_STAGING = your-staging-config-key
-CONFIG_KEY_PROD = your-production-config-key
+CONFIG_KEY_DEV = ew5whcNwYpwygLoa3ZeTkfXU23kXDqyOh1ersAlRDr4=
+CONFIG_KEY_STAGING = ew5whcNwYpwygLoa3ZeTkfXU23kXDqyOh1ersAlRDr4=
+CONFIG_KEY_PROD = ew5whcNwYpwygLoa3ZeTkfXU23kXDqyOh1ersAlRDr4=
 CONFIG_KEY = $(CONFIG_KEY_$(SERVICE_ENV):default=$(CONFIG_KEY_PROD))

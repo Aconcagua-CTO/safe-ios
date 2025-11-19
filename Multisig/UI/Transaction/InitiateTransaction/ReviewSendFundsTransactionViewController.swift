@@ -89,4 +89,59 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
 
         show(successVC, sender: self)
     }
+
+    override func createSections() {
+        sectionItems = [SectionItem.header(headerCell())]
+        if let summary = feeSummaryCell() {
+            sectionItems.append(.valueChange(summary))
+        }
+        if let feeAmountCell = feeAmountCell() {
+            sectionItems.append(.valueChange(feeAmountCell))
+        }
+        if let feeRecipient = feeRecipientCell() {
+            sectionItems.append(.safeInfo(feeRecipient))
+        }
+        sectionItems.append(.advanced(parametersCell()))
+    }
+
+    private func feeSummaryCell() -> UITableViewCell? {
+        guard let batch = feeBatchResult else { return nil }
+        let cell = tableView.dequeueCell(ValueChangeTableViewCell.self)
+        let formatter = TokenFormatter()
+        let decimals = tokenBalance.decimals
+        let original = formatter.string(from: BigDecimal(Int256(batch.originalAmount), decimals), shortFormat: false)
+        let net = formatter.string(from: BigDecimal(Int256(batch.netAmount), decimals), shortFormat: false)
+        cell.set(title: "Amount after fee",
+                 valueBefore: "\(original) \(tokenBalance.symbol)",
+                 valueAfter: "\(net) \(tokenBalance.symbol)")
+        cell.selectionStyle = .none
+        return cell
+    }
+
+    private func feeAmountCell() -> UITableViewCell? {
+        guard let batch = feeBatchResult else { return nil }
+        let cell = tableView.dequeueCell(ValueChangeTableViewCell.self)
+        let formatter = TokenFormatter()
+        let decimals = tokenBalance.decimals
+        let fee = formatter.string(from: BigDecimal(Int256(batch.feeAmount), decimals), shortFormat: false)
+        let percentage = Double(batch.basisPoints) / 100.0
+        cell.set(title: String(format: "Fee (%.2f%%)", percentage),
+                 value: "\(fee) \(tokenBalance.symbol)")
+        cell.selectionStyle = .none
+        return cell
+    }
+
+    private func feeRecipientCell() -> UITableViewCell? {
+        guard let batch = feeBatchResult else { return nil }
+        let cell = tableView.dequeueCell(DetailAccountCell.self)
+        cell.setAccount(address: batch.treasury,
+                        label: "Treasury",
+                        title: "Fee recipient",
+                        copyEnabled: true,
+                        browseURL: nil,
+                        prefix: safe.chain?.shortName,
+                        titleStyle: .headlineSecondary)
+        cell.selectionStyle = .none
+        return cell
+    }
 }

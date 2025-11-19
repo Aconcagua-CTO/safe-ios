@@ -35,6 +35,16 @@ struct AppConfiguration {
         
         @ConfigurationKey("AUTH_API_BASE_URL")
         var authApiBaseURL: URL
+
+        @ConfigurationKey("FEE_BPS")
+        private var feeBasisPointsRaw: String
+
+        var feeBasisPoints: Int {
+            Int(feeBasisPointsRaw) ?? 0
+        }
+
+        @ConfigurationKey("FEE_TREASURY_ADDRESS")
+        var feeTreasuryAddress: String
         
         @ConfigurationKey("CONFIG_KEY")
         var configKey: String
@@ -57,7 +67,15 @@ struct AppConfiguration {
             guard let bundlePath = Bundle.main.path(forResource: "config", ofType: "bundle") else {
                 throw "config.bundle not found"
             }
-            let filename = Multisig.App.configuration.services.environment == .production ? "apis-prod.enc.json" : "apis-staging.enc.json"
+            let filename: String
+            switch Multisig.App.configuration.services.environment {
+            case .development:
+                filename = "apis-dev.enc.json"
+            case .staging:
+                filename = "apis-staging.enc.json"
+            case .production:
+                filename = "apis-prod.enc.json"
+            }
             let file = bundlePath + "/" + filename
             
             let config = SecureConfig()

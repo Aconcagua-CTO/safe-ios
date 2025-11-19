@@ -67,7 +67,8 @@ class LoginViewModel: ObservableObject {
                 self.authState = .success(user: user)
                 
                 // Trigger vault sync after successful login (non-blocking)
-                App.shared.vaultsRepository.syncVaultsFromBackend { result in
+                VaultLogger.info("Triggering post-login vault sync (force=true)")
+                App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { result in
                     switch result {
                     case .success:
                         AuthLogger.info("Vault sync completed successfully after login")

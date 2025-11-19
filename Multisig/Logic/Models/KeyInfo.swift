@@ -11,6 +11,9 @@ import CoreData
 import SafeWeb3
 import WalletConnectSwift
 
+// "address" -> name
+fileprivate var cachedNames = [String: String]()
+
 /// Enum for storing key type in the persistence store. The order of existing items should not be changed.
 enum KeyType: Int, CaseIterable {
     case deviceImported = 0
@@ -111,9 +114,13 @@ extension KeyInfo {
         }
     }
     
+    static func cachedName(address: Address) -> String? {
+        let key = address.checksummed
+        return cachedNames[key]
+    }
+    
     static func name(address: Address) -> String? {
-        guard let keyInfo = try? KeyInfo.keys(addresses: [address]).first else { return nil }
-        return keyInfo.name
+        return cachedName(address: address)
     }
 
     /// Returns number of existing key infos
@@ -128,6 +135,15 @@ extension KeyInfo {
         } catch {
             LogService.shared.error("Failed to fetch safe count: \(error)")
             return 0
+        }
+    }
+
+    static func updateCachedNames() {
+        guard let entities = try? KeyInfo.all() else { return }
+
+        cachedNames = entities.reduce(into: [String: String]()) { names, keyInfo in
+            let key = keyInfo.address.checksummed
+            names[key] = keyInfo.name
         }
     }
 
@@ -409,6 +425,7 @@ extension KeyInfo {
     /// Saves the key to the persistent store
     func save() {
         App.shared.coreDataStack.saveContext()
+        KeyInfo.updateCachedNames()
     }
 
     func rollback() {

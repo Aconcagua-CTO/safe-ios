@@ -1,0 +1,277 @@
+{
+  "functionSelectors": [
+    {
+      "selector": "0xa9059cbb",
+      "protocol": "ERC20",
+      "functionName": "transfer",
+      "functionSignature": "transfer(address,uint256)",
+      "amountParameterLocation": "Bytes 36-67 (uint256)",
+      "amountParameterIndex": 1,
+      "requiresApproval": false
+    },
+    {
+      "selector": "0x23b872dd",
+      "protocol": "ERC20",
+      "functionName": "transferFrom",
+      "functionSignature": "transferFrom(address,address,uint256)",
+      "amountParameterLocation": "Bytes 68-99 (uint256)",
+      "amountParameterIndex": 2,
+      "requiresApproval": false
+    },
+    {
+      "selector": "0x095ea7b3",
+      "protocol": "ERC20",
+      "functionName": "approve",
+      "functionSignature": "approve(address,uint256)",
+      "amountParameterLocation": "Bytes 36-67 (uint256)",
+      "amountParameterIndex": 1,
+      "requiresApproval": false
+    },
+    {
+      "selector": "0x617ba037",
+      "protocol": "Aave V3",
+      "functionName": "supply",
+      "functionSignature": "supply(address,uint256,address,uint16)",
+      "amountParameterLocation": "Bytes 36-67 (uint256)",
+      "amountParameterIndex": 1,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "137": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "42161": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "10": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "43114": "0x794a61358D6845594F94dc1DB02A252b5b4814aD"
+      },
+      "note": "Aave V3 Pool addresses. Chain IDs: 1=Ethereum, 137=Polygon, 42161=Arbitrum, 10=Optimism, 43114=Avalanche"
+    },
+    {
+      "selector": "0xe8eda9df",
+      "protocol": "Aave V2",
+      "functionName": "deposit",
+      "functionSignature": "deposit(address,uint256,address,uint16)",
+      "amountParameterLocation": "Bytes 36-67 (uint256)",
+      "amountParameterIndex": 1,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x7d2768dE32b0b80b7a3454c06BdAc9fA29ceECfF"
+      },
+      "note": "Aave V2 LendingPool address (Ethereum mainnet only). Chain ID: 1=Ethereum"
+    },
+    {
+      "selector": "0x38ed1739",
+      "protocol": "Uniswap V2",
+      "functionName": "swapExactTokensForTokens",
+      "functionSignature": "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      "note": "Uniswap V2 Router02. Chain ID: 1=Ethereum. Same selector as PancakeSwap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0x8803dbee",
+      "protocol": "Uniswap V2",
+      "functionName": "swapTokensForExactTokens",
+      "functionSignature": "swapTokensForExactTokens(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      "note": "Uniswap V2 Router02. Chain ID: 1=Ethereum. Same selector as PancakeSwap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0x7ff36ab5",
+      "protocol": "Uniswap V2",
+      "functionName": "swapExactETHForTokens",
+      "functionSignature": "swapExactETHForTokens(uint256,address[],address,uint256)",
+      "amountParameterLocation": "value field (native ETH)",
+      "amountParameterIndex": -1,
+      "requiresApproval": false,
+      "contractAddresses": {
+        "ethereum": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      "note": "Uses native ETH in value field, not data parameter"
+    },
+    {
+      "selector": "0x4a25d94a",
+      "protocol": "Uniswap V2",
+      "functionName": "swapTokensForExactETH",
+      "functionSignature": "swapTokensForExactETH(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      "note": "Uniswap V2 Router02. Chain ID: 1=Ethereum. Same selector as PancakeSwap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0x18cbafe5",
+      "protocol": "Uniswap V2",
+      "functionName": "swapExactTokensForETH",
+      "functionSignature": "swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      "note": "Uniswap V2 Router02. Chain ID: 1=Ethereum. Same selector as PancakeSwap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0xb6f9de95",
+      "protocol": "Uniswap V2",
+      "functionName": "swapETHForExactTokens",
+      "functionSignature": "swapETHForExactTokens(uint256,address[],address,uint256)",
+      "amountParameterLocation": "value field (native ETH)",
+      "amountParameterIndex": -1,
+      "requiresApproval": false,
+      "contractAddresses": {
+        "ethereum": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      "note": "Uses native ETH in value field, not data parameter"
+    },
+    {
+      "selector": "0x414bf389",
+      "protocol": "Uniswap V3",
+      "functionName": "exactInputSingle",
+      "functionSignature": "exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))",
+      "amountParameterLocation": "Tuple params (amountIn)",
+      "amountParameterIndex": 5,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+      },
+      "note": "Uniswap V3 SwapRouter. Chain ID: 1=Ethereum. Uses tuple encoding - decode tuple to access amountIn"
+    },
+    {
+      "selector": "0xc04b8d59",
+      "protocol": "Uniswap V3",
+      "functionName": "exactInput",
+      "functionSignature": "exactInput((bytes,address,uint256,uint256,uint256))",
+      "amountParameterLocation": "Tuple params (amountIn)",
+      "amountParameterIndex": 2,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+      },
+      "note": "Uniswap V3 SwapRouter. Chain ID: 1=Ethereum. Uses tuple encoding - decode tuple to access amountIn"
+    },
+    {
+      "selector": "0x5023b4df",
+      "protocol": "Uniswap V3",
+      "functionName": "exactOutputSingle",
+      "functionSignature": "exactOutputSingle((address,address,uint24,address,uint256,uint256,uint160))",
+      "amountParameterLocation": "Tuple params (amountOut)",
+      "amountParameterIndex": 5,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "ethereum": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+      },
+      "note": "Uses tuple encoding - decode tuple to access amountOut"
+    },
+    {
+      "selector": "0xdb3e2198",
+      "protocol": "Uniswap V3",
+      "functionName": "exactOutput",
+      "functionSignature": "exactOutput((bytes,address,uint256,uint256,uint256))",
+      "amountParameterLocation": "Tuple params (amountOut)",
+      "amountParameterIndex": 2,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "ethereum": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+      },
+      "note": "Uses tuple encoding - decode tuple to access amountOut"
+    },
+    {
+      "selector": "0x38ed1739",
+      "protocol": "PancakeSwap V2",
+      "functionName": "swapExactTokensForTokens",
+      "functionSignature": "swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "56": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      "note": "PancakeSwap V2 Router. Chain ID: 56=BSC. Same selector as Uniswap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0x8803dbee",
+      "protocol": "PancakeSwap V2",
+      "functionName": "swapTokensForExactTokens",
+      "functionSignature": "swapTokensForExactTokens(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "56": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      "note": "PancakeSwap V2 Router. Chain ID: 56=BSC. Same selector as Uniswap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0x7ff36ab5",
+      "protocol": "PancakeSwap V2",
+      "functionName": "swapExactETHForTokens",
+      "functionSignature": "swapExactETHForTokens(uint256,address[],address,uint256)",
+      "amountParameterLocation": "value field (native BNB)",
+      "amountParameterIndex": -1,
+      "requiresApproval": false,
+      "contractAddresses": {
+        "bsc": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      "note": "Uses native BNB in value field, not data parameter"
+    },
+    {
+      "selector": "0x4a25d94a",
+      "protocol": "PancakeSwap V2",
+      "functionName": "swapTokensForExactETH",
+      "functionSignature": "swapTokensForExactETH(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "56": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      "note": "PancakeSwap V2 Router. Chain ID: 56=BSC. Same selector as Uniswap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0x18cbafe5",
+      "protocol": "PancakeSwap V2",
+      "functionName": "swapExactTokensForETH",
+      "functionSignature": "swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
+      "amountParameterLocation": "Bytes 4-35 (uint256 amountIn)",
+      "amountParameterIndex": 0,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "56": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      "note": "PancakeSwap V2 Router. Chain ID: 56=BSC. Same selector as Uniswap V2 - distinguish by contract address"
+    },
+    {
+      "selector": "0xb6f9de95",
+      "protocol": "PancakeSwap V2",
+      "functionName": "swapETHForExactTokens",
+      "functionSignature": "swapETHForExactTokens(uint256,address[],address,uint256)",
+      "amountParameterLocation": "value field (native BNB)",
+      "amountParameterIndex": -1,
+      "requiresApproval": false,
+      "contractAddresses": {
+        "bsc": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      "note": "Uses native BNB in value field, not data parameter"
+    }
+  ],
+  "notes": {
+    "uniswapPancakeSwapDistinction": "Uniswap V2 and PancakeSwap V2 share identical function selectors. Distinguish by checking the 'to' address against contractAddresses in this JSON (keyed by chain ID): Uniswap V2 Router02 (Chain ID 1) = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D, PancakeSwap V2 Router (Chain ID 56) = 0x10ED43C718714eb63d5aA57B78B54704E256024E",
+    "chainIdReference": "Chain IDs: 1=Ethereum, 56=BSC, 137=Polygon, 42161=Arbitrum, 10=Optimism, 43114=Avalanche",
+    "nativeTokenSwaps": "Functions that use native tokens (ETH/BNB) store the amount in the transaction 'value' field, not in the data parameters",
+    "tupleEncoding": "Uniswap V3 functions use tuple encoding for parameters. Decode the tuple structure to access individual parameters",
+    "amountParameterIndex": "Index refers to the parameter position in the function signature (0-based). -1 indicates amount is in transaction value field"
+  }
+}
+

@@ -17,7 +17,10 @@ protocol VaultsRepository {
      * Sync vaults from backend and replace all local vaults
      * - Parameter completion: Completion handler with Result indicating success or failure
      */
-    func syncVaultsFromBackend(completion: @escaping (Result<Void, Error>) -> Void)
+    /// - Parameters:
+    ///   - force: When true, bypasses the `AppSettings.useLocalVaults` guard so that manual refreshes can run even if automatic syncing is disabled.
+    ///   - completion: Completion handler with Result indicating success or failure.
+    func syncVaultsFromBackend(force: Bool, completion: @escaping (Result<Void, Error>) -> Void)
 }
 
 /**
@@ -38,25 +41,27 @@ class VaultsRepositoryImpl: VaultsRepository {
         self.authRepository = authRepository
     }
     
-    func syncVaultsFromBackend(completion: @escaping (Result<Void, Error>) -> Void) {
+    func syncVaultsFromBackend(force: Bool = false, completion: @escaping (Result<Void, Error>) -> Void) {
         syncQueue.async { [weak self] in
             guard let self = self else {
                 completion(.failure(NSError(domain: "VaultsRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "Repository deallocated"])))
                 return
             }
             
+            VaultLogger.debug("syncVaultsFromBackend(force: \(force)) requested")
+            
             // Check if a sync is already in progress
             if self.isSyncing {
-                VaultLogger.warning("Vault sync already in progress, skipping new sync request")
+                VaultLogger.warning("Vault sync already in progress, skipping new sync request (force=\(force))")
                 completion(.success(()))
                 return
             }
             
             // Mark sync as in progress
             self.isSyncing = true
-            VaultLogger.info("Starting new vault sync operation")
+            VaultLogger.info("Starting new vault sync operation (force=\(force))")
             
-            self.syncVaultsFromBackendWithRetry(attempt: 1) { result in
+            self.syncVaultsFromBackendWithRetry(attempt: 1, force: force) { result in
                 // Mark sync as complete
                 self.syncQueue.async {
                     self.isSyncing = false
@@ -67,12 +72,14 @@ class VaultsRepositoryImpl: VaultsRepository {
         }
     }
     
-    private func syncVaultsFromBackendWithRetry(attempt: Int, completion: @escaping (Result<Void, Error>) -> Void) {
+    private func syncVaultsFromBackendWithRetry(attempt: Int, force: Bool, completion: @escaping (Result<Void, Error>) -> Void) {
         // Check feature flag: if useLocalVaults is enabled, skip backend sync
-        if AppSettings.useLocalVaults {
-            VaultLogger.info("Feature flag 'useLocalVaults' is enabled - skipping backend sync, using local vaults")
+        if AppSettings.useLocalVaults && !force {
+            VaultLogger.info("Feature flag 'useLocalVaults' is enabled - skipping backend sync, using local vaults (force=false)")
             completion(.success(()))
             return
+        } else if AppSettings.useLocalVaults && force {
+            VaultLogger.info("Feature flag 'useLocalVaults' is enabled - forcing backend sync due to manual request")
         }
         
         let startTime = Date()
@@ -150,7 +157,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                     
                     // Schedule retry after delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + retryDelay) {
-                        self.syncVaultsFromBackendWithRetry(attempt: attempt + 1, completion: completion)
+                        self.syncVaultsFromBackendWithRetry(attempt: attempt + 1, force: force, completion: completion)
                     }
                 } else {
                     // Final attempt failed, show error to user
@@ -182,8 +189,14 @@ class VaultsRepositoryImpl: VaultsRepository {
             guard let self = self else { return }
             
             do {
+                let keyFor: (String, String) -> String = { address, chainId in
+                    "\(address.lowercased())|\(chainId)"
+                }
+                
                 // Map backend vaults to CoreData Safe entities
-                var mappedSafes: [(address: String, name: String, chainId: String, version: String?)] = []
+                var mappedSafes: [(address: String, name: String, chainId: String, chain: Chain, version: String?)] = []
+                var skippedCount = 0
+                var seenServerKeys = Set<String>()
                 
                 for (index, vault) in vaultResponses.enumerated() {
                     #if DEBUG
@@ -197,100 +210,190 @@ class VaultsRepositoryImpl: VaultsRepository {
                     #endif
                     
                     // Validate address format
-                    guard let _ = Address(vault.id) else {
+                    guard let parsedAddress = Address(vault.id) else {
                         VaultLogger.warning("Failed to parse vault \(index + 1): Invalid address format - \(vault.id)")
+                        skippedCount += 1
                         continue
                     }
                     
                     // Find Chain entity
                     guard let chain = Chain.by(vault.chainId) else {
                         VaultLogger.warning("Failed to parse vault \(index + 1): Chain not found for chainId \(vault.chainId)")
+                        skippedCount += 1
                         continue
                     }
                     
+                    guard let chainId = chain.id else {
+                        VaultLogger.warning("Failed to parse vault \(index + 1): Chain has no identifier for chainId \(vault.chainId)")
+                        skippedCount += 1
+                        continue
+                    }
+                    
+                    let normalizedAddress = parsedAddress.checksummed
+                    let key = keyFor(normalizedAddress, chainId)
+                    
+                    if seenServerKeys.contains(key) {
+                        VaultLogger.warning("Duplicate vault entry received for \(normalizedAddress) on chain \(chainId); skipping duplicate")
+                        skippedCount += 1
+                        continue
+                    }
+                    seenServerKeys.insert(key)
+                    
                     mappedSafes.append((
-                        address: vault.id,
+                        address: normalizedAddress,
                         name: vault.name,
-                        chainId: vault.chainId,
+                        chainId: chainId,
+                        chain: chain,
                         version: vault.contractVersion
                     ))
                     
-                    VaultLogger.success("Mapped vault \(index + 1): \(vault.id.prefix(10))... -> Safe(\(vault.name), chain: \(vault.chainId))")
+                    VaultLogger.success("Mapped vault \(index + 1): \(normalizedAddress.prefix(10))... -> Safe(\(vault.name), chain: \(chainId))")
                 }
                 
-                VaultLogger.info("Successfully mapped \(mappedSafes.count)/\(vaultResponses.count) vaults to Safe entities")
+                VaultLogger.info("Prepared \(mappedSafes.count) vault(s) for sync (skipped: \(skippedCount))")
                 
-                if mappedSafes.count < vaultResponses.count {
-                    let failed = vaultResponses.count - mappedSafes.count
-                    VaultLogger.warning("\(failed) vault(s) failed to map and were skipped")
-                }
+                let selectedKey: String? = {
+                    guard
+                        let address = selectedSafeAddress,
+                        let chainId = selectedSafeChainId
+                    else {
+                        return nil
+                    }
+                    return keyFor(address, chainId)
+                }()
                 
-                // Get count of existing safes (excluding demo) before deletion
                 let existingSafes = try Safe.getAll()
-                let existingSafesExcludingDemo = existingSafes.filter { $0.address != Safe.demoAddress }
-                let deletedCount = existingSafesExcludingDemo.count
+                var existingSafesMap: [String: Safe] = [:]
+                var duplicateLocalSafes = 0
                 
-                // Destructive sync: clear all existing safes (except demo) and insert new ones
-                VaultLogger.database("Clearing existing local safes...")
-                
-                // Delete all safes except demo
-                for safe in existingSafesExcludingDemo {
-                    Safe.remove(safe: safe)
-                }
-                
-                VaultLogger.database("Deleted \(deletedCount) existing safe(s)")
-                
-                // Insert new safes
-                VaultLogger.database("Inserting \(mappedSafes.count) new safe(s)...")
-                
-                for (index, mappedSafe) in mappedSafes.enumerated() {
-                    guard let chain = Chain.by(mappedSafe.chainId) else {
-                        VaultLogger.warning("Chain not found for \(mappedSafe.chainId), skipping safe")
+                for safe in existingSafes where safe.address != Safe.demoAddress {
+                    guard
+                        let address = safe.address,
+                        let chainId = safe.chain?.id
+                    else {
+                        VaultLogger.warning("Skipping local safe missing address or chain relationship")
                         continue
                     }
                     
-                    // Determine if this safe should be selected
-                    let shouldSelect = selectedSafeAddress == mappedSafe.address && selectedSafeChainId == mappedSafe.chainId
-                    
-                    let safe = Safe.create(
-                        address: mappedSafe.address,
-                        version: mappedSafe.version,
-                        name: mappedSafe.name,
-                        chain: chain,
-                        selected: shouldSelect,
-                        status: .deployed
-                    )
-                    
-                    #if DEBUG
-                    VaultLogger.debug("[\(index + 1)/\(mappedSafes.count)] Inserted: \(mappedSafe.address) (\(mappedSafe.name)) on chain \(mappedSafe.chainId)")
-                    #else
-                    VaultLogger.database("Inserted safe: \(mappedSafe.name) on chain \(mappedSafe.chainId)")
-                    #endif
+                    let key = keyFor(address, chainId)
+                    if existingSafesMap[key] != nil {
+                        duplicateLocalSafes += 1
+                        VaultLogger.warning("Duplicate local safe detected for \(address) on chain \(chainId); keeping the first instance")
+                        continue
+                    }
+                    existingSafesMap[key] = safe
                 }
                 
-                // If selected safe was removed, select first available safe
-                if selectedSafeAddress != nil {
-                    let newSafes = try Safe.getAll()
-                    if !newSafes.contains(where: { $0.address == selectedSafeAddress && $0.chain?.id == selectedSafeChainId }) {
-                        VaultLogger.info("Selected safe was removed, selecting first available safe")
-                        if let firstSafe = newSafes.first {
-                            firstSafe.select()
+                if duplicateLocalSafes > 0 {
+                    VaultLogger.warning("Detected \(duplicateLocalSafes) duplicate local safe(s)")
+                }
+                
+                var insertedCount = 0
+                var updatedCount = 0
+                var unchangedCount = 0
+                var deletedCount = 0
+                
+                var updatedSafesNeedingSave: [Safe] = []
+                var selectedSafeStillPresent = selectedKey == nil
+                
+                for mappedSafe in mappedSafes {
+                    let chain = mappedSafe.chain
+                    let key = keyFor(mappedSafe.address, mappedSafe.chainId)
+                    
+                    if let existingSafe = existingSafesMap.removeValue(forKey: key) {
+                        var changed = false
+                        
+                        if existingSafe.name != mappedSafe.name {
+                            existingSafe.name = mappedSafe.name
+                            changed = true
                         }
+                        if existingSafe.contractVersion != mappedSafe.version {
+                            existingSafe.contractVersion = mappedSafe.version
+                            changed = true
+                        }
+                        if existingSafe.safeStatus != .deployed {
+                            existingSafe.safeStatus = .deployed
+                            changed = true
+                        }
+                        if existingSafe.chain != chain {
+                            existingSafe.chain = chain
+                            changed = true
+                        }
+                        
+                        if changed {
+                            updatedSafesNeedingSave.append(existingSafe)
+                            updatedCount += 1
+                            VaultLogger.database("Updated safe: \(mappedSafe.address) on chain \(mappedSafe.chainId)")
+                        } else {
+                            unchangedCount += 1
+                        }
+                        
+                        if key == selectedKey {
+                            selectedSafeStillPresent = true
+                        }
+                    } else {
+                        let shouldSelect = key == selectedKey
+                        let safe = Safe.create(
+                            address: mappedSafe.address,
+                            version: mappedSafe.version,
+                            name: mappedSafe.name,
+                            chain: chain,
+                            selected: shouldSelect,
+                            status: .deployed
+                        )
+                        insertedCount += 1
+                        
+                        if shouldSelect {
+                            selectedSafeStillPresent = true
+                        }
+                        
+                        VaultLogger.database("Inserted safe: \(safe.address ?? mappedSafe.address) on chain \(mappedSafe.chainId)")
                     }
-                } else if mappedSafes.isEmpty == false {
-                    // If no safe was selected before and we have safes, select the first one
-                    if let firstSafe = try Safe.getAll().first {
-                        firstSafe.select()
-                        VaultLogger.info("Selected first safe: \(firstSafe.address ?? "nil")")
+                }
+                
+                if !updatedSafesNeedingSave.isEmpty {
+                    App.shared.coreDataStack.saveContext()
+                    Safe.updateCachedNames()
+                    VaultLogger.database("Saved \(updatedSafesNeedingSave.count) updated safe(s)")
+                } else if insertedCount > 0 {
+                    Safe.updateCachedNames()
+                }
+                
+                if existingSafesMap.isEmpty == false {
+                    VaultLogger.database("Removing \(existingSafesMap.count) stale local safe(s)")
+                }
+                
+                for safe in existingSafesMap.values {
+                    let key = keyFor(safe.address ?? "", safe.chain?.id ?? "")
+                    Safe.remove(safe: safe)
+                    deletedCount += 1
+                    
+                    if key == selectedKey {
+                        selectedSafeStillPresent = false
                     }
+                }
+                
+                let safesAfter = try Safe.getAll()
+                let selectedAfter = try Safe.getSelected()
+                
+                if selectedAfter == nil, let firstSafe = safesAfter.first {
+                    firstSafe.select()
+                    VaultLogger.info("Selected fallback safe: \(firstSafe.address ?? "nil")")
+                } else if selectedKey != nil && !selectedSafeStillPresent {
+                    VaultLogger.info("Previously selected safe no longer available after sync")
+                }
+                
+                if skippedCount > 0 {
+                    VaultLogger.warning("Skipped \(skippedCount) vault(s) due to validation issues or duplicates")
                 }
                 
                 let totalTime = Date().timeIntervalSince(startTime)
                 VaultLogger.success("==================== SYNC COMPLETED ====================")
                 VaultLogger.success("Total time: \(String(format: "%.0f", totalTime * 1000))ms")
-                VaultLogger.success("Vaults synced: \(mappedSafes.count)")
-                VaultLogger.success("Previous vaults: \(deletedCount)")
-                VaultLogger.success("Net change: \(mappedSafes.count - deletedCount)")
+                VaultLogger.success("Server vaults received: \(vaultResponses.count)")
+                VaultLogger.success("Inserted: \(insertedCount), Updated: \(updatedCount), Unchanged: \(unchangedCount), Removed: \(deletedCount)")
+                VaultLogger.success("Local safes total: \(safesAfter.count)")
+                VaultLogger.success("Net change: \(insertedCount - deletedCount)")
                 
                 completion(.success(()))
                 

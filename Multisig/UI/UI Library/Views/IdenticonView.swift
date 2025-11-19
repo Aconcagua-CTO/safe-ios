@@ -36,7 +36,14 @@ class IdenticonView: UINibView {
     }
 
     func set(address: Address, imageURL: URL? = nil, placeholderImage: String? = nil, badgeName: String? = nil, reqConfirmations: Int? = nil, owners: Int? = nil) {
+        let identiconStart = Date()
+        VaultLogger.debug("[IDENTICON] Setting identicon for address \(address.hexadecimal.prefix(10))... with imageURL: \(imageURL?.absoluteString ?? "nil")")
+
         identiconImageView.setCircleImage(url: imageURL, placeholderName: placeholderImage, address: address)
+
+        let identiconTime = Date().timeIntervalSince(identiconStart)
+        VaultLogger.debug("[IDENTICON] setCircleImage() completed in \(String(format: "%.3f", identiconTime))ms")
+
         if let badgeName = badgeName {
             badgeImageView.image = UIImage(named: badgeName)
         }

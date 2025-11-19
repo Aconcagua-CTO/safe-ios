@@ -91,25 +91,6 @@ final class HeaderViewController: ContainerViewController {
     @IBAction private func didTapSwitchSafe(_ sender: Any) {
         let switchSafesVC = SwitchSafesViewController()
 
-        switchSafesVC.onAddSafe = { [weak self] in
-            Tracker.trackEvent(.addSafeFromSwitchSafes)
-            self?.dismiss(animated: false) {
-                self?.addSafe()
-            }
-        }
-
-        switchSafesVC.onCreateSafe = { [weak self] in
-            // Create Safe Flow
-            Tracker.trackEvent(.createSafeFromSwitchSafes)
-            self?.dismiss(animated: true) { [weak self] in
-                guard let self = self else { return }
-                self.createSafeFlow = CreateSafeFlow(completion: { [weak self] _ in
-                    self?.createSafeFlow = nil
-                })
-                self.present(flow: self.createSafeFlow, dismissableOnSwipe: false)
-            }
-        }
-
         let nav = UINavigationController(rootViewController: switchSafesVC)
         present(nav, animated: true)
     }

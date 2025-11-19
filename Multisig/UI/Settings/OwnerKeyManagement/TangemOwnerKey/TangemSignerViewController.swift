@@ -352,6 +352,7 @@ private final class TangemSignContentViewController: UIViewController {
         let rBytes = Array(r)
         let sBytes = Array(s)
 
+        // Try both compressed and uncompressed recovery since Tangem cards may sign with either format
         for recoveryId in 0...1 {
             let v = UInt8(27 + recoveryId)
             TangemLogger.debug("TangemSigner ▶️ Attempting recoveryId=\(recoveryId) using SECP256K1")
@@ -360,19 +361,24 @@ private final class TangemSignContentViewController: UIViewController {
                 continue
             }
 
-            if let recoveredKey = SECP256K1.recoverPublicKey(hash: hash, signature: signature, compressed: false) {
-                do {
-                    let recoveredAddress = try service.ethereumAddress(fromNormalizedPublicKey: recoveredKey)
-                    TangemLogger.debug("TangemSigner ▶️ SECP256K1 recovered address=\(recoveredAddress.checksummed) (expected=\(expectedAddress.checksummed))")
-                    if recoveredAddress == expectedAddress {
-                        TangemLogger.debug("TangemSigner ▶️ Found correct recovery ID: \(recoveryId)")
-                        return recoveryId
+            // Try both compressed and uncompressed key recovery
+            for compressed in [false, true] {
+                if let recoveredKey = SECP256K1.recoverPublicKey(hash: hash, signature: signature, compressed: compressed) {
+                    do {
+                        TangemLogger.debug("TangemSigner ▶️ SECP256K1 recoveryId=\(recoveryId) compressed=\(compressed) recovered key (\(recoveredKey.count) bytes) = \(recoveredKey.tangemHexDescription())")
+                        // Normalize the recovered key to uncompressed before deriving address
+                        let normalizedRecovered = try service.normalizedWalletPublicKey(recoveredKey)
+                        TangemLogger.debug("TangemSigner ▶️ Normalized recovered key (\(normalizedRecovered.count) bytes) = \(normalizedRecovered.tangemHexDescription())")
+                        let recoveredAddress = try service.ethereumAddress(fromNormalizedPublicKey: normalizedRecovered)
+                        TangemLogger.debug("TangemSigner ▶️ SECP256K1 (compressed=\(compressed)) recovered address=\(recoveredAddress.checksummed) (expected=\(expectedAddress.checksummed))")
+                        if recoveredAddress == expectedAddress {
+                            TangemLogger.debug("TangemSigner ▶️ Found correct recovery ID: \(recoveryId)")
+                            return recoveryId
+                        }
+                    } catch {
+                        TangemLogger.error("TangemSigner ⚠️ Failed to derive address from recovered public key (compressed=\(compressed))", error: error)
                     }
-                } catch {
-                    TangemLogger.error("TangemSigner ⚠️ Failed to derive address from recovered public key", error: error)
                 }
-            } else {
-                TangemLogger.debug("TangemSigner ⚠️ SECP256K1 recovery returned nil for recoveryId=\(recoveryId)")
             }
         }
 

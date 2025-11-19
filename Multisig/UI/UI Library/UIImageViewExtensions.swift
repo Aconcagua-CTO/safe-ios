@@ -44,8 +44,33 @@ extension UIImageView {
 
     /// Sets the image from URL or uses blocky for the address if image can't be loaded
     func setCircleImage(url: URL?, placeholderName: String? = nil, address: Address) {
-        let blocky = BlockiesImageProvider(seed: address.hexadecimal).image()?.circleShape()
-        setCircleShapeImage(url: url, placeholder: UIImage(named: (placeholderName ?? "")) ?? blocky)
+        let imageStart = Date()
+        VaultLogger.debug("[IMAGE] setCircleImage called for address \(address.hexadecimal.prefix(10))... with URL: \(url?.absoluteString ?? "nil")")
+
+        let blockyProvider = BlockiesImageProvider(seed: address.hexadecimal)
+        let circleProcessor = RoundCornerImageProcessor(radius: .widthFraction(0.5))
+
+        // If we have a URL, try to load it first, fallback to blocky if it fails
+        if let url = url {
+            VaultLogger.debug("[IMAGE] Attempting to load image from URL: \(url.absoluteString)")
+            kf.setImage(with: url, options: [.processor(circleProcessor)]) { [weak self] result in
+                let urlLoadTime = Date().timeIntervalSince(imageStart)
+                switch result {
+                case .success:
+                    VaultLogger.debug("[IMAGE] URL image loaded successfully in \(String(format: "%.3f", urlLoadTime))ms")
+                case .failure(let error):
+                    VaultLogger.debug("[IMAGE] URL image failed (\(String(format: "%.3f", urlLoadTime))ms), falling back to Blockies")
+                    self?.kf.setImage(with: blockyProvider, options: [.processor(circleProcessor)])
+                }
+            }
+        } else {
+            VaultLogger.debug("[IMAGE] No URL provided, using Blockies directly")
+            // No URL, use blocky directly
+            kf.setImage(with: blockyProvider, options: [.processor(circleProcessor)])
+        }
+
+        let setupTime = Date().timeIntervalSince(imageStart)
+        VaultLogger.debug("[IMAGE] setCircleImage setup completed in \(String(format: "%.3f", setupTime))ms")
     }
 
     func setImage(url: URL?, placeholder: UIImage?, failedImage: UIImage?) {
@@ -85,22 +110,58 @@ struct BlockiesImageProvider: ImageDataProvider {
     var height: CGFloat = 250
     var cacheKey: String { "\(seed)@\(blockSize)-\(width)x\(height)" }
 
+    private static var imageCache = [String: UIImage]()
+
     func data(handler: @escaping (Result<Data, Error>) -> Void) {
-        if let image = image(), let data = image.pngData() {
-            handler(.success(data))
-        } else {
-            handler(.failure("Failed to create blockies for \(seed)"))
+        let blockiesStart = Date()
+        VaultLogger.debug("[BLOCKIES] Starting Blockies generation for seed \(seed.prefix(10))...")
+
+        // Generate image on background thread to avoid blocking main thread
+        DispatchQueue.global(qos: .userInitiated).async {
+            let imageGenStart = Date()
+            if let image = self.image(), let data = image.pngData() {
+                let imageGenTime = Date().timeIntervalSince(imageGenStart)
+                VaultLogger.debug("[BLOCKIES] Blockies image generated successfully in \(String(format: "%.3f", imageGenTime))ms")
+                DispatchQueue.main.async {
+                    let totalTime = Date().timeIntervalSince(blockiesStart)
+                    VaultLogger.debug("[BLOCKIES] Blockies generation completed in \(String(format: "%.3f", totalTime))ms total")
+                    handler(.success(data))
+                }
+            } else {
+                let imageGenTime = Date().timeIntervalSince(imageGenStart)
+                VaultLogger.debug("[BLOCKIES] Blockies image generation failed after \(String(format: "%.3f", imageGenTime))ms")
+                DispatchQueue.main.async {
+                    let totalTime = Date().timeIntervalSince(blockiesStart)
+                    VaultLogger.debug("[BLOCKIES] Blockies generation failed in \(String(format: "%.3f", totalTime))ms total")
+                    handler(.failure(NSError(domain: "BlockiesImageProvider", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create blockies for \(seed)"])))
+                }
+            }
         }
     }
 
     func image() -> UIImage? {
+        let cacheKey = self.cacheKey
+
+        // Check cache first
+        if let cachedImage = BlockiesImageProvider.imageCache[cacheKey] {
+            return cachedImage
+        }
+
+        // Generate image
         let size = blockSize == 0 ? 8 : blockSize
         let blockies = Blockies(
             seed: seed,
             size: Int(size),
             scale: Int(min(width, height) / CGFloat(size))
         )
-        return blockies.createImage()
+
+        if let image = blockies.createImage() {
+            // Cache the image
+            BlockiesImageProvider.imageCache[cacheKey] = image
+            return image
+        }
+
+        return nil
     }
 }
 

@@ -11,6 +11,9 @@ import SafeWeb3
 import SwiftCryptoTokenFormatter
 import Ethereum
 import Solidity
+#if DEBUG
+import CoreData
+#endif
 
 class TransactionViewController: UIViewController {
     @IBOutlet private weak var safeAddressInfoView: AddressInfoView!
@@ -31,6 +34,9 @@ class TransactionViewController: UIViewController {
     var tokenBalance: TokenBalance!
     var gatewayService = App.shared.clientGatewayService
     var safe: Safe!
+#if DEBUG
+    private var safeContextObserver: NSObjectProtocol?
+#endif
 
     private var debounceTimer: Timer!
     private let debounceDuration: TimeInterval = 0.250
@@ -45,6 +51,28 @@ class TransactionViewController: UIViewController {
 
         safe = try? Safe.getSelected()
         assert(safe != nil)
+#if DEBUG
+        logSafeState("viewDidLoad-initial")
+        safeContextObserver = NotificationCenter.default.addObserver(
+            forName: .NSManagedObjectContextObjectsDidChange,
+            object: App.shared.coreDataStack.viewContext,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self, let safe = self.safe else { return }
+            if let deleted = notification.userInfo?[NSDeletedObjectsKey] as? Set<NSManagedObject>,
+               deleted.contains(safe) {
+                LogService.shared.debug("[TransactionViewController] Safe deleted via context change")
+            }
+            if let invalidated = notification.userInfo?[NSInvalidatedObjectsKey] as? Set<NSManagedObject>,
+               invalidated.contains(safe) {
+                LogService.shared.debug("[TransactionViewController] Safe invalidated via context change")
+            }
+            if let refreshed = notification.userInfo?[NSRefreshedObjectsKey] as? Set<NSManagedObject>,
+               refreshed.contains(safe) {
+                LogService.shared.debug("[TransactionViewController] Safe refreshed via context change")
+            }
+        }
+#endif
 
         navigationItem.title = "Send " + tokenBalance.symbol
         navigationItem.backButtonTitle = "Back"
@@ -91,12 +119,21 @@ class TransactionViewController: UIViewController {
         super.viewDidAppear(animated)
         Tracker.trackEvent(.assetsTransferInit)
         keyboardBehavior.start()
+#if DEBUG
+        logSafeState("viewDidAppear")
+#endif
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         keyboardBehavior.stop()
         TooltipSource.hideAll()
+#if DEBUG
+        if let observer = safeContextObserver {
+            NotificationCenter.default.removeObserver(observer)
+            safeContextObserver = nil
+        }
+#endif
     }
 
     @IBAction func maxButtonTouched(_ sender: Any) {
@@ -163,35 +200,90 @@ class TransactionViewController: UIViewController {
     }
 
     private func didEnterText(_ text: String?) {
+        let pasteStartTime = Date()
+        VaultLogger.info("[PASTE] didEnterText() called with text: '\(text?.prefix(20) ?? "nil")...'")
+
+        #if DEBUG
+        logSafeState("didEnterText-before")
+        #endif
+
+        VaultLogger.debug("[PASTE] Clearing address field and disabling review buttons")
         addressField.clear()
         enableReviewButtons(false)
 
         guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            VaultLogger.debug("[PASTE] Text is nil or empty after trimming, returning early")
             return
         }
 
         guard !text.isEmpty else {
+            VaultLogger.debug("[PASTE] Text is empty, setting error")
             addressField.setError("Address should not be empty")
             return
         }
+
+        VaultLogger.debug("[PASTE] Setting input text: '\(text.prefix(20))...'")
         addressField.setInputText(text)
+
         do {
+            let addressParseStart = Date()
             let address = try Address.addressWithPrefix(text: text)
-            guard (address.prefix ?? safe.chain?.shortName) == safe.chain?.shortName else {
+            let addressParseTime = Date().timeIntervalSince(addressParseStart)
+            VaultLogger.debug("[PASTE] Address parsing took \(String(format: "%.3f", addressParseTime))ms: \(address.hexadecimal.prefix(10))...")
+
+            #if DEBUG
+            if safe.chain == nil {
+                LogService.shared.error("[TransactionViewController] didEnterText: safe.chain unexpectedly nil before prefix check")
+            }
+            #endif
+
+            let safeChainShortName = safe.chain?.shortName
+            let prefixCheckStart = Date()
+            guard (address.prefix ?? safeChainShortName) == safeChainShortName else {
+                VaultLogger.warning("[PASTE] Address prefix mismatch - address prefix: \(address.prefix ?? "nil"), safe chain: \(safeChainShortName ?? "nil")")
                 addressField.setError(GSError.AddressMismatchNetwork())
                 return
             }
+            let prefixCheckTime = Date().timeIntervalSince(prefixCheckStart)
+            VaultLogger.debug("[PASTE] Prefix validation took \(String(format: "%.3f", prefixCheckTime))ms - passed")
 
+            guard let chainId = safe.chain?.id else {
+                #if DEBUG
+                LogService.shared.error("[TransactionViewController] didEnterText: safe.chain?.id is nil, cannot set address")
+                #endif
+                VaultLogger.error("[PASTE] Safe chain ID is nil, cannot proceed")
+                addressField.setError(GSError.error(description: "Safe chain is unavailable", error: nil))
+                return
+            }
+
+            let namingStart = Date()
+            VaultLogger.debug("[PASTE] Starting name resolution for address \(address.hexadecimal.prefix(10))... on chain \(chainId)")
+            let namingInfo = NamingPolicy.name(for: address, chainId: chainId)
+            let namingTime = Date().timeIntervalSince(namingStart)
+            VaultLogger.debug("[PASTE] Name resolution took \(String(format: "%.3f", namingTime))ms - result: '\(namingInfo.name ?? "nil")'")
+
+            let uiUpdateStart = Date()
+            VaultLogger.debug("[PASTE] Setting address field with resolved name")
             addressField.setAddress(address,
-                                    label: NamingPolicy.name(for: address, chainId: safe.chain!.id!).name,
-                                    prefix: safe.chain?.shortName)
+                                    label: namingInfo.name,
+                                    prefix: safeChainShortName)
+            let uiUpdateTime = Date().timeIntervalSince(uiUpdateStart)
+            VaultLogger.debug("[PASTE] UI update took \(String(format: "%.3f", uiUpdateTime))ms")
+
+            let verifyStart = Date()
+            verifyInput()
+            let verifyTime = Date().timeIntervalSince(verifyStart)
+            VaultLogger.debug("[PASTE] verifyInput() took \(String(format: "%.3f", verifyTime))ms")
+
         } catch {
+            VaultLogger.error("[PASTE] Address parsing failed", error: error)
             addressField.setError(
                 GSError.error(description: "Can’t use this address",
                               error: error is EthereumAddress.Error ? GSError.SafeAddressNotValid() : error))
         }
 
-        verifyInput()
+        let totalTime = Date().timeIntervalSince(pasteStartTime)
+        VaultLogger.success("[PASTE] didEnterText() completed in \(String(format: "%.3f", totalTime))ms")
     }
 
     private func enableReviewButtons(_ enabled: Bool) {
@@ -218,6 +310,16 @@ class TransactionViewController: UIViewController {
         enableReviewButtons(message == nil && address != nil)
         amountTextField.showError(message: message)
     }
+#if DEBUG
+    private func logSafeState(_ context: String) {
+        guard let safe = safe else {
+            LogService.shared.debug("[TransactionViewController] \(context): safe == nil")
+            return
+        }
+        let hasContext = safe.managedObjectContext != nil
+        LogService.shared.debug("[TransactionViewController] \(context): isDeleted=\(safe.isDeleted) isFault=\(safe.isFault) contextNil=\(!hasContext) chainNil=\(safe.chain == nil)")
+    }
+#endif
 }
 
 

@@ -129,20 +129,6 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
         super.reloadData()
         currentDataTask?.cancel()
         
-        // Sync vaults from backend (non-blocking)
-        // This will update the vault list if backend sync is enabled
-        if App.shared.authRepository.isAuthenticated() {
-            App.shared.vaultsRepository.syncVaultsFromBackend { result in
-                switch result {
-                case .success:
-                    VaultLogger.info("Vault sync completed successfully during pull-to-refresh")
-                case .failure(let error):
-                    VaultLogger.error("Vault sync failed during pull-to-refresh", error: error)
-                    // Don't show error to user - sync failures shouldn't block balance refresh
-                }
-            }
-        }
-        
         do {
             if let safe = try? Safe.getSelected(), safe.chain?.isSupported(feature: .moonpay) ?? false {
                 emptyView.setTitle("Add some crypto to get started")

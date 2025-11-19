@@ -8,6 +8,7 @@
 
 import SwiftUI
 import UIKit
+import FirebaseCrashlytics
 
 struct AdvancedAppSettings: View {
 
@@ -39,6 +40,16 @@ struct AdvancedAppSettings: View {
             if !(App.configuration.services.environment == .production) ||
                 FirebaseRemoteConfig.shared.value(key: .crashDebugEnabled) == "YES" {
                 Section(header: SectionHeader("DEBUG")) {
+                    Button(action: {
+                        let crashlytics = Crashlytics.crashlytics()
+                        crashlytics.log("Advanced Settings: force Crashlytics crash triggered by user")
+                        crashlytics.setCustomValue("advanced_settings", forKey: "force_crash_source")
+                        crashlytics.setCustomValue(Date().description, forKey: "force_crash_timestamp")
+                        fatalError("Crashlytics test crash triggered from Advanced Settings")
+                    }) {
+                        Text("Crash with Crashlytics").body()
+                    }
+                    
                     Button(action: {
                         fatalError()
                     }) {

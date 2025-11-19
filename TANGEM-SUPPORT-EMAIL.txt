@@ -1,0 +1,198 @@
+Subject: Linked Terminal Feature Not Working for HD Wallet Cards (Firmware 6.33r)
+
+To: Tangem Support (support@tangem.com)
+CC: Tangem Developer Relations (if applicable)
+
+Dear Tangem Support Team,
+
+We are integrating Tangem cards into Safe Wallet (a multi-signature wallet for iOS) and have encountered an issue with the Linked Terminal feature for HD wallet cards.
+
+═══════════════════════════════════════════════════════════════
+
+ISSUE SUMMARY
+
+The Linked Terminal feature does not work for our HD wallet card (firmware 6.33r), even though:
+  • config.linkedTerminal = true
+  • Terminal keypair properly generated and stable
+  • Terminal keys successfully sent to card (TAG_TerminalPublicKey, TAG_TerminalTransactionSignature)
+  • Card has SkipSecurityDelayIfValidatedByLinkedTerminal enabled
+
+Result: TAG_IsLinked remains 00 (false) and 15-second delay applies to EVERY signature.
+
+═══════════════════════════════════════════════════════════════
+
+ENVIRONMENT
+
+Card:
+  • Card ID: AF05000000203703
+  • Firmware: 6.33r
+  • Batch: AF05
+  • Type: HD Wallet (Wallet 2.0)
+  • Manufactured: 2023-08-23
+  • Settings: SkipSecurityDelayIfValidatedByLinkedTerminal ✓
+
+SDK:
+  • Platform: iOS (TangemSdk.xcframework)
+  • Version: 3.x
+  • Configuration: linkedTerminal = true
+
+App:
+  • Platform: iOS 18.1
+  • Terminal Keys: Stable secp256k1 keypair in iOS Keychain
+  • Implementation: Following SDK documentation
+
+═══════════════════════════════════════════════════════════════
+
+ROOT CAUSE INVESTIGATION
+
+We reviewed the Tangem SDK source code and found a firmware version check in SignCommand.swift (lines 254-260):
+
+    private func retrieveTerminalKeys(from environment: SessionEnvironment) -> KeyPair? {
+        guard let card = environment.card,
+              card.settings.isLinkedTerminalEnabled,
+              card.firmwareVersion < .hdWalletAvailable else {
+                  return nil  // ← Blocks firmware >= 4.52
+              }
+        
+        return environment.terminalKeys
+    }
+
+This check prevents terminal keys from being sent to HD wallet cards (firmware >= 4.52).
+
+═══════════════════════════════════════════════════════════════
+
+TESTING (Binary Patch Applied - Development Only)
+
+⚠️ FULL DISCLOSURE: We applied a binary patch to the SDK for testing purposes.
+
+Patch Details:
+  • File: TangemSdk.xcframework/ios-arm64/TangemSdk.framework/TangemSdk
+  • Offset: 0xdd9c8
+  • Change: B.NE instruction → NOP (bypass firmware check)
+  • Purpose: Test if SDK restriction is the only blocker
+  • Status: DEVELOPMENT/TESTING ONLY - will NOT ship to production
+
+Results:
+
+  ✅ Patch successfully bypasses SDK firmware check
+  ✅ Terminal keys sent to card in both signatures
+  ✅ Same stable public key used (proves proper implementation)
+  ✅ Valid terminal signatures generated
+  
+  ❌ Card TAG_IsLinked stays 00 (not linked)
+  ❌ 15-second delay still enforced on second signature
+  ❌ No performance improvement
+
+═══════════════════════════════════════════════════════════════
+
+EVIDENCE FROM LOGS
+
+First Signature (Terminal Linking Attempt):
+-----------------------------------------------
+TAG_IsLinked: 00 (false)
+TAG_TerminalPublicKey sent: 04FBA5E7EE5CEA405A9791A546214DCD31C911E4FBC448F219A4557FB2DEC721614477C3DD9A84C7F7599BA4DEF8C946EF4ABDD3F26C4864EAA0A49BE84EDB3DC4
+TAG_TerminalTransactionSignature sent: B7ABD408CACF85B0B242FB40EB171564BB5C86F4006FF20E37C8179B93AB16E674D7C1B060E8F971178D09B4A9E89181CC739B3C6C5C210D5622393226BEEFDF
+Delay: 15 seconds (full delay enforced)
+Result: Signature success, totalSigned=30
+
+Second Signature (2 minutes later):
+-----------------------------------------------
+TAG_IsLinked: 00 (false)  ← STILL NOT LINKED!
+TAG_TerminalPublicKey sent: 04FBA5E7EE5CEA405A9791A546214DCD31C911E4FBC448F219A4557FB2DEC721614477C3DD9A84C7F7599BA4DEF8C946EF4ABDD3F26C4864EAA0A49BE84EDB3DC4
+(SAME KEY - proves stable implementation)
+TAG_TerminalTransactionSignature sent: 2F608F1E35A3437ABD7E690CB41ACCB8ADECACE50601B0AE8FBE40A700C4430712501B79A003D1E9CA7743680B3D44F2898B64425302DF1DEF905F1858787258
+(Different signature for different hash - proves valid auth)
+Delay: 15 seconds (STILL enforced, expected 0s)
+Result: Signature success, totalSigned=31
+
+═══════════════════════════════════════════════════════════════
+
+ANALYSIS
+
+Two-Layer Restriction:
+
+1. SDK Layer (Software):
+   • Check: card.firmwareVersion < .hdWalletAvailable
+   • Effect: Prevents sending terminal keys for firmware >= 4.52
+   • Status: ✅ Successfully bypassed via binary patch
+
+2. Card Firmware Layer (Hardware):
+   • Card receives terminal keys ✅
+   • Card has SkipSecurityDelayIfValidatedByLinkedTerminal setting ✅
+   • Card REFUSES to store link (TAG_IsLinked stays 00) ❌
+   • Card enforces full delay on every signature ❌
+   • Status: ❌ Blocking linked terminal for HD wallets
+
+Conclusion: Card firmware has its own restriction preventing HD wallet cards from accepting terminal links, independent of SDK.
+
+═══════════════════════════════════════════════════════════════
+
+QUESTIONS
+
+1. Is linked terminal supported for HD wallet cards (firmware >= 4.52)?
+   • Our card has isLinkedTerminalEnabled=true and the SkipSecurityDelay setting
+   • But TAG_IsLinked never changes from 00 to 01
+   • Is this a firmware-level restriction?
+
+2. Why does the SDK have the firmware version check?
+   • Is it for security reasons?
+   • Legacy compatibility issue?
+   • Can it be removed or made configurable?
+
+3. How does the official Tangem app handle this?
+   • We analyzed the iOS app repository - it uses the same SDK
+   • Does it also have 15-second delays for HD wallets?
+   • Or is there a special configuration we're missing?
+
+4. What do you recommend for production?
+   • Accept 15-second delay as designed behavior?
+   • Use different card type?
+   • Alternative signing approach?
+   • Wait for SDK/firmware update?
+
+═══════════════════════════════════════════════════════════════
+
+IMPACT
+
+Current: 15+ seconds per signature (any signature)
+Desired: 15s first signature, <5s subsequent signatures
+
+User Experience:
+  • Current: Acceptable but slower than competing solutions
+  • With linked terminal: Excellent (matching Ledger/Trezor speed)
+
+═══════════════════════════════════════════════════════════════
+
+NEXT STEPS
+
+Pending your response:
+
+1. Remove binary patch (development only, not for production) ✓
+2. Accept current behavior if intentional ✓
+3. Improve UI messaging about security delay ✓
+4. Apply your recommended solution when provided ✓
+
+═══════════════════════════════════════════════════════════════
+
+ATTACHMENTS
+
+Complete documentation available in our repository:
+  • TANGEM-SUPPORT-REPORT.md - Full technical report
+  • TANGEM-SUPPORT-GITHUB-ISSUE.md - GitHub issue format
+  • Complete logs with TAG-level details
+  • Binary patch technical details
+
+═══════════════════════════════════════════════════════════════
+
+Thank you for your time and excellent hardware wallet product. We look forward to your guidance on this issue.
+
+Best regards,
+Safe Wallet Development Team
+
+---
+
+Contact: [Your email]
+App: Safe Wallet for iOS
+Organization: [Your organization]
+Date: 2025-11-18
+

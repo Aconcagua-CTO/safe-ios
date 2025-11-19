@@ -12,16 +12,8 @@ final class SwitchSafesViewController: UITableViewController {
     var notificationCenter = NotificationCenter.default
 
     private var chainSafes = Chain.ChainSafes()
-    private let addSafeSection = 0
-    
-    /// Whether to show the "Add Safe Account" section
-    /// Hidden when using backend vault sync (useLocalVaults = false)
-    private var shouldShowAddSafeSection: Bool {
-        AppSettings.useLocalVaults
-    }
-
-    var onCreateSafe: (() -> ())?
-    var onAddSafe: (() -> ())?
+    private let refreshSection = 0
+    private var isManualVaultRefreshInProgress = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -57,6 +49,7 @@ final class SwitchSafesViewController: UITableViewController {
 
     @objc private func reloadData() {
         chainSafes = Chain.chainSafes()
+        VaultLogger.debug("Reloaded chain safes: \(chainSafes.count) chain(s)")
         tableView.reloadData()
     }
 
@@ -72,25 +65,28 @@ final class SwitchSafesViewController: UITableViewController {
     // MARK: - UITableViewDataSource
 
     override func numberOfSections(in tableView: UITableView) -> Int {
-        chainSafes.count + (shouldShowAddSafeSection ? 1 : 0)
+        // Always include the manual refresh section at the top
+        chainSafes.count + 1
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if shouldShowAddSafeSection && section == addSafeSection {
+        if section == refreshSection {
             return 1
         } else {
-            let chainIndex = shouldShowAddSafeSection ? section - 1 : section
+            let chainIndex = section - 1
             return chainSafes[chainIndex].safes.count
         }
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        if shouldShowAddSafeSection && indexPath.section == addSafeSection {
-            return tableView.dequeueReusableCell(withIdentifier: "AddSafe", for: indexPath)
+        if indexPath.section == refreshSection {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "AddSafe", for: indexPath)
+            (cell as? AddSafeTableViewCell)?.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
+            return cell
         }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
-        let chainIndex = shouldShowAddSafeSection ? indexPath.section - 1 : indexPath.section
+        let chainIndex = indexPath.section - 1
         let safe = chainSafes[chainIndex].safes[indexPath.row]
         cell.setName(safe.displayName)
         cell.setProgress(enabled: false)
@@ -117,37 +113,15 @@ final class SwitchSafesViewController: UITableViewController {
     // MARK: - UITableViewDelegate
 
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        (shouldShowAddSafeSection && indexPath.section == addSafeSection) ? 54 : 66
+        indexPath.section == refreshSection ? 54 : 66
     }
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        if shouldShowAddSafeSection && indexPath.section == addSafeSection {
-            let alertController = UIAlertController(
-                title: nil,
-                message: nil,
-                preferredStyle: .multiplatformActionSheet)
-
-            let addSafe = UIAlertAction(title: "Load existing Safe Account", style: .default) { [weak self] _ in
-                self?.onAddSafe?()
-            }
-
-            let createSafe = UIAlertAction(title: "Create new Safe Account", style: .default) { [weak self] _ in
-                self?.onCreateSafe?()
-            }
-            let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-            alertController.addAction(addSafe)
-            alertController.addAction(createSafe)
-            alertController.addAction(cancel)
-            
-            if let popoverPresentationController = alertController.popoverPresentationController {
-                popoverPresentationController.sourceView = tableView
-                popoverPresentationController.sourceRect = tableView.rectForRow(at: indexPath)
-            }
-            
-            self.present(alertController, animated: true)
+        if indexPath.section == refreshSection {
+            refreshVaultList()
         } else {
-            let chainIndex = shouldShowAddSafeSection ? indexPath.section - 1 : indexPath.section
+            let chainIndex = indexPath.section - 1
             let safe = chainSafes[chainIndex].safes[indexPath.row]
             if !safe.isSelected {
                 safe.select()
@@ -157,10 +131,10 @@ final class SwitchSafesViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        guard !(shouldShowAddSafeSection && section == addSafeSection) else { return nil }
+        guard section != refreshSection else { return nil }
 
         let view = tableView.dequeueHeaderFooterView(NetworkIndicatorHeaderView.self)
-        let chainIndex = shouldShowAddSafeSection ? section - 1 : section
+        let chainIndex = section - 1
         let chain = chainSafes[chainIndex].chain
         view.text = chain.name
         view.dotColor = chain.backgroundColor
@@ -168,15 +142,16 @@ final class SwitchSafesViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        (shouldShowAddSafeSection && section == addSafeSection) ? 0 : NetworkIndicatorHeaderView.height
+        section == refreshSection ? 0 : NetworkIndicatorHeaderView.height
     }
 
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        !(shouldShowAddSafeSection && indexPath.section == addSafeSection)
+        indexPath.section != refreshSection
     }
 
     override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        let chainIndex = shouldShowAddSafeSection ? indexPath.section - 1 : indexPath.section
+        guard indexPath.section != refreshSection else { return nil }
+        let chainIndex = indexPath.section - 1
         let safe = chainSafes[chainIndex].safes[indexPath.row]
 
         var actions = [UIContextualAction]()
@@ -212,5 +187,48 @@ final class SwitchSafesViewController: UITableViewController {
         }
         
         self.present(alertController, animated: true)
+    }
+    
+    private func refreshVaultList() {
+        guard App.shared.authRepository.isAuthenticated() else {
+            VaultLogger.warning("[Manual Refresh] User attempted to refresh vaults without authentication")
+            SnackbarViewController.show("Please log in before refreshing vaults.", duration: 3.0)
+            return
+        }
+        
+        guard !isManualVaultRefreshInProgress else {
+            VaultLogger.debug("[Manual Refresh] Ignoring duplicate refresh request – already refreshing")
+            SnackbarViewController.show("Vault refresh already in progress…", duration: 2.0)
+            return
+        }
+        
+        isManualVaultRefreshInProgress = true
+        updateRefreshCellAppearance()
+        VaultLogger.info("[Manual Refresh] User triggered vault refresh from SwitchSafesViewController")
+        
+        App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isManualVaultRefreshInProgress = false
+                self.updateRefreshCellAppearance()
+                
+                switch result {
+                case .success:
+                    VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
+                    SnackbarViewController.show("Vault list refreshed", duration: 3.0)
+                    self.reloadData()
+                case .failure(let error):
+                    VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)
+                    SnackbarViewController.show("Failed to refresh vaults: \(error.localizedDescription)", duration: 4.0)
+                }
+            }
+        }
+    }
+    
+    private func updateRefreshCellAppearance() {
+        guard let cell = tableView.cellForRow(at: IndexPath(row: 0, section: refreshSection)) as? AddSafeTableViewCell else {
+            return
+        }
+        cell.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
     }
 }

@@ -8,12 +8,23 @@ CONFIG_FILE="${CONFIG_DIR}/Config.xcconfig"
 cp "${EXAMPLE_CONFIG}" "${CONFIG_FILE}"
 
 # replace the example value with the environment key
+if ! [ -z ${CONFIG_KEY_DEV} ]; then
+    sed -i '' "s;your-development-config-key;${CONFIG_KEY_DEV};g" "${CONFIG_FILE}"
+fi
+
 if ! [ -z ${CONFIG_KEY_STAGING} ]; then
     sed -i '' "s;your-staging-config-key;${CONFIG_KEY_STAGING};g" "${CONFIG_FILE}"
 fi
 
 if ! [ -z ${CONFIG_KEY_PROD} ]; then
     sed -i '' "s;your-production-config-key;${CONFIG_KEY_PROD};g" "${CONFIG_FILE}"
+fi
+
+DEV_ENCRYPTED="${CONFIG_DIR}/config.bundle/apis-dev.enc.json"
+STAGING_ENCRYPTED="${CONFIG_DIR}/config.bundle/apis-staging.enc.json"
+
+if [ ! -f "${DEV_ENCRYPTED}" ] && [ -f "${STAGING_ENCRYPTED}" ]; then
+    cp "${STAGING_ENCRYPTED}" "${DEV_ENCRYPTED}"
 fi
 
 # decrypt configuration file with the key from environment

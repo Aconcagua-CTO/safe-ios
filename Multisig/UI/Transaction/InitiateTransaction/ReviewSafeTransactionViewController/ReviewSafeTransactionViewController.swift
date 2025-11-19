@@ -9,6 +9,8 @@
 import UIKit
 import Version
 import SwiftCryptoTokenFormatter
+import SafeAbi
+import Solidity
 
 fileprivate protocol SectionItem {}
 
@@ -34,6 +36,9 @@ class ReviewSafeTransactionViewController: UIViewController {
     var minimalNonce: UInt256String?
 
     var transactionPreview: SCGModels.TrasactionPreview?
+    var feeBatchResult: TransactionBatchBuilder.Result?
+    var preparedTransaction: Transaction?
+    private var simulationTask: URLSessionTask?
     var shouldLoadTransactionPreview: Bool = false
 
     enum SectionItem {
@@ -131,14 +136,15 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     private func loadData() {
+        preparedTransaction = nil
         guard
-            let tx = createTransaction(),
-            let chainId = tx.chainId,
-            let safeAddress = tx.safe?.address
+            let transaction = transactionWithFee(),
+            let chainId = transaction.chainId,
+            let safeAddress = transaction.safe?.address
         else { return }
 
         if let version = self.safe.semVer, version < Version(1, 3, 0) {
-            estimateTransaction(chainId, safeAddress, tx)
+            estimateTransaction(chainId, safeAddress, transaction)
         } else {
             fetchNonces(chainId, safeAddress)
         }
@@ -210,7 +216,12 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
     
     fileprivate func handleEstimationSuccess() {
-        if self.shouldLoadTransactionPreview, let transaction = self.createTransaction() {
+        let transactionForPreview = preparedTransaction ?? transactionWithFee()
+        if let transaction = transactionForPreview {
+            simulateFeeBatch(transaction: transaction)
+        }
+
+        if self.shouldLoadTransactionPreview, let transaction = transactionForPreview {
             self.transactionPreview = nil
             
             self.currentDataTask = App.shared.clientGatewayService.asyncPreviewTransaction(
@@ -270,7 +281,7 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     private func sign(_ keyInfo: KeyInfo) {
-        guard let transaction = createTransaction(),
+        guard let transaction = transactionWithFee(),
               let safeTxHash = transaction.safeTxHash?.description else {
             preconditionFailure("Unexpected Error")
         }
@@ -371,6 +382,46 @@ class ReviewSafeTransactionViewController: UIViewController {
         nil
     }
 
+    func transactionWithFee() -> Transaction? {
+        guard var transaction = createTransaction() else { return nil }
+        if let batch = TransactionBatchBuilder.build(transaction: transaction, safe: safe) {
+            feeBatchResult = batch
+            transaction = batch.transaction
+        } else {
+            feeBatchResult = nil
+        }
+        preparedTransaction = transaction
+        return transaction
+    }
+
+    private func simulateFeeBatch(transaction: Transaction) {
+        guard let batch = feeBatchResult else {
+            TransactionFeeLogger.debug("Skipping simulation: no fee batch result available.")
+            return
+        }
+        guard let chain = safe.chain,
+              let safeSolAddress = Sol.Address(maybeData: safe.addressValue.data32) else {
+            TransactionFeeLogger.debug("Skipping simulation: missing chain information.")
+            return
+        }
+
+        simulationTask?.cancel()
+
+        let client = RpcClient(chain: chain)
+        let target = Sol.Address(stringLiteral: batch.multiSendAddress.checksummedWithoutPrefix)
+        let payload = Sol.Bytes(storage: transaction.data?.data ?? Data())
+        let call = GnosisSafe_v1_3_0.simulateAndRevert(targetContract: target, calldataPayload: payload)
+
+        simulationTask = client.eth_call(to: safeSolAddress, input: call) { result in
+            switch result {
+            case .success:
+                TransactionFeeLogger.info("Fee batch simulation succeeded.")
+            case .failure(let error):
+                TransactionFeeLogger.warning("Fee batch simulation returned error: \(error)")
+            }
+        }
+    }
+
     private func proposeTransaction(transaction: Transaction, keyInfo: KeyInfo, signature: String) {
         currentDataTask = App.shared.clientGatewayService.asyncProposeTransaction(transaction: transaction,
                                                                                   sender: AddressString(keyInfo.address),
@@ -449,7 +500,7 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     func dataCell() -> UITableViewCell {
-        guard let transaction = createTransaction() else { return UITableViewCell() }
+        guard let transaction = transactionWithFee() else { return UITableViewCell() }
 
         let cell = tableView.dequeueCell(DetailExpandableTextCell.self)
         let data = transaction.data?.description ?? ""

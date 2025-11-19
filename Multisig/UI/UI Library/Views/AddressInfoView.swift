@@ -41,12 +41,19 @@ class AddressInfoView: UINibView {
         textLabel.setStyle(.headline)
         addressLabel.setStyle(.bodyTertiary)
         setTitle(nil)
-        
+
         setIconSize(Self.defaultIconSize)
-        
+        // Make icon constraints flexible to avoid layout conflicts
+        iconWidthConstraint.priority = .defaultHigh
+        iconHeightConstraint.priority = .defaultHigh
+
+        // Make the view more flexible for layout
+        setContentHuggingPriority(.defaultHigh, for: .vertical)
+        setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
         addToContactsGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(addToContacts))
         copyButton.addGestureRecognizer(addToContactsGestureRecognizer)
-        
+
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(displayAddress),
                                                name: .chainSettingsChanged,
@@ -56,6 +63,9 @@ class AddressInfoView: UINibView {
     func setIconSize(_ value: CGFloat) {
         iconWidthConstraint.constant = value
         iconHeightConstraint.constant = value
+        // Reduce priority to allow breaking during layout conflicts
+        iconWidthConstraint.priority = .defaultHigh
+        iconHeightConstraint.priority = .defaultHigh
         setNeedsUpdateConstraints()
     }
     
