@@ -63,6 +63,12 @@ struct SerializedDataFile: Codable {
         var tangemWalletPublicKey: Data?
         var tangemDerivationPath: String?
         var tangemWalletIndex: Int?
+        var burnerCardId: String?
+        var burnerTagIdentifier: String?
+        var burnerSlot: Int?
+        var burnerWalletPublicKey: Data?
+        var burnerDerivationPath: String?
+        var burnerAttestationValid: Bool?
     }
     
     struct SerializedContact: Codable {
@@ -306,6 +312,19 @@ class ImportExportDataController {
                 data.tangemWalletPublicKey = metadata.walletPublicKey
                 data.tangemDerivationPath = metadata.derivationPath
                 data.tangemWalletIndex = metadata.walletIndex
+            case .burner:
+                guard let rawMetadata = key.metadata,
+                      let metadata = KeyInfo.BurnerKeyMetadata.from(data: rawMetadata) else {
+                    logs.append("Skipping key named '\(key.name!)' with address \(key.address): " +
+                                "could not load burner key metadata")
+                    continue
+                }
+                data.burnerCardId = metadata.cardId
+                data.burnerTagIdentifier = metadata.tagIdentifier
+                data.burnerSlot = metadata.slot
+                data.burnerWalletPublicKey = metadata.walletPublicKey
+                data.burnerDerivationPath = metadata.derivationPath
+                data.burnerAttestationValid = metadata.attestationValid
             }
             
             keys.append(data)
@@ -550,6 +569,27 @@ class ImportExportDataController {
                     if !didAdd {
                         logs.append("Skipped key with name '\(key.name)' and address \(address): " +
                                     "could not create tangem metadata.")
+                        continue
+                    }
+                case .burner:
+                    if let cardId = key.burnerCardId,
+                       let slot = key.burnerSlot,
+                       let publicKey = key.burnerWalletPublicKey {
+                        didAdd = OwnerKeyController.importKey(
+                            burnerCardId: cardId,
+                            tagIdentifier: key.burnerTagIdentifier ?? cardId,
+                            slot: slot,
+                            walletPublicKey: publicKey,
+                            address: address,
+                            name: name,
+                            derivationPath: key.burnerDerivationPath,
+                            attestationValid: key.burnerAttestationValid ?? false
+                        )
+                    }
+
+                    if !didAdd {
+                        logs.append("Skipped key named '\(key.name)' and address \(address): " +
+                                    "could not create burner metadata.")
                         continue
                     }
                 }

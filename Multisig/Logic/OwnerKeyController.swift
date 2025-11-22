@@ -197,6 +197,40 @@ class OwnerKeyController {
         }
     }
 
+    @discardableResult
+    static func importKey(burnerCardId: String,
+                          tagIdentifier: String?,
+                          slot: Int,
+                          walletPublicKey: Data,
+                          address: Address,
+                          name: String,
+                          derivationPath: String?,
+                          attestationValid: Bool) -> Bool {
+        do {
+            try KeyInfo.import(burner: burnerCardId,
+                               tagIdentifier: tagIdentifier,
+                               slot: slot,
+                               walletPublicKey: walletPublicKey,
+                               address: address,
+                               name: name,
+                               derivationPath: derivationPath,
+                               attestationValid: attestationValid)
+            
+            Tracker.setNumKeys(KeyInfo.count(.burner), type: .burner)
+            postNotification(.ownerKeyImported)
+            Tracker.trackEvent(.burnerKeyImported)
+            return true
+        } catch {
+            if let err = error as? GSError.DuplicateKey {
+                App.shared.snackbar.show(error: err)
+            } else {
+                let err = GSError.error(description: "Failed to add Burner owner", error: error)
+                App.shared.snackbar.show(error: err)
+            }
+            return false
+        }
+    }
+
     static func importKey(keystone address: Address, path: String, name: String, sourceFingerprint: UInt32) -> Bool {
         do {
             try KeyInfo.import(keystone: address, path: path, name: name, sourceFingerprint: sourceFingerprint)
@@ -358,6 +392,7 @@ class OwnerKeyController {
         Tracker.setNumKeys(KeyInfo.count(.web3AuthApple), type: .web3AuthApple)
         Tracker.setNumKeys(KeyInfo.count(.web3AuthGoogle), type: .web3AuthGoogle)
         Tracker.setNumKeys(KeyInfo.count(.tangem), type: .tangem)
+        Tracker.setNumKeys(KeyInfo.count(.burner), type: .burner)
         postNotification(.ownerKeyRemoved)
     }
     

@@ -241,6 +241,21 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
                 let signature = Foundation.Data(hexWC: hexSignature)
                 self?.confirm(signature: signature)
             }
+        case .burner:
+            let hexToSign = request.message.toHexStringWithPrefix()
+            let request = SignRequest(title: "Sign Message",
+                                      tracking: ["action": "signMessage"],
+                                      signer: keyInfo,
+                                      hexToSign: hexToSign)
+
+            let burnerSignerVC = BurnerSignerViewController(request: request)
+
+            present(burnerSignerVC, animated: true)
+
+            burnerSignerVC.completion = { [weak self] hexSignature in
+                let signature = Data(hexWC: hexSignature)
+                self?.confirm(signature: signature)
+            }
 
         case .keystone:
             let signInfo = KeystoneSignInfo(

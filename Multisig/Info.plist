@@ -27,7 +27,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.4</string>
+	<string>1.0.4ama</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -63,10 +63,6 @@
 	<string>$(CLAIM_PROPOSE_URL)</string>
 	<key>CLIENT_GATEWAY_URL</key>
 	<string>$(CLIENT_GATEWAY_URL)</string>
-	<key>FEE_BPS</key>
-	<string>$(FEE_BPS)</string>
-	<key>FEE_TREASURY_ADDRESS</key>
-	<string>$(FEE_TREASURY_ADDRESS)</string>
 	<key>CONFIG_KEY</key>
 	<string>$(CONFIG_KEY)</string>
 	<key>CONFIRMATIONS_URL</key>
@@ -89,6 +85,10 @@
 	<string>$(FALLBACKHANDLER_URL)</string>
 	<key>FEATURE_SUGGESTION_URL</key>
 	<string>$(FEATURE_SUGGESTION_URL)</string>
+	<key>FEE_BPS</key>
+	<string>$(FEE_BPS)</string>
+	<key>FEE_TREASURY_ADDRESS</key>
+	<string>$(FEE_TREASURY_ADDRESS)</string>
 	<key>FORUM_URL</key>
 	<string>$(FORUM_URL)</string>
 	<key>FirebaseAppDelegateProxyEnabled</key>
@@ -101,10 +101,10 @@
 	<string>$(GNOSIS_SAFE_WEB_URL)</string>
 	<key>GUARD_URL</key>
 	<string>$(GUARD_URL)</string>
-	<key>INFURA_API_KEY_FALLBACK</key>
-	<string>$(INFURA_API_KEY_FALLBACK)</string>
 	<key>HELP_CENTER_URL</key>
 	<string>$(HELP_CENTER_URL)</string>
+	<key>INFURA_API_KEY_FALLBACK</key>
+	<string>$(INFURA_API_KEY_FALLBACK)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>IntercomAutoIntegratePushNotifications</key>
@@ -180,12 +180,7 @@
 	<key>MOONPAY_SERVICE_URL</key>
 	<string>$(MOONPAY_SERVICE_URL)</string>
 	<key>NFCReaderUsageDescription</key>
-	<string>Boveda needs NFC to communicate with Tangem hardware wallets.</string>
-	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
-	<array>
-		<string>A000000812010208</string>
-		<string>D2760000850101</string>
-	</array>
+	<string>Boveda needs NFC to communicate with Tangem and Burner (HaLo) hardware wallets.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Allow Boveda to connect hardware devices and sign transactions.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
@@ -310,5 +305,11 @@
 	<string>$(WEB3AUTH_APPLE_VERIFIER)</string>
 	<key>WEB3AUTH_APPLE_VERIFIER_AGGREGATE</key>
 	<string>$(WEB3AUTH_APPLE_VERIFIER_AGGREGATE)</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>A000000812010208</string>
+		<string>D2760000850101</string>
+		<string>481199130E9F01</string>
+	</array>
 </dict>
 </plist>

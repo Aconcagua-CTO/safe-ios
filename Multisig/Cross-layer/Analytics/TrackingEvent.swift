@@ -19,6 +19,7 @@ enum TrackingUserProperty: String, UserProperty {
     case numKeysWeb3AuthApple = "num_keys_web3auth_apple" // string, number of Web3Auth keys of Apple login, "0" on fresh install
     case numKeysWeb3AuthGoogle = "num_keys_web3auth_google" // string, number of Web3Auth keys of Goolge login, "0" on fresh install
     case numKeysTangem = "num_keys_tangem" // string, number of Tangem keys, "0" on fresh install
+    case numKeysBurner = "num_keys_burner" // string, number of Burner keys, "0" on fresh install
     case passcodeIsSet = "passcode_is_set" // string, "true" or "false" depending on if app passcode is set
     case walletConnectForDappsEnabled = "wc_for_dapps_enabled" // string, "true" or "false"
     case walletConnectForKeysEnabled = "wc_for_keys_enabled" // string, "true" or "false"
@@ -57,6 +58,7 @@ enum TrackingEvent: String, Trackable {
     case reviewExecutionSelectKey                   = "screen_select_exec_key"
     case reviewExecutionLedger                      = "screen_exec_tx_ledger_confirm"
     case reviewExecutionTangem                      = "screen_exec_tx_tangem_confirm"
+    case reviewExecutionBurner                      = "screen_exec_tx_burner_confirm"
     case executeFailure                             = "user_exec_tx_failed"
     case reviewExecutionFieldEdited                 = "user_edit_exec_tx_fee_fields"
     case reviewExecutionSelectedKeyChanged          = "user_select_exec_key_change"
@@ -126,6 +128,7 @@ enum TrackingEvent: String, Trackable {
     case ledgerOwnerOnboarding                      = "screen_owner_ledger_nano_x_info"
     case keystoneOwnerOnboarding                    = "screen_owner_keystone_info"
     case tangemOwnerOnboarding                      = "screen_owner_tangem_info"
+    case burnerOwnerOnboarding                      = "screen_owner_burner_info"
 
     case ownerEnterSeed                             = "screen_owner_enter_seed"
     case ownerConfirmPrivateKey                     = "screen_owner_confirm_private_key"
@@ -189,6 +192,7 @@ enum TrackingEvent: String, Trackable {
     case keystoneQRScanner                          = "screen_keystone_scan"
     case keystoneKeyImported                        = "user_keystone_key_imported"
     case tangemKeyImported                          = "user_tangem_key_imported"
+    case burnerKeyImported                          = "user_burner_key_imported"
 
     // MARK: Confirm transactions
 
@@ -526,6 +530,8 @@ extension KeyType {
             return "web3AuthGoogle"
         case .tangem:
             return "tangem"
+        case .burner:
+            return "burner"
         }
     }
 }

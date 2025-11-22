@@ -21,13 +21,26 @@ bin/configure.sh
 # set -e
 ############
 
+# Build the app target first to ensure it exists before test host validation
+echo "Building app target..."
+xcrun xcodebuild build \
+    -project Multisig.xcodeproj \
+    -scheme "$XCODE_SCHEME" \
+    -destination "platform=iOS Simulator,name=iPhone 17" \
+    -sdk iphonesimulator \
+    -configuration Debug.Development \
+    -target Multisig \
+    2>&1 | tee "$OUTPUT_DIR/xcodebuild-app.log" | tail -20
+
+# Now run the tests
+echo "Running tests..."
 set -o pipefail && \
 xcrun xcodebuild test \
     -project Multisig.xcodeproj \
     -scheme "$XCODE_SCHEME" \
-    -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
+    -destination "platform=iOS Simulator,name=iPhone 17" \
     -resultBundlePath "$TEST_BUNDLE_PATH" \
-| tee "$OUTPUT_DIR/xcodebuild-test.log" | xcpretty -c -r junit
+|| tee "$OUTPUT_DIR/xcodebuild-test.log" | xcpretty -c -r junit
 
 # print the total code  coverage
 xcrun xccov view --report --only-targets "$TEST_BUNDLE_PATH"

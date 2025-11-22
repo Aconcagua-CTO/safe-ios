@@ -24,6 +24,7 @@ enum KeyType: Int, CaseIterable {
     case web3AuthApple = 5
     case web3AuthGoogle = 6
     case tangem = 7
+    case burner = 8
 
     static var privateKeyTypes: [KeyType] {
         [.deviceImported, .deviceGenerated, .web3AuthApple, .web3AuthGoogle]
@@ -96,6 +97,23 @@ extension KeyInfo {
             try! JSONEncoder().encode(self)
         }
 
+        static func from(data: Data) -> Self? {
+            try? JSONDecoder().decode(Self.self, from: data)
+        }
+    }
+    
+    struct BurnerKeyMetadata: Codable {
+        let cardId: String
+        let tagIdentifier: String?
+        let slot: Int
+        let walletPublicKey: Data
+        let derivationPath: String?
+        let attestationValid: Bool
+        
+        var data: Data {
+            try! JSONEncoder().encode(self)
+        }
+        
         static func from(data: Data) -> Self? {
             try? JSONDecoder().decode(Self.self, from: data)
         }
@@ -355,6 +373,41 @@ extension KeyInfo {
                                           walletPublicKey: walletPublicKey,
                                           derivationPath: derivationPath,
                                           walletIndex: walletIndex).data
+
+        item.save()
+
+        return item
+    }
+    @discardableResult
+    static func `import`(burner cardId: String,
+                         tagIdentifier: String?,
+                         slot: Int,
+                         walletPublicKey: Data,
+                         address: Address,
+                         name: String,
+                         derivationPath: String?,
+                         attestationValid: Bool) throws -> KeyInfo? {
+        let context = App.shared.coreDataStack.viewContext
+
+        let fr = KeyInfo.fetchRequest().by(address: address)
+        let item: KeyInfo
+
+        if (try context.fetch(fr).first) != nil {
+            throw GSError.DuplicateKey()
+        } else {
+            item = KeyInfo(context: context)
+            item.name = name
+        }
+
+        item.address = address
+        item.keyID = "burner:\(address.checksummed)"
+        item.keyType = .burner
+        item.metadata = BurnerKeyMetadata(cardId: cardId,
+                                          tagIdentifier: tagIdentifier,
+                                          slot: slot,
+                                          walletPublicKey: walletPublicKey,
+                                          derivationPath: derivationPath,
+                                          attestationValid: attestationValid).data
 
         item.save()
 

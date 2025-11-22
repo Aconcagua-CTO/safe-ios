@@ -343,6 +343,22 @@ class ReviewSafeTransactionViewController: UIViewController {
             vc.onClose = { [weak self] in
                 self?.endConfirm()
             }
+        case .burner:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let vc = BurnerSignerViewController(request: request)
+
+            presentModal(vc)
+
+            vc.completion = { [weak self] signature in
+                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature)
+            }
+
+            vc.onClose = { [weak self] in
+                self?.endConfirm()
+            }
 
         case .keystone:
             let signInfo = KeystoneSignInfo(

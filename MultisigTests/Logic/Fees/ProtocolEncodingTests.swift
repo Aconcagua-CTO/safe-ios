@@ -15,7 +15,8 @@ final class ProtocolEncodingTests: XCTestCase {
                                    amount: Sol.UInt256(1),
                                    onBehalfOf: Sol.Address(0x2),
                                    referralCode: Sol.UInt16(0))
-        let selector = Data(call.encode().prefix(4)).toHexStringWithPrefix()
+        let encoded = call.encode()
+        let selector = encoded.prefix(4).toHexStringWithPrefix()
         XCTAssertEqual(selector, "0x617ba037")
     }
 
@@ -26,7 +27,8 @@ final class ProtocolEncodingTests: XCTestCase {
                                                             path: path,
                                                             to: Sol.Address(0x3),
                                                             deadline: Sol.UInt256(0))
-        let selector = Data(call.encode().prefix(4)).toHexStringWithPrefix()
+        let encoded = call.encode()
+        let selector = encoded.prefix(4).toHexStringWithPrefix()
         XCTAssertEqual(selector, "0x38ed1739")
     }
 
@@ -41,7 +43,8 @@ final class ProtocolEncodingTests: XCTestCase {
         params.amountOutMinimum = Sol.UInt256(0)
         params.sqrtPriceLimitX96 = Sol.UInt160(0)
         let call = UniswapRouterV3.exactInputSingle(params: params)
-        let selector = Data(call.encode().prefix(4)).toHexStringWithPrefix()
+        let encoded = call.encode()
+        let selector = encoded.prefix(4).toHexStringWithPrefix()
         XCTAssertEqual(selector, "0x414bf389")
     }
 

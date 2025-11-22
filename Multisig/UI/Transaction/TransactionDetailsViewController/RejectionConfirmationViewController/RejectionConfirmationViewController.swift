@@ -145,6 +145,20 @@ class RejectionConfirmationViewController: UIViewController {
             vc.onClose = { [weak self] in
                 self?.endLoading()
             }
+        case .burner:
+            let request = SignRequest(title: "Reject Transaction",
+                                      tracking: ["action": "reject"],
+                                      signer: keyInfo,
+                                      hexToSign: rejectionTransaction.safeTxHash.description)
+            let vc = BurnerSignerViewController(request: request)
+            present(vc, animated: true, completion: nil)
+
+            vc.completion = { [weak self] signature in
+                self?.rejectAndCloseController(signature: signature)
+            }
+            vc.onClose = { [weak self] in
+                self?.endLoading()
+            }
         case .keystone:
             let signInfo = KeystoneSignInfo(
                 signData: rejectionTransaction.safeTxHash.hash.toHexString(),

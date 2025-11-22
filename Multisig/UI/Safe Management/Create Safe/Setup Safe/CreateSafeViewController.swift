@@ -939,6 +939,37 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             }
 
             present(vc, animated: true, completion: nil)
+        case .burner:
+            let rawTransaction = uiModel.transaction.preImageForSigning()
+            let chainId = Int(uiModel.chain.id!)!
+            let isLegacy = uiModel.transaction is Eth.TransactionLegacy
+
+            let request = SignRequest(title: "Sign Transaction",
+                                      tracking: ["action": "signTx"],
+                                      signer: keyInfo,
+                                      payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
+
+            let vc = BurnerSignerViewController(request: request)
+
+            vc.txCompletion = { [weak self] signature in
+                guard let self = self else { return }
+
+                do {
+                    try self.uiModel.transaction.updateSignature(
+                        v: Sol.UInt256(UInt(signature.v)),
+                        r: Sol.UInt256(Data(Array(signature.r))),
+                        s: Sol.UInt256(Data(Array(signature.s)))
+                    )
+                } catch {
+                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    App.shared.snackbar.show(error: gsError)
+                    return
+                }
+
+                self.localSignerSubmit()
+            }
+
+            present(vc, animated: true, completion: nil)
 
         case .keystone:
             let isLegacy = uiModel.transaction is Eth.TransactionLegacy

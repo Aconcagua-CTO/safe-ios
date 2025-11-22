@@ -245,6 +245,12 @@ struct AppConfiguration {
         static var socialLogin: Bool = false
 
         static var relay: Bool = true
+
+#if DEBUG
+        static var burnerWallet: Bool = true
+#else
+        static var burnerWallet: Bool = false
+#endif
     }
 
     struct Claim {

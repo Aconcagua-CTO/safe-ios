@@ -409,6 +409,29 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     self?.reloadData()
                 }
             }
+        case .burner:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let vc = BurnerSignerViewController(request: request)
+
+            present(vc, animated: true, completion: {
+                Tracker.trackEvent(.reviewExecutionBurner)
+            })
+
+            var didSignBurner = false
+
+            vc.completion = { [weak self] signature in
+                didSignBurner = true
+                self?.confirmAndRefresh(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
+            }
+
+            vc.onClose = { [weak self] in
+                if didSignBurner {
+                    self?.reloadData()
+                }
+            }
 
         case .keystone:
             let signInfo = KeystoneSignInfo(

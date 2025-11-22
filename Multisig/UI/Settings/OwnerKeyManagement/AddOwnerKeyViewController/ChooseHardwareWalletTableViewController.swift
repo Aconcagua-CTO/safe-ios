@@ -15,6 +15,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
         case ledger
         case keystone
         case tangem
+        case burner
 
         var title: String {
             switch self {
@@ -24,6 +25,8 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 return "Connect Keystone"
             case .tangem:
                 return "Connect Tangem Card"
+            case .burner:
+                return "Connect Burner Card"
             }
         }
 
@@ -35,6 +38,8 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 return UIImage(named: KeyType.ledgerNanoX.imageName)!
             case .tangem:
                 return UIImage(named: KeyType.tangem.imageName)!
+            case .burner:
+                return UIImage(named: KeyType.burner.imageName)!
             }
         }
     }
@@ -45,6 +50,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
     private var connectKeystoneFlow: ConnectKeystoneFlow!
     private var ledgerKeyFlow: LedgerKeyFlow!
     private var tangemKeyFlow: TangemKeyFlow!
+    private var burnerKeyFlow: BurnerKeyFlow!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -58,8 +64,12 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
         tableView.backgroundColor = .backgroundSecondary
         tableView.tableFooterView = UIView()
 
+        var hardwareOptions: [Row] = [.ledger, .keystone, .tangem]
+        if AppConfiguration.FeatureToggles.burnerWallet {
+            hardwareOptions.append(.burner)
+        }
         sections = [
-            (section: "", items: [.ledger, .keystone, .tangem])
+            (section: "", items: hardwareOptions)
         ]
     }
 
@@ -112,6 +122,12 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 completion()
             }
             push(flow: tangemKeyFlow)
+        case .burner:
+            burnerKeyFlow = BurnerKeyFlow { [unowned self] _ in
+                burnerKeyFlow = nil
+                completion()
+            }
+            push(flow: burnerKeyFlow)
         }
     }
 }

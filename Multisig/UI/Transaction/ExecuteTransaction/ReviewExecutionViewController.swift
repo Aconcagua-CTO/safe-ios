@@ -615,6 +615,33 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             }
 
             present(vc, animated: true, completion: nil)
+        case .burner:
+            let rawTransaction = controller.preimageForSigning()
+            let chainId = controller.intChainId
+            let isLegacy = controller.isLegacyTx
+
+            let request = SignRequest(title: "Sign Transaction",
+                                      tracking: ["action": "signTx"],
+                                      signer: keyInfo,
+                                      payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
+
+            let vc = BurnerSignerViewController(request: request)
+
+            vc.txCompletion = { [weak self] signature in
+                guard let self = self else { return }
+
+                do {
+                    try self.controller.update(signature: (UInt(signature.v), Array(signature.r), Array(signature.s)))
+                } catch {
+                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    App.shared.snackbar.show(error: gsError)
+                    return
+                }
+
+                self.submit()
+            }
+
+            present(vc, animated: true, completion: nil)
             
         case .keystone:
             let isLegacy = controller.isLegacyTx

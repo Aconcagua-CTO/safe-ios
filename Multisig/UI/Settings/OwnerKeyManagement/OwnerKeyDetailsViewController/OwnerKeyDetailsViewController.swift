@@ -524,6 +524,8 @@ extension KeyType {
             return "Social Key"
         case .tangem:
             return "Tangem Card"
+        case .burner:
+            return "Burner Card"
         }
     }
 }
