@@ -10,29 +10,17 @@ import SwiftUI
 
 struct AddressImage: View {
     let address: Address?
-    let blockSize: Int = 8
-
+    
     @ViewBuilder var body: some View {
-        if let address = address {
-            GeometryReader { geometry in
-                Image(
-                    address: address,
-                    size: self.blockSize,
-                    scale: self.scale(for: geometry)
-                )
+        if address != nil {
+            Image(address: address)
                 .renderingMode(.original)
                 .resizable()
                 .aspectRatio(1, contentMode: .fit)
                 .clipShape(Circle())
-            }
         } else {
             Circle().foregroundColor(.backgroundSecondary)
         }
-    }
-
-    func scale(for geometry: GeometryProxy) -> Int {
-        let block = blockSize == 0 ? 8 : abs(blockSize)
-        return Int(min(geometry.size.width, geometry.size.height) / CGFloat(block))
     }
 }
 

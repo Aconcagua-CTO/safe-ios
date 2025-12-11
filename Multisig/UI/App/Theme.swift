@@ -69,7 +69,8 @@ class Theme: ObservableObject {
 
     var displayMode: UIUserInterfaceStyle {
         get {
-            UIUserInterfaceStyle(rawValue: Int(AppSettings.displayMode)) ?? .unspecified
+            // FORCED: Always use dark mode. To reverse, restore: UIUserInterfaceStyle(rawValue: Int(AppSettings.displayMode)) ?? .unspecified
+            return .dark
         }
         set {
             AppSettings.displayMode = Int32(newValue.rawValue)

@@ -104,7 +104,8 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             Section.App.passcode("Security"),
             Section.App.fiat("Fiat currency", AppSettings.selectedFiatCode),
             Section.App.chainPrefix("Chain prefix"),
-            Section.App.appearance("Appearance"),
+            // HIDDEN: Appearance setting hidden to force dark mode. To reverse, uncomment the line below.
+            //Section.App.appearance("Appearance"),
             // we do not have experimental features at the moment
             //Section.App.experimental("Experimental")
         ])
@@ -323,9 +324,10 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.chainPrefix:
             show(ChainSettingsTableViewController(), sender: self)
 
-        case Section.App.appearance:
-            let appearanceViewController = ChangeDisplayModeTableViewController()
-            show(appearanceViewController, sender: self)
+        // HIDDEN: Appearance case handling hidden to force dark mode. To reverse, uncomment the block below.
+        //case Section.App.appearance:
+        //    let appearanceViewController = ChangeDisplayModeTableViewController()
+        //    show(appearanceViewController, sender: self)
 
         case Section.App.experimental:
             let experimentalViewController = ExperimentalViewController()

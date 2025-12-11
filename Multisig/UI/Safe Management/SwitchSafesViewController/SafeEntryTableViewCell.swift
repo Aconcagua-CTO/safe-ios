@@ -9,7 +9,6 @@
 import UIKit
 
 class SafeEntryTableViewCell: UITableViewCell {
-    @IBOutlet private weak var mainImageView: UIImageView!
     @IBOutlet private weak var mainLabel: UILabel!
     @IBOutlet private weak var detailLabel: UILabel!
     @IBOutlet private weak var selectorView: UIImageView!
@@ -23,11 +22,7 @@ class SafeEntryTableViewCell: UITableViewCell {
     }
 
     func setAddress(_ value: Address, grayscale: Bool = false) {
-        if grayscale {
-            mainImageView.setAddressGrayscale(value.hexadecimal)
-        } else {
-            mainImageView.setAddress(value.hexadecimal)
-        }
+        // No-op: identicon removed to avoid blockies generation.
     }
 
     func setProgress(enabled: Bool) {

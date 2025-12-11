@@ -12,7 +12,6 @@
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="RibbonViewController" customModule="Multisig" customModuleProvider="target">
             <connections>
                 <outlet property="contentView" destination="27H-lV-bjh" id="CYN-Oq-W3a"/>
-                <outlet property="ribbonView" destination="1BQ-71-Sn5" id="P6m-jd-YGW"/>
                 <outlet property="view" destination="i5M-Pr-FkT" id="sfx-zR-JGt"/>
             </connections>
         </placeholder>
@@ -22,15 +21,8 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="27H-lV-bjh" userLabel="contentView">
-                    <rect key="frame" x="0.0" y="68" width="414" height="794"/>
+                    <rect key="frame" x="0.0" y="44" width="414" height="852"/>
                     <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                </view>
-                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="1BQ-71-Sn5" customClass="RibbonView" customModule="Multisig" customModuleProvider="target">
-                    <rect key="frame" x="0.0" y="44" width="414" height="24"/>
-                    <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                    <constraints>
-                        <constraint firstAttribute="height" constant="24" placeholder="YES" id="ntb-yd-sGp"/>
-                    </constraints>
                 </view>
             </subviews>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
@@ -38,10 +30,7 @@
             <constraints>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="bottom" secondItem="27H-lV-bjh" secondAttribute="bottom" id="2Aq-Gs-tld"/>
                 <constraint firstItem="27H-lV-bjh" firstAttribute="trailing" secondItem="fnl-2z-Ty3" secondAttribute="trailing" id="2JP-BF-Hnq"/>
-                <constraint firstItem="1BQ-71-Sn5" firstAttribute="top" secondItem="fnl-2z-Ty3" secondAttribute="top" id="9X5-YV-I0b"/>
-                <constraint firstItem="1BQ-71-Sn5" firstAttribute="trailing" secondItem="fnl-2z-Ty3" secondAttribute="trailing" id="GrX-1I-3xA"/>
-                <constraint firstItem="1BQ-71-Sn5" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" id="SgB-4d-uBp"/>
-                <constraint firstItem="27H-lV-bjh" firstAttribute="top" secondItem="1BQ-71-Sn5" secondAttribute="bottom" id="lVP-Zr-sf3"/>
+                <constraint firstItem="27H-lV-bjh" firstAttribute="top" secondItem="fnl-2z-Ty3" secondAttribute="top" id="yVl-r2-A9f"/>
                 <constraint firstItem="27H-lV-bjh" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" id="sRs-dT-Df6"/>
             </constraints>
             <point key="canvasLocation" x="-26.086956521739133" y="110.49107142857143"/>

@@ -268,8 +268,6 @@
 		04FAF0A22BD9E00000A1F111 /* TangemSdk.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */; };
 		04FAF0B32BD9E2F800A1F111 /* TangemService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF0AE2BD9E1F100A1F111 /* TangemService.swift */; };
 		04FAF0B42BD9E2F800A1F111 /* TangemLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FAF0AF2BD9E1F100A1F111 /* TangemLogger.swift */; };
-		AAF01C122F0E000000E9D4B0 /* BurnerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C102F0E000000E9D4B0 /* BurnerService.swift */; };
-		AAF01C132F0E000000E9D4B0 /* BurnerLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C112F0E000000E9D4B0 /* BurnerLogger.swift */; };
 		04FAF0C12BD9E50000A1F111 /* Bls_Signature.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */; };
 		04FAF0C22BD9E50000A1F111 /* TangemSdk.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		04FAF0C32BD9E50000A1F111 /* Bls_Signature.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -583,11 +581,6 @@
 		0AB34D6624B71DE300A43988 /* CollectiblesRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB34D6524B71DE300A43988 /* CollectiblesRequest.swift */; };
 		0AB5DF8F270DD185005BFB43 /* CreateDelegateRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB5DF8E270DD185005BFB43 /* CreateDelegateRequest.swift */; };
 		0AB5DFB3270F48EB005BFB43 /* LedgerSignerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB5DFB2270F48EB005BFB43 /* LedgerSignerViewController.swift */; };
-		AAF01C1D2F0E217700E9D4B0 /* BurnerSignerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C1C2F0E217700E9D4B0 /* BurnerSignerViewController.swift */; };
-		AAF01C192F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C172F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift */; };
-		AAF01C1A2F0E0C6E00E9D4B0 /* BurnerScanViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C182F0E0C6E00E9D4B0 /* BurnerScanViewController.swift */; };
-		AAF01C152F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C142F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift */; };
-		AAF2B1012F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF2B1002F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift */; };
 		0ABAFDB324ACB3B6007EBB92 /* SnackbarCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ABAFDB224ACB3B6007EBB92 /* SnackbarCenter.swift */; };
 		0ABC00202823058200F42D29 /* GenerateKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ABC001F2823058100F42D29 /* GenerateKeyFlow.swift */; };
 		0ABC00222823139D00F42D29 /* CreatePasscodeFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ABC00212823139D00F42D29 /* CreatePasscodeFlow.swift */; };
@@ -730,19 +723,20 @@
 		3E373F762631781A00D8107A /* EnterUnstoppableNameViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3E373F742631781900D8107A /* EnterUnstoppableNameViewController.xib */; };
 		3E373F772631781A00D8107A /* EnterUnstoppableNameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E373F752631781A00D8107A /* EnterUnstoppableNameViewController.swift */; };
 		3E373F7D2631784200D8107A /* BlockchainDomainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E373F7C2631784200D8107A /* BlockchainDomainManager.swift */; };
+		405352632ED8C02300C26E15 /* VaultSyncErrorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405352612ED8C02200C26E15 /* VaultSyncErrorViewController.swift */; };
+		405352642ED8C02300C26E15 /* VaultSyncLoadingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405352622ED8C02200C26E15 /* VaultSyncLoadingViewController.swift */; };
 		406FE2C02EC63B9600938806 /* TangemFactoryResetTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2BF2EC63B9600938806 /* TangemFactoryResetTask.swift */; };
 		406FE2C42EC63BD200938806 /* TangemActivationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C12EC63BD200938806 /* TangemActivationViewController.swift */; };
 		406FE2C52EC63BD200938806 /* TangemCardReaderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */; };
 		406FE2C62EC63BD200938806 /* TangemFactoryResetViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */; };
 		406FE2C82EC64C8500938806 /* TangemActivationTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C72EC64C8500938806 /* TangemActivationTask.swift */; };
-		40A3E0A82F0D6BD600D4A799 /* TangemMultipleSignTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */; };
-		4080E5FD2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */; };
 		40703C272EC8B02900CAAA33 /* TransactionFeeLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C242EC8B02900CAAA33 /* TransactionFeeLogger.swift */; };
 		40703C282EC8B02900CAAA33 /* FunctionSelectorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */; };
 		40703C292EC8B02900CAAA33 /* UInt256+Solidity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C252EC8B02900CAAA33 /* UInt256+Solidity.swift */; };
 		40703C2A2EC8B02900CAAA33 /* TransactionBatchBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C232EC8B02900CAAA33 /* TransactionBatchBuilder.swift */; };
 		40703C2C2EC8B07700CAAA33 /* function-selectors.json in Resources */ = {isa = PBXBuildFile; fileRef = 40703C2B2EC8B07700CAAA33 /* function-selectors.json */; };
 		40703C342EC8B0C300CAAA33 /* ProtocolEncodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C322EC8B0C300CAAA33 /* ProtocolEncodingTests.swift */; };
+		4080E5FD2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */; };
 		409009D92EB5296400550983 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 409009D82EB5296400550983 /* FirebaseAuth */; };
 		409009DE2EB52C3700550983 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409009DD2EB52C3700550983 /* AuthState.swift */; };
 		409009ED2EB52E5A00550983 /* AuthLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409009E92EB52E5A00550983 /* AuthLogger.swift */; };
@@ -758,6 +752,7 @@
 		40A1C1872EBB7F1500670DDE /* VaultResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A1C17F2EBB7F1500670DDE /* VaultResponse.swift */; };
 		40A1C1882EBB7F1500670DDE /* VaultsApiRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A1C1802EBB7F1500670DDE /* VaultsApiRequest.swift */; };
 		40A1C1892EBB7F1500670DDE /* ApiConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A1C17D2EBB7F1500670DDE /* ApiConfig.swift */; };
+		40A3E0A82F0D6BD600D4A799 /* TangemMultipleSignTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */; };
 		47039CEE28C37EDB00081A7A /* KeystoneRequestSignatureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47039CED28C37EDB00081A7A /* KeystoneRequestSignatureView.swift */; };
 		47039CF228C579CF00081A7A /* KeystoneSignInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47039CF128C579CF00081A7A /* KeystoneSignInfo.swift */; };
 		47646ED428AA72DD009DC437 /* ConnectKeystoneFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47646ED328AA72DD009DC437 /* ConnectKeystoneFlow.swift */; };
@@ -842,7 +837,6 @@
 		558836702565385F0014E8C7 /* RemoveCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5588366E2565385F0014E8C7 /* RemoveCell.swift */; };
 		558836712565385F0014E8C7 /* RemoveCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5588366F2565385F0014E8C7 /* RemoveCell.xib */; };
 		55888DFF260C4F6200940347 /* SwiftAccessPolicy in Frameworks */ = {isa = PBXBuildFile; productRef = 55888DFE260C4F6200940347 /* SwiftAccessPolicy */; };
-		5591CEEE260C725C0067DFDF /* BlockiesSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 5591CEED260C725C0067DFDF /* BlockiesSwift */; };
 		5596710D256E935F0097D3A2 /* MockSecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5596710C256E935F0097D3A2 /* MockSecureStore.swift */; };
 		5596C03825507EAE00EF23A5 /* CollectibleTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5596C03725507EAE00EF23A5 /* CollectibleTableViewCell.xib */; };
 		5596C03E25507F3C00EF23A5 /* CollectibleTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5596C03D25507F3C00EF23A5 /* CollectibleTableViewCell.swift */; };
@@ -1016,6 +1010,13 @@
 		93EF2FAC27C551B60077BE95 /* FinalStepInstructionTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93EF2FAA27C551B60077BE95 /* FinalStepInstructionTableViewCell.xib */; };
 		93EF2FAF27C551DC0077BE95 /* StepInstructionTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93EF2FAD27C551DC0077BE95 /* StepInstructionTableViewCell.swift */; };
 		93EF2FB027C551DC0077BE95 /* StepInstructionTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 93EF2FAE27C551DC0077BE95 /* StepInstructionTableViewCell.xib */; };
+		AAF01C122F0E000000E9D4B0 /* BurnerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C102F0E000000E9D4B0 /* BurnerService.swift */; };
+		AAF01C132F0E000000E9D4B0 /* BurnerLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C112F0E000000E9D4B0 /* BurnerLogger.swift */; };
+		AAF01C152F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C142F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift */; };
+		AAF01C192F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C172F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift */; };
+		AAF01C1A2F0E0C6E00E9D4B0 /* BurnerScanViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C182F0E0C6E00E9D4B0 /* BurnerScanViewController.swift */; };
+		AAF01C1D2F0E217700E9D4B0 /* BurnerSignerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF01C1C2F0E217700E9D4B0 /* BurnerSignerViewController.swift */; };
+		AAF2B1012F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF2B1002F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift */; };
 		AD3031332AAA437DA1EED403 /* TransferNoWarningButDelegateWithName.json in Resources */ = {isa = PBXBuildFile; fileRef = AD30370F4D8215898B27959A /* TransferNoWarningButDelegateWithName.json */; };
 		AD30333439A0A2388F0749B0 /* ChangeConfirmationsFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD303AD3E32FBAF7FC2B202B /* ChangeConfirmationsFlow.swift */; };
 		AD303399362FE10A1FB79BB6 /* ReviewChangeConfirmationsTxViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD303815FA00D7D2A33A3F8C /* ReviewChangeConfirmationsTxViewController.swift */; };
@@ -1414,8 +1415,6 @@
 		04FAF0A32BD9E00000A1F111 /* TangemSdk.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = TangemSdk.xcframework; sourceTree = "<group>"; };
 		04FAF0AE2BD9E1F100A1F111 /* TangemService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemService.swift; sourceTree = "<group>"; };
 		04FAF0AF2BD9E1F100A1F111 /* TangemLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemLogger.swift; sourceTree = "<group>"; };
-		AAF01C102F0E000000E9D4B0 /* BurnerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerService.swift; sourceTree = "<group>"; };
-		AAF01C112F0E000000E9D4B0 /* BurnerLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerLogger.swift; sourceTree = "<group>"; };
 		04FAF0C02BD9E50000A1F111 /* Bls_Signature.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = Bls_Signature.xcframework; sourceTree = "<group>"; };
 		04FAF12A2BDA01AF00A1F111 /* TangemKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemKeyFlow.swift; sourceTree = "<group>"; };
 		04FAF12B2BDA01AF00A1F111 /* TangemScanViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemScanViewController.swift; sourceTree = "<group>"; };
@@ -1430,11 +1429,6 @@
 		0A01DCE02770996E00A87D7A /* Ethereum */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Ethereum; path = Packages/Ethereum; sourceTree = "<group>"; };
 		0A01DCE32770B0A100A87D7A /* TransactionIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionIntegrationTests.swift; sourceTree = "<group>"; };
 		0A0391C327C5640C003C871A /* CreateSafeInstructionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSafeInstructionsViewController.swift; sourceTree = "<group>"; };
-		AAF01C172F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerKeyFlow.swift; sourceTree = "<group>"; };
-		AAF01C182F0E0C6E00E9D4B0 /* BurnerScanViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerScanViewController.swift; sourceTree = "<group>"; };
-		AAF01C1C2F0E217700E9D4B0 /* BurnerSignerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerSignerViewController.swift; sourceTree = "<group>"; };
-		AAF01C142F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerCommandParserTests.swift; sourceTree = "<group>"; };
-		AAF2B1002F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerAPDUTests.swift; sourceTree = "<group>"; };
 		0A0391C727C565D3003C871A /* IconButtonTableViewCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = IconButtonTableViewCell.xib; sourceTree = "<group>"; };
 		0A0391C827C565D3003C871A /* HelpTextTableViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HelpTextTableViewCell.swift; sourceTree = "<group>"; };
 		0A0391C927C565D3003C871A /* HelpTextTableViewCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HelpTextTableViewCell.xib; sourceTree = "<group>"; };
@@ -1856,13 +1850,13 @@
 		3E373F742631781900D8107A /* EnterUnstoppableNameViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = EnterUnstoppableNameViewController.xib; sourceTree = "<group>"; };
 		3E373F752631781A00D8107A /* EnterUnstoppableNameViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EnterUnstoppableNameViewController.swift; sourceTree = "<group>"; };
 		3E373F7C2631784200D8107A /* BlockchainDomainManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlockchainDomainManager.swift; sourceTree = "<group>"; };
+		405352612ED8C02200C26E15 /* VaultSyncErrorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultSyncErrorViewController.swift; sourceTree = "<group>"; };
+		405352622ED8C02200C26E15 /* VaultSyncLoadingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultSyncLoadingViewController.swift; sourceTree = "<group>"; };
 		406FE2BF2EC63B9600938806 /* TangemFactoryResetTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemFactoryResetTask.swift; sourceTree = "<group>"; };
 		406FE2C12EC63BD200938806 /* TangemActivationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemActivationViewController.swift; sourceTree = "<group>"; };
 		406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemCardReaderViewController.swift; sourceTree = "<group>"; };
 		406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemFactoryResetViewController.swift; sourceTree = "<group>"; };
 		406FE2C72EC64C8500938806 /* TangemActivationTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemActivationTask.swift; sourceTree = "<group>"; };
-		40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemMultipleSignTask.swift; sourceTree = "<group>"; };
-		4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemTerminalKeyManager.swift; sourceTree = "<group>"; };
 		40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionSelectorCatalog.swift; sourceTree = "<group>"; };
 		40703C232EC8B02900CAAA33 /* TransactionBatchBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionBatchBuilder.swift; sourceTree = "<group>"; };
 		40703C242EC8B02900CAAA33 /* TransactionFeeLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFeeLogger.swift; sourceTree = "<group>"; };
@@ -1871,6 +1865,7 @@
 		40703C2E2EC8B09700CAAA33 /* Ethereum */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Ethereum; sourceTree = "<group>"; };
 		40703C2F2EC8B09700CAAA33 /* SecureConfig */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = SecureConfig; sourceTree = "<group>"; };
 		40703C322EC8B0C300CAAA33 /* ProtocolEncodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolEncodingTests.swift; sourceTree = "<group>"; };
+		4080E5FC2F0B480700A5CEC7 /* TangemTerminalKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemTerminalKeyManager.swift; sourceTree = "<group>"; };
 		408FF8F32EC3A54B00B636DA /* MultisigDebug.Development.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MultisigDebug.Development.entitlements; sourceTree = "<group>"; };
 		409009DD2EB52C3700550983 /* AuthState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthState.swift; sourceTree = "<group>"; };
 		409009E82EB52E5A00550983 /* AuthenticatedHTTPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedHTTPClient.swift; sourceTree = "<group>"; };
@@ -1886,6 +1881,7 @@
 		40A1C1802EBB7F1500670DDE /* VaultsApiRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultsApiRequest.swift; sourceTree = "<group>"; };
 		40A1C1812EBB7F1500670DDE /* VaultsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultsRepository.swift; sourceTree = "<group>"; };
 		40A1C1822EBB7F1500670DDE /* VaultsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultsService.swift; sourceTree = "<group>"; };
+		40A3E0A72F0D6BD600D4A799 /* TangemMultipleSignTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemMultipleSignTask.swift; sourceTree = "<group>"; };
 		47039CED28C37EDB00081A7A /* KeystoneRequestSignatureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeystoneRequestSignatureView.swift; sourceTree = "<group>"; };
 		47039CF128C579CF00081A7A /* KeystoneSignInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeystoneSignInfo.swift; sourceTree = "<group>"; };
 		47646ED328AA72DD009DC437 /* ConnectKeystoneFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectKeystoneFlow.swift; sourceTree = "<group>"; };
@@ -2154,6 +2150,13 @@
 		93EF2FAA27C551B60077BE95 /* FinalStepInstructionTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = FinalStepInstructionTableViewCell.xib; sourceTree = "<group>"; };
 		93EF2FAD27C551DC0077BE95 /* StepInstructionTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepInstructionTableViewCell.swift; sourceTree = "<group>"; };
 		93EF2FAE27C551DC0077BE95 /* StepInstructionTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = StepInstructionTableViewCell.xib; sourceTree = "<group>"; };
+		AAF01C102F0E000000E9D4B0 /* BurnerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerService.swift; sourceTree = "<group>"; };
+		AAF01C112F0E000000E9D4B0 /* BurnerLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerLogger.swift; sourceTree = "<group>"; };
+		AAF01C142F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerCommandParserTests.swift; sourceTree = "<group>"; };
+		AAF01C172F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerKeyFlow.swift; sourceTree = "<group>"; };
+		AAF01C182F0E0C6E00E9D4B0 /* BurnerScanViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerScanViewController.swift; sourceTree = "<group>"; };
+		AAF01C1C2F0E217700E9D4B0 /* BurnerSignerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerSignerViewController.swift; sourceTree = "<group>"; };
+		AAF2B1002F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnerAPDUTests.swift; sourceTree = "<group>"; };
 		AD303139191A822F493B9A87 /* NoDelegateWarningBecauseNoDelegateOperation.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = NoDelegateWarningBecauseNoDelegateOperation.json; sourceTree = "<group>"; };
 		AD30320FB98CBA790C56F472 /* DelegateWarningMultiSend.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = DelegateWarningMultiSend.json; sourceTree = "<group>"; };
 		AD3032263454247E99CC6C62 /* TransferWithDelegateWarning.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = TransferWithDelegateWarning.json; sourceTree = "<group>"; };
@@ -2277,7 +2280,6 @@
 				0497B2AD29A641C9007109ED /* WalletConnect in Frameworks */,
 				04C22B302A36807500F58A15 /* SafeWeb3 in Frameworks */,
 				04C22B2D2A367FF800F58A15 /* CustomAuth in Frameworks */,
-				5591CEEE260C725C0067DFDF /* BlockiesSwift in Frameworks */,
 				0A13BD7729756CE700322C66 /* URRegistry in Frameworks */,
 				0A7FBE2528BE684100B5FFCF /* WhatsNewKit in Frameworks */,
 				0A3DAD9426270F4D00743E38 /* unistring.xcframework in Frameworks */,
@@ -2868,15 +2870,6 @@
 			path = Tangem;
 			sourceTree = "<group>";
 		};
-		AAF01C0E2F0E000000E9D4B0 /* Burner */ = {
-			isa = PBXGroup;
-			children = (
-				AAF01C102F0E000000E9D4B0 /* BurnerService.swift */,
-				AAF01C112F0E000000E9D4B0 /* BurnerLogger.swift */,
-			);
-			path = Burner;
-			sourceTree = "<group>";
-		};
 		04FAF1292BDA010E00A1F111 /* TangemOwnerKey */ = {
 			isa = PBXGroup;
 			children = (
@@ -2888,16 +2881,6 @@
 				04FAF12C2BDA01AF00A1F111 /* TangemSignerViewController.swift */,
 			);
 			path = TangemOwnerKey;
-			sourceTree = "<group>";
-		};
-		AAF01C1B2F0E0C6E00E9D4B0 /* BurnerOwnerKey */ = {
-			isa = PBXGroup;
-			children = (
-				AAF01C172F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift */,
-				AAF01C182F0E0C6E00E9D4B0 /* BurnerScanViewController.swift */,
-				AAF01C1C2F0E217700E9D4B0 /* BurnerSignerViewController.swift */,
-			);
-			path = BurnerOwnerKey;
 			sourceTree = "<group>";
 		};
 		0A0391C527C564AA003C871A /* InstructionsViewController */ = {
@@ -2964,15 +2947,6 @@
 				B37C73AE2B6D2FC100E85E7F /* WalletConnectManagerTestData.bundle */,
 			);
 			path = Logic;
-			sourceTree = "<group>";
-		};
-		AAF01C162F0E02CD00E9D4B0 /* Burner */ = {
-			isa = PBXGroup;
-			children = (
-				AAF01C142F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift */,
-				AAF2B1002F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift */,
-			);
-			path = Burner;
 			sourceTree = "<group>";
 		};
 		0A0EFCA4246EADF800D3D8BF /* Utils */ = {
@@ -3485,6 +3459,8 @@
 		0A839B5F2578EB9500103AD9 /* View Controllers */ = {
 			isa = PBXGroup;
 			children = (
+				405352612ED8C02200C26E15 /* VaultSyncErrorViewController.swift */,
+				405352622ED8C02200C26E15 /* VaultSyncLoadingViewController.swift */,
 				0A0391C527C564AA003C871A /* InstructionsViewController */,
 				04B4B5F425B754A400CFE24B /* AccountActionCompletedViewController */,
 				0A6C131325407B5100EA67E3 /* ContainerViewController.swift */,
@@ -4805,6 +4781,34 @@
 			path = ci_scripts;
 			sourceTree = "<group>";
 		};
+		AAF01C0E2F0E000000E9D4B0 /* Burner */ = {
+			isa = PBXGroup;
+			children = (
+				AAF01C102F0E000000E9D4B0 /* BurnerService.swift */,
+				AAF01C112F0E000000E9D4B0 /* BurnerLogger.swift */,
+			);
+			path = Burner;
+			sourceTree = "<group>";
+		};
+		AAF01C162F0E02CD00E9D4B0 /* Burner */ = {
+			isa = PBXGroup;
+			children = (
+				AAF01C142F0E02CD00E9D4B0 /* BurnerCommandParserTests.swift */,
+				AAF2B1002F0E6FBB00E9D4B0 /* BurnerAPDUTests.swift */,
+			);
+			path = Burner;
+			sourceTree = "<group>";
+		};
+		AAF01C1B2F0E0C6E00E9D4B0 /* BurnerOwnerKey */ = {
+			isa = PBXGroup;
+			children = (
+				AAF01C172F0E0C6E00E9D4B0 /* BurnerKeyFlow.swift */,
+				AAF01C182F0E0C6E00E9D4B0 /* BurnerScanViewController.swift */,
+				AAF01C1C2F0E217700E9D4B0 /* BurnerSignerViewController.swift */,
+			);
+			path = BurnerOwnerKey;
+			sourceTree = "<group>";
+		};
 		AD3034214AE5434B20ABC8B5 /* Features */ = {
 			isa = PBXGroup;
 			children = (
@@ -5087,7 +5091,6 @@
 				55D3FF64260B2551008ABD2B /* Kingfisher */,
 				55D3FF8F260B2B21008ABD2B /* TrustKit */,
 				55888DFE260C4F6200940347 /* SwiftAccessPolicy */,
-				5591CEED260C725C0067DFDF /* BlockiesSwift */,
 				0463F5C026296924009C04FA /* FirebaseRemoteConfig */,
 				0463F5C226296924009C04FA /* FirebaseCrashlytics */,
 				0463F5C426296924009C04FA /* FirebaseMessaging */,
@@ -5226,7 +5229,6 @@
 				55D3FF63260B2550008ABD2B /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				55D3FF8E260B2B21008ABD2B /* XCRemoteSwiftPackageReference "TrustKit" */,
 				55888DFD260C4F6200940347 /* XCRemoteSwiftPackageReference "SwiftAccessPolicy" */,
-				5591CEEC260C725B0067DFDF /* XCRemoteSwiftPackageReference "BlockiesSwift" */,
 				0463F5BD26296924009C04FA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				0A61E83A2670DE68009D68A4 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 				55DA0661269C9411006C9AA5 /* XCRemoteSwiftPackageReference "Version" */,
@@ -5924,6 +5926,8 @@
 				0472B2A82857B43E0049BA17 /* ShareTextView.swift in Sources */,
 				0428DB1225CF239A002CF4A9 /* ChangeDisplayModeTableViewController.swift in Sources */,
 				5534F7372760C7670018E655 /* CreatePasscodeSuggestionViewController.swift in Sources */,
+				405352632ED8C02300C26E15 /* VaultSyncErrorViewController.swift in Sources */,
+				405352642ED8C02300C26E15 /* VaultSyncLoadingViewController.swift in Sources */,
 				0AC2A3CA26FB6B84002CB26A /* WebAppURLBuilder.swift in Sources */,
 				0A791D9924D2E3C100D70DA9 /* MethodDecodingError.swift in Sources */,
 				04FEFE7C28C5FD570028A349 /* LegalDisclaimerViewController.swift in Sources */,
@@ -7690,14 +7694,14 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_STYLE = Automatic;
+				DEFINES_MODULE = NO;
 				INFOPLIST_FILE = MultisigTests/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				DEFINES_MODULE = NO;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				MODULEMAP_FILE = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.MultisigTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -7719,14 +7723,14 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_ENTITLEMENTS = "";
 				CODE_SIGN_STYLE = Automatic;
+				DEFINES_MODULE = NO;
 				INFOPLIST_FILE = MultisigIntegrationTests/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				DEFINES_MODULE = NO;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				MODULEMAP_FILE = "";
 				PRODUCT_BUNDLE_IDENTIFIER = io.gnosis.MultisigIntegrationTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -7925,14 +7929,6 @@
 				kind = branch;
 			};
 		};
-		5591CEEC260C725B0067DFDF /* XCRemoteSwiftPackageReference "BlockiesSwift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gnosis/BlockiesSwift.git";
-			requirement = {
-				branch = "0.1.2-gnosis";
-				kind = branch;
-			};
-		};
 		55D3FE8A260A0F88008ABD2B /* XCRemoteSwiftPackageReference "SwiftCryptoTokenFormatter" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gnosis/SwiftCryptoTokenFormatter.git";
@@ -8127,11 +8123,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 55888DFD260C4F6200940347 /* XCRemoteSwiftPackageReference "SwiftAccessPolicy" */;
 			productName = SwiftAccessPolicy;
-		};
-		5591CEED260C725C0067DFDF /* BlockiesSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 5591CEEC260C725B0067DFDF /* XCRemoteSwiftPackageReference "BlockiesSwift" */;
-			productName = BlockiesSwift;
 		};
 		55D3FE8B260A0F88008ABD2B /* SwiftCryptoTokenFormatter */ = {
 			isa = XCSwiftPackageProductDependency;

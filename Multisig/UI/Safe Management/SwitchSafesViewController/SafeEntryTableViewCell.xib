@@ -18,15 +18,8 @@
                 <rect key="frame" x="0.0" y="0.0" width="320" height="66"/>
                 <autoresizingMask key="autoresizingMask"/>
                 <subviews>
-                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="uCU-XK-SxW">
-                        <rect key="frame" x="16" y="15" width="36" height="36"/>
-                        <constraints>
-                            <constraint firstAttribute="width" constant="36" id="NEQ-ZC-CVv"/>
-                            <constraint firstAttribute="height" constant="36" id="jWJ-Qa-ePD"/>
-                        </constraints>
-                    </imageView>
                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="4nS-eF-yo0">
-                        <rect key="frame" x="64" y="12.5" width="168" height="41"/>
+                        <rect key="frame" x="16" y="12.5" width="216" height="41"/>
                         <subviews>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="MIc-5I-mGm">
                                 <rect key="frame" x="0.0" y="0.0" width="168" height="20.5"/>
@@ -55,21 +48,18 @@
                     </imageView>
                 </subviews>
                 <constraints>
-                    <constraint firstItem="uCU-XK-SxW" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="16" id="5EO-nj-OkZ"/>
                     <constraint firstItem="sWA-tw-6Ow" firstAttribute="leading" secondItem="4nS-eF-yo0" secondAttribute="trailing" constant="12" id="7ec-oX-Ojs"/>
                     <constraint firstItem="sD6-ay-hF7" firstAttribute="centerY" secondItem="H2p-sc-9uM" secondAttribute="centerY" id="Dkw-9U-91R"/>
                     <constraint firstItem="sD6-ay-hF7" firstAttribute="leading" secondItem="sWA-tw-6Ow" secondAttribute="trailing" constant="16" id="Hsv-wH-Lhk"/>
                     <constraint firstItem="4nS-eF-yo0" firstAttribute="centerY" secondItem="H2p-sc-9uM" secondAttribute="centerY" id="LYz-Qd-dAx"/>
                     <constraint firstItem="sWA-tw-6Ow" firstAttribute="centerY" secondItem="H2p-sc-9uM" secondAttribute="centerY" id="Smf-7V-YC9"/>
-                    <constraint firstItem="uCU-XK-SxW" firstAttribute="centerY" secondItem="H2p-sc-9uM" secondAttribute="centerY" id="iLv-uv-2md"/>
-                    <constraint firstItem="4nS-eF-yo0" firstAttribute="leading" secondItem="uCU-XK-SxW" secondAttribute="trailing" constant="12" id="lzm-mC-6Wj"/>
+                    <constraint firstItem="4nS-eF-yo0" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="16" id="i1M-8g-Pk0"/>
                     <constraint firstAttribute="trailing" secondItem="sD6-ay-hF7" secondAttribute="trailing" constant="16" id="nf0-zx-p0y"/>
                 </constraints>
             </tableViewCellContentView>
             <viewLayoutGuide key="safeArea" id="njF-e1-oar"/>
             <connections>
                 <outlet property="detailLabel" destination="XnQ-qz-rsE" id="L3l-Te-oxH"/>
-                <outlet property="mainImageView" destination="uCU-XK-SxW" id="HVa-Zt-xLq"/>
                 <outlet property="mainLabel" destination="MIc-5I-mGm" id="R6A-jj-r6N"/>
                 <outlet property="progressIndicator" destination="sWA-tw-6Ow" id="KLV-dz-ak8"/>
                 <outlet property="selectorView" destination="sD6-ay-hF7" id="XNK-ob-Oa1"/>

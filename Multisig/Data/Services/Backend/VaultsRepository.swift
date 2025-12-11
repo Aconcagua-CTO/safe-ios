@@ -216,8 +216,14 @@ class VaultsRepositoryImpl: VaultsRepository {
                         continue
                     }
                     
+                    // Resolve chain ID (backend may send POLYGON id even for ARBITRUM vaults)
+                    let resolvedChainId = chainId(for: vault)
+                    if resolvedChainId != vault.chainId {
+                        VaultLogger.debug("  Overriding backend chainId \(vault.chainId) with \(resolvedChainId) derived from network \(vault.contractNetwork ?? "nil")")
+                    }
+                    
                     // Find Chain entity
-                    guard let chain = Chain.by(vault.chainId) else {
+                    guard let chain = Chain.by(resolvedChainId) else {
                         VaultLogger.warning("Failed to parse vault \(index + 1): Chain not found for chainId \(vault.chainId)")
                         skippedCount += 1
                         continue
@@ -409,4 +415,28 @@ class VaultsRepositoryImpl: VaultsRepository {
         }
     }
 }
+
+// MARK: - Helpers
+
+private extension VaultsRepository {
+    func chainId(for vault: VaultResponse) -> String {
+        guard let networkName = vault.contractNetwork?.uppercased() else {
+            return vault.chainId
+        }
+        if let mapped = vaultNetworkNameToChainId[networkName] {
+            return mapped
+        }
+        return vault.chainId
+    }
+}
+
+private let vaultNetworkNameToChainId: [String: String] = [
+    "ARBITRUM": Chain.ChainID.arbitrum,
+    "POLYGON": Chain.ChainID.polygon,
+    "ETHEREUM": Chain.ChainID.ethereumMainnet,
+    "GNOSIS": Chain.ChainID.gnosis,
+    "BSC": Chain.ChainID.bsc,
+    "AVALANCHE": Chain.ChainID.avalanche,
+    "OPTIMISM": Chain.ChainID.optimism
+]
 

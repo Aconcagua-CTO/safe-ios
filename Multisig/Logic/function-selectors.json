@@ -264,6 +264,53 @@
         "bsc": "0x10ED43C718714eb63d5aA57B78B54704E256024E"
       },
       "note": "Uses native BNB in value field, not data parameter"
+    },
+    {
+      "selector": "0x04e45aaf",
+      "protocol": "CowSwap",
+      "functionName": "setPreSignature",
+      "functionSignature": "setPreSignature((address,address,address,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint32,bool,bytes32),bool)",
+      "amountParameterLocation": "Tuple params (sellAmount or buyAmount)",
+      "amountParameterIndex": 3,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+        "100": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+      },
+      "note": "CowSwap GPv2Settlement contract. Chain IDs: 1=Ethereum, 100=Gnosis Chain. Requires approval of GPv2VaultRelayer. Uses tuple encoding - decode tuple to access order amounts"
+    },
+    {
+      "selector": "0x2e1a7d4d",
+      "protocol": "CowSwap",
+      "functionName": "invalidateOrder",
+      "functionSignature": "invalidateOrder((address,address,address,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint32,bool,bytes32))",
+      "amountParameterLocation": "Tuple params",
+      "amountParameterIndex": 3,
+      "requiresApproval": false,
+      "contractAddresses": {
+        "1": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41",
+        "100": "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
+      },
+      "note": "CowSwap GPv2Settlement contract. Chain IDs: 1=Ethereum, 100=Gnosis Chain. Used to invalidate orders, does not require approval"
+    },
+    {
+      "selector": "0x8a05438c",
+      "protocol": "Stargate Finance",
+      "functionName": "swap",
+      "functionSignature": "swap(uint16,uint256,uint256,address,uint256,uint256,bytes)",
+      "amountParameterLocation": "Bytes 132-163 (uint256 _amountLD)",
+      "amountParameterIndex": 4,
+      "requiresApproval": true,
+      "contractAddresses": {
+        "1": "0x8731d54E9D02c286767d56ac03e8037C07e01e98",
+        "137": "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd",
+        "42161": "0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614",
+        "10": "0x296F55F8Fb28E498B858d0BcDA06D955B2Cb3f97",
+        "56": "0x4a364f8c717cAAD9A442737Eb7b8A55cc6cf18D8",
+        "43114": "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd",
+        "100": "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd"
+      },
+      "note": "Stargate Router for cross-chain swaps. Chain IDs: 1=Ethereum, 137=Polygon, 42161=Arbitrum, 10=Optimism, 56=BSC, 43114=Avalanche, 100=Gnosis. NOTE: Contract addresses need verification from Stargate documentation"
     }
   ],
   "notes": {

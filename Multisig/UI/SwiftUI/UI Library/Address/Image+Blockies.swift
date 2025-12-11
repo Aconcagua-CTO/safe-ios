@@ -8,44 +8,11 @@
 
 import SwiftUI
 import UIKit
-import BlockiesSwift
 
 extension Image {
-    init(blocky seed: String? = nil,
-          size: Int = 8,
-          scale: Int = 4,
-          customScale: Int = 1,
-          color: UIColor? = nil,
-          bgColor: UIColor? = nil,
-          spotColor: UIColor? = nil) {
-        let uiImage = Blockies(seed: seed,
-                               size: size,
-                               scale: scale,
-                               color: color,
-                               bgColor: bgColor,
-                               spotColor: spotColor)
-            .createImage(customScale: customScale)
-        if let image = uiImage {
-            self.init(uiImage: image)
-        } else {
-            self.init("ico-token-placeholder")
-        }
-    }
-
     init(address: Address?,
-          size: Int = 8,
-          scale: Int = 4,
-          customScale: Int = 1,
-          color: UIColor? = nil,
-          bgColor: UIColor? = nil,
-          spotColor: UIColor? = nil) {
-        self.init(blocky: address?.hexadecimal,
-                  size: size,
-                  scale: scale,
-                  customScale: customScale,
-                  color: color,
-                  bgColor: bgColor,
-                  spotColor: spotColor)
+         placeholderName: String = "ico-safe-bar-logo") {
+        self.init(placeholderName)
     }
 }
 

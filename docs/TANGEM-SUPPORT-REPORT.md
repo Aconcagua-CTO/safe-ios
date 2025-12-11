@@ -1,4 +1,4 @@
-# Tangem SDK Support Request: Linked Terminal Not Working for HD Wallet Cards
+Te# Tangem SDK Support Request: Linked Terminal Not Working for HD Wallet Cards
 
 ## Issue Summary
 

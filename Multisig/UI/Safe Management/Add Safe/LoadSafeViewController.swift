@@ -20,6 +20,7 @@ class LoadSafeViewController: UIViewController {
     var trackingEvent: TrackingEvent?
     var addSafeFlow: AddSafeFlow!
     var createSafeFlow: CreateSafeFlow!
+    var showNoVaultsMessage = false
 
     convenience init() {
         self.init(nibName: nil, bundle: nil)
@@ -27,17 +28,39 @@ class LoadSafeViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        headerLabel.setStyle(.title3)
-        descriptionLabel.setStyle(.callout)
-        loadSafeButton.setText("Load existing Safe Account", .filled)
-        createSafeButton.setText("Create new Safe Account", .bordered)
-        demoButton.setText("Try Demo", .plain)
+        updateUI()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        updateUI()
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         if let event = trackingEvent {
             Tracker.trackEvent(event)
+        }
+    }
+    
+    private func updateUI() {
+        if showNoVaultsMessage {
+            headerLabel?.text = "Aún no tenés bóvedas"
+            headerLabel?.setStyle(.title3)
+            descriptionLabel?.text = "Contactos a hola@boveda.ai"
+            descriptionLabel?.setStyle(.callout)
+            loadSafeButton?.isHidden = true
+            createSafeButton?.isHidden = true
+            demoButton?.isHidden = true
+        } else {
+            headerLabel?.setStyle(.title3)
+            descriptionLabel?.setStyle(.callout)
+            loadSafeButton?.setText("Load existing Safe Account", .filled)
+            loadSafeButton?.isHidden = false
+            createSafeButton?.setText("Create new Safe Account", .bordered)
+            createSafeButton?.isHidden = false
+            demoButton?.setText("Try Demo", .plain)
+            demoButton?.isHidden = false
         }
     }
 

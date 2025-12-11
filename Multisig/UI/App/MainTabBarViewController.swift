@@ -13,6 +13,7 @@ class MainTabBarViewController: UITabBarController {
     var onFirstAppear: (_ vc: MainTabBarViewController) -> Void = { _ in
     }
 
+    private let tabIconSize = CGSize(width: 28, height: 28)
     private weak var transactionsSegementControl: SegmentViewController?
     private var appearsFirstTime: Bool = true
     private var addOwnerFlow: UpdateOwnersFromInviteLinkFlow!
@@ -150,7 +151,7 @@ class MainTabBarViewController: UITabBarController {
         let balances = balancesTabViewController(
             root: tabRoot,
             title: "Assets",
-            image: UIImage(named: "tab-icon-balances.pdf")!,
+            image: UIImage(named: "tab-icon-balances")!.scaled(to: tabIconSize),
             tag: Path.balances[0]
         )
         balances.assetsViewController = assetsVC

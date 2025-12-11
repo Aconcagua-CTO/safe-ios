@@ -12,6 +12,7 @@ import SwiftUI
 fileprivate protocol SectionItem {}
 
 class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
+    private static let vaultListTitle = "Vault list / Lista de bóvedas"
     var clientGatewayService = App.shared.clientGatewayService
     let tableBackgroundColor: UIColor = .backgroundPrimary
     let advancedSectionHeaderHeight: CGFloat = 28
@@ -53,6 +54,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         }
 
         enum Advanced: SectionItem {
+            case vaultList(String)
             case advanced(String)
             case removeSafe
         }
@@ -96,6 +98,11 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         }
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        update()
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         Tracker.trackEvent(.settingsSafe)
@@ -137,7 +144,15 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                             (error as NSError).domain == NSURLErrorDomain {
                             return
                         }
-                        self.onError(GSError.error(description: "Failed to load Safe Account settings", error: GSError.detailedError(from: error)))
+
+                        let detailedError = GSError.detailedError(from: error)
+                        if detailedError is GSError.EntityNotFound {
+                            self.showVaultListFallback()
+                            SnackbarViewController.show("Active vault not found. Please choose another vault.", duration: 4.0)
+                            return
+                        }
+
+                        self.onError(GSError.error(description: "Failed to load Safe Account settings", error: detailedError))
                     }
                 case .success(let safeInfo):
                     DispatchQueue.main.async { [weak self] in
@@ -184,27 +199,35 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     }
 
     private func updateSections() {
-        sections = []
+        var newSections: [SectionItems] = []
 
-        guard
+        if
             let safe = safe,
             let implementationInfo = safe.implementationInfo,
             let implementationVersionState = safe.implementationVersionState,
             let version = safe.version
-        else { return }
+        {
+            newSections += [
+                (section: .name("Safe Account Name"), items: [Section.Name.name(safe.name ?? "Safe \(safe.addressValue.ellipsized())")]),
+                (section: .security("SECURITY"), items: [Section.Security.security("Account security", safe.security)]),
+                (section: .safeVersion("Safe Account base contract version"),
+                 items: [Section.ContractVersion.versionInfo(implementationInfo, implementationVersionState, version)]),
 
-        sections += [
-            (section: .name("Safe Account Name"), items: [Section.Name.name(safe.name ?? "Safe \(safe.addressValue.ellipsized())")]),
-            (section: .security("SECURITY"), items: [Section.Security.security("Account security", safe.security)]),
-            (section: .safeVersion("Safe Account base contract version"),
-             items: [Section.ContractVersion.versionInfo(implementationInfo, implementationVersionState, version)]),
+                (section: .ensName("ENS name"), items: [Section.EnsName.ensName])
+            ]
+        }
 
-            (section: .ensName("ENS name"), items: [Section.EnsName.ensName]),
-
-            (section: .advanced, items: [
-                Section.Advanced.advanced("Advanced"),
-                Section.Advanced.removeSafe])
+        var advancedItems: [Section.Advanced] = [
+            Section.Advanced.vaultList(Self.vaultListTitle)
         ]
+
+        if safe != nil {
+            advancedItems.append(.advanced("Advanced"))
+            advancedItems.append(.removeSafe)
+        }
+
+        newSections.append((section: .advanced, items: advancedItems))
+        sections = newSections
     }
 
     // MARK: - Table view data source
@@ -229,20 +252,25 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard isValid(path: indexPath), let safe = safe else {
+        guard isValid(path: indexPath) else {
             return UITableViewCell()
         }
+
+        let safe = self.safe
         let item = sections[indexPath.section].items[indexPath.row]
         switch item {
         case Section.Name.name(let name):
+            guard safe != nil else { return UITableViewCell() }
             return tableView.basicCell(name: name, indexPath: indexPath)
         case Section.Security.security(let name, let status):
+            guard safe != nil else { return UITableViewCell() }
             return tableView.basicCell(name: name,
                                        icon: "ico-shield",
                                        indexPath: indexPath,
                                        supplementaryImage: status == .high ? nil : UIImage(named:"ico-info-24")?.withTintColor(status.color))
 
         case Section.ContractVersion.versionInfo(let info, let status, let version):
+            guard let safe = safe else { return UITableViewCell() }
             return safeVersionCell(info: info,
                                    status: status,
                                    version: version,
@@ -250,6 +278,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                                    prefix: safe.chain!.shortName)
 
         case Section.EnsName.ensName:
+            guard let safe = safe else { return UITableViewCell() }
             if ensLoader == nil || ensLoader!.isLoading {
                 return loadingCell(name: nil, indexPath: indexPath)
             } else {
@@ -257,9 +286,14 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             }
 
         case Section.Advanced.advanced(let name):
+            guard safe != nil else { return UITableViewCell() }
+            return tableView.basicCell(name: name, indexPath: indexPath)
+
+        case Section.Advanced.vaultList(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
 
         case Section.Advanced.removeSafe:
+            guard let safe = safe else { return UITableViewCell() }
             return tableView.removeCell(indexPath: indexPath, title: "Remove Safe") { [weak self] in
                 guard let `self` = self else { return }
                 let alertController = UIAlertController(
@@ -360,6 +394,9 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         case Section.Advanced.advanced(_):
             openAdvancedSettings()
 
+        case Section.Advanced.vaultList:
+            presentVaultList()
+
         default:
             break
         }
@@ -384,6 +421,12 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         default:
             return BasicCell.rowHeight
         }
+    }
+
+    private func presentVaultList() {
+        let switchSafesVC = SwitchSafesViewController()
+        let nav = UINavigationController(rootViewController: switchSafesVC)
+        present(nav, animated: true)
     }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection _section: Int) -> UIView? {
@@ -426,6 +469,20 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         default:
             return BasicHeaderView.headerHeight
         }
+    }
+
+    override var isEmpty: Bool {
+        sections.isEmpty
+    }
+
+    private func showVaultListFallback() {
+        safe = nil
+        safeOwners = []
+        ensLoader = nil
+        sections = [
+            (section: .advanced, items: [Section.Advanced.vaultList(Self.vaultListTitle)])
+        ]
+        onSuccess()
     }
 }
 

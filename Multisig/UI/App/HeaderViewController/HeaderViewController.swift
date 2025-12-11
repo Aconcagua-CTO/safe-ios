@@ -16,7 +16,6 @@ final class HeaderViewController: ContainerViewController {
     @IBOutlet private weak var barShadowView: UIImageView!
     @IBOutlet private weak var safeBarView: SafeBarView!
     @IBOutlet private weak var noSafeBarView: NoSafeBarView!
-    @IBOutlet private weak var switchSafeButton: UIButton!
     @IBOutlet private weak var contentView: UIView!
     @IBOutlet private weak var headerBarHeightConstraint: NSLayoutConstraint!
 
@@ -40,20 +39,18 @@ final class HeaderViewController: ContainerViewController {
         super.viewDidLoad()
         headerBar.backgroundColor = .backgroundSecondary
         safeBarView.addTarget(self, action: #selector(didTapSafeBarView(_:)), for: .touchUpInside)
-        safeBarView.set { [unowned self] in
-            guard let safe = try? Safe.getSelected() else { return }
-            claimTokenFlow = ClaimSafeTokenFlow(safe: safe) { [unowned self] _ in
-                claimTokenFlow = nil
-            }
-            Tracker.trackEvent(.userClaimOpen)
-            present(flow: claimTokenFlow)
-        }
 
         reloadHeaderBar()
         displayRootController()
         addObservers()
         headerBarHeightConstraint.constant = ScreenMetrics.safeHeaderHeight
+        LogService.shared.debug("[HeaderViewController] viewDidLoad - screen bounds: \(UIScreen.main.bounds.size), isBigScreen: \(ScreenMetrics.isBigScreen), headerHeight: \(ScreenMetrics.safeHeaderHeight)")
         reloadSafeData()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        LogService.shared.debug("[HeaderViewController] viewDidLayoutSubviews - headerBar.frame: \(headerBar.frame), safeBarView.frame: \(safeBarView.frame)")
     }
 
     private func addObservers() {
@@ -88,13 +85,6 @@ final class HeaderViewController: ContainerViewController {
         navigationController?.navigationBar.isHidden = false
     }
 
-    @IBAction private func didTapSwitchSafe(_ sender: Any) {
-        let switchSafesVC = SwitchSafesViewController()
-
-        let nav = UINavigationController(rootViewController: switchSafesVC)
-        present(nav, animated: true)
-    }
-    
     private func addSafe() {
         addSafeFlow = AddSafeFlow(completion: { [weak self] _ in
             self?.addSafeFlow = nil
@@ -103,10 +93,10 @@ final class HeaderViewController: ContainerViewController {
     }
 
     @objc private func didTapSafeBarView(_ sender: Any) {
-        let vc = SafeInfoViewController(nibName: nil, bundle: nil)
-        vc.modalPresentationStyle = .overFullScreen
-        vc.modalTransitionStyle = .crossDissolve
-        present(vc, animated: true, completion: nil)
+        // Navigate to Transactions tab > History subtab
+        if let tabBarController = tabBarController as? MainTabBarViewController {
+            tabBarController.switchTo(indexPath: MainTabBarViewController.Path.history)
+        }
     }
 
     @objc private func didReceiveUpdateNotification(_ notification: Notification) {
@@ -121,12 +111,10 @@ final class HeaderViewController: ContainerViewController {
             let selectedSafe = try Safe.getSelected()
             let hasSafe = selectedSafe != nil
             safeBarView.isHidden = !hasSafe
-            switchSafeButton.isHidden = !hasSafe
             noSafeBarView.isHidden = hasSafe
 
             if let safe = selectedSafe {
                 safeBarView.setName(safe.displayName)
-                safeBarView.setReadOnly(safe.isReadOnly)
 
                 switch safe.safeStatus {
                 case .deployed:
@@ -151,8 +139,6 @@ final class HeaderViewController: ContainerViewController {
         currentDataTask?.cancel()
         do {
             guard let safe = try Safe.getSelected() else { return }
-
-            safeBarView.set(safeTokenClaimable: ClaimingAppController.isAvailable(chain: safe.chain!))
 
             currentDataTask = clientGatewayService.asyncSafeInfo(safeAddress: safe.addressValue,
                                                                  chainId: safe.chain!.id!) { [weak self] result in

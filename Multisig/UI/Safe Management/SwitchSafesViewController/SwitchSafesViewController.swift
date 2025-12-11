@@ -123,10 +123,8 @@ final class SwitchSafesViewController: UITableViewController {
         } else {
             let chainIndex = indexPath.section - 1
             let safe = chainSafes[chainIndex].safes[indexPath.row]
-            if !safe.isSelected {
-                safe.select()
-                didTapCloseButton()
-            }
+            safe.select()
+            didTapCloseButton()
         }
     }
 

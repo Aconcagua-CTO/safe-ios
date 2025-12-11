@@ -41,20 +41,20 @@ struct LaunchView: View {
 
     var onStart: () -> Void = {}
 
-    private let logoToTextSpacing: CGFloat = 40
     private let textToButtonSpacing: CGFloat = 60
+    private let taglineFontSize: CGFloat = 25.5
 
     var body: some View {
         GeometryReader { geometryProxy in
 
             ZStack(alignment: .centerAlignment) {
                 VStack(alignment: .center, spacing: 0) {
-                    // 100 x 153 px, so no additional framing is required
-                    Image("launchscreen-logo")
-                        .padding(.bottom,  self.logoToTextSpacing)
-
-                    // 282 × 89 px, so no additional framing is required
-                    Image("ico-splash-text")
+                    Text("BOVEDA")
+                        .font(.custom("DMSans-Medium", size: taglineFontSize))
+                        .foregroundColor(Color.primary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .frame(maxWidth: 280)
                         .alignmentGuide(.centerVerticalAlignment) { $0[VerticalAlignment.center] }
                         .padding(.bottom, self.textToButtonSpacing)
                 }

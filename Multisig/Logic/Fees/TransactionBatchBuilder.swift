@@ -87,6 +87,20 @@ final class TransactionBatchBuilder {
                                     params: UniswapRouterV3.exactInputSingle.ExactInputSingleParams)
         case swapExactInputV3(router: Address,
                                params: UniswapRouterV3.exactInput.ExactInputParams)
+        case cowSwapSetPreSignature(settlement: Address,
+                                     sellToken: Address,
+                                     buyToken: Address,
+                                     sellAmount: UInt256,
+                                     buyAmount: UInt256,
+                                     order: CowSwapSettlement.setPreSignature.Order)
+        case stargateSwap(router: Address,
+                          dstChainId: UInt16,
+                          srcPoolId: UInt256,
+                          dstPoolId: UInt256,
+                          refundAddress: Address,
+                          amountLD: UInt256,
+                          minAmountLD: UInt256,
+                          payload: Data)
     }
 
     private let transaction: Transaction
@@ -192,6 +206,13 @@ final class TransactionBatchBuilder {
             return classifyV3ExactInputSingle(data: data)
         case "exactInput((bytes,address,uint256,uint256,uint256))":
             return classifyV3ExactInput(data: data)
+        case "setPreSignature((address,address,address,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint32,bool,bytes32),bool)":
+            return classifyCowSwapSetPreSignature(data: data)
+        case "invalidateOrder((address,address,address,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint32,bool,bytes32))":
+            // invalidateOrder doesn't require approval, skip fee batching
+            return nil
+        case "swap(uint16,uint256,uint256,address,uint256,uint256,bytes)":
+            return classifyStargateSwap(data: data)
         default:
             TransactionFeeLogger.debug("Selector \(entry.functionSignature) currently unsupported for fee batching.")
             return nil
@@ -348,6 +369,53 @@ final class TransactionBatchBuilder {
         return .swapExactInputV3(router: router, params: call.params)
     }
 
+    private func classifyCowSwapSetPreSignature(data: Data) -> Intent? {
+        var call = CowSwapSettlement.setPreSignature()
+        var offset = 0
+        guard (try? call.decode(from: data, offset: &offset)) != nil else {
+            TransactionFeeLogger.warning("Failed to decode CowSwap setPreSignature calldata.")
+            return nil
+        }
+        let settlement = transaction.to.address
+        let sellToken = Address(call.order.sellToken)
+        let buyToken = Address(call.order.buyToken)
+        let sellAmount = UInt256(sol: call.order.sellAmount)
+        let buyAmount = UInt256(sol: call.order.buyAmount)
+        TransactionFeeLogger.debug("Decoded CowSwap setPreSignature: settlement=\(settlement.checksummed), sellToken=\(sellToken.checksummed), buyToken=\(buyToken.checksummed), sellAmount=\(sellAmount.asDecimalString), buyAmount=\(buyAmount.asDecimalString)")
+        return .cowSwapSetPreSignature(settlement: settlement,
+                                        sellToken: sellToken,
+                                        buyToken: buyToken,
+                                        sellAmount: sellAmount,
+                                        buyAmount: buyAmount,
+                                        order: call.order)
+    }
+
+    private func classifyStargateSwap(data: Data) -> Intent? {
+        var call = StargateRouter.swap()
+        var offset = 0
+        guard (try? call.decode(from: data, offset: &offset)) != nil else {
+            TransactionFeeLogger.warning("Failed to decode Stargate swap calldata.")
+            return nil
+        }
+        let router = transaction.to.address
+        let dstChainId = UInt16(call.dstChainId)
+        let srcPoolId = UInt256(sol: call.srcPoolId)
+        let dstPoolId = UInt256(sol: call.dstPoolId)
+        let refundAddress = Address(call.refundAddress)
+        let amountLD = UInt256(sol: call.amountLD)
+        let minAmountLD = UInt256(sol: call.minAmountLD)
+        let payload = call.payload.storage
+        TransactionFeeLogger.debug("Decoded Stargate swap: router=\(router.checksummed), dstChainId=\(dstChainId), srcPoolId=\(srcPoolId.asDecimalString), dstPoolId=\(dstPoolId.asDecimalString), amountLD=\(amountLD.asDecimalString), minAmountLD=\(minAmountLD.asDecimalString)")
+        return .stargateSwap(router: router,
+                             dstChainId: dstChainId,
+                             srcPoolId: srcPoolId,
+                             dstPoolId: dstPoolId,
+                             refundAddress: refundAddress,
+                             amountLD: amountLD,
+                             minAmountLD: minAmountLD,
+                             payload: payload)
+    }
+
     private struct Computation {
         let originalAmount: UInt256
         let netAmount: UInt256
@@ -373,6 +441,10 @@ final class TransactionBatchBuilder {
             return computeSwapExactInputSingleV3(router: router, params: params)
         case let .swapExactInputV3(router, params):
             return computeSwapExactInputV3(router: router, params: params)
+        case let .cowSwapSetPreSignature(settlement, sellToken, buyToken, sellAmount, buyAmount, order):
+            return computeCowSwapSetPreSignature(settlement: settlement, sellToken: sellToken, buyToken: buyToken, sellAmount: sellAmount, buyAmount: buyAmount, order: order)
+        case let .stargateSwap(router, dstChainId, srcPoolId, dstPoolId, refundAddress, amountLD, minAmountLD, payload):
+            return computeStargateSwap(router: router, dstChainId: dstChainId, srcPoolId: srcPoolId, dstPoolId: dstPoolId, refundAddress: refundAddress, amountLD: amountLD, minAmountLD: minAmountLD, payload: payload)
         }
     }
 
@@ -824,6 +896,282 @@ final class TransactionBatchBuilder {
                            netAmount: netAmount,
                            feeAmount: feeAmount,
                            legs: legs)
+    }
+
+    private func computeCowSwapSetPreSignature(settlement: Address,
+                                                sellToken: Address,
+                                                buyToken: Address,
+                                                sellAmount: UInt256,
+                                                buyAmount: UInt256,
+                                                order: CowSwapSettlement.setPreSignature.Order) -> Computation? {
+        guard let feeAmount = calculateFee(for: sellAmount) else {
+            TransactionFeeLogger.info("CowSwap sell amount too small for fee – skipping.")
+            return nil
+        }
+        let netSellAmount = sellAmount - feeAmount
+        guard netSellAmount > 0 else {
+            TransactionFeeLogger.warning("CowSwap net sell amount would be zero – skipping.")
+            return nil
+        }
+
+        // CowSwap requires approval of GPv2VaultRelayer
+        // GPv2VaultRelayer addresses per chain
+        // Ethereum: 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110
+        // Gnosis Chain: 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110
+        // In production, this should be looked up from chain-specific configuration
+        let vaultRelayerAddress: Address
+        if let chainId = safe.chain?.id {
+            // GPv2VaultRelayer addresses per chain
+            switch chainId {
+            case "1": // Ethereum
+                vaultRelayerAddress = (try? Address(from: "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110")) ?? settlement
+            case "100": // Gnosis Chain
+                vaultRelayerAddress = (try? Address(from: "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110")) ?? settlement
+            default:
+                vaultRelayerAddress = settlement // Fallback
+            }
+        } else {
+            vaultRelayerAddress = settlement
+        }
+
+        // Calculate approval amount: net amount + fee amount
+        let approvalAmount = sellAmount
+
+        // Create approval leg
+        let approve = ERC20.approve(spender: Sol.Address(stringLiteral: vaultRelayerAddress.checksummedWithoutPrefix),
+                                    value: Sol.UInt256(approvalAmount))
+
+        // Create modified order with net sell amount
+        var modifiedOrder = order
+        modifiedOrder.sellAmount = Sol.UInt256(netSellAmount)
+        // Adjust buy amount proportionally if needed
+        if sellAmount > 0 {
+            let adjustedBuyAmount = (buyAmount * netSellAmount) / sellAmount
+            modifiedOrder.buyAmount = Sol.UInt256(adjustedBuyAmount)
+        }
+
+        // Create setPreSignature call with modified order
+        let setPreSignatureCall = CowSwapSettlement.setPreSignature(order: modifiedOrder, signed: Sol.Bool(true))
+
+        // Create fee transfer leg
+        let feeTransfer = ERC20.transfer(to: Sol.Address(stringLiteral: config.treasury.checksummedWithoutPrefix),
+                                         value: Sol.UInt256(feeAmount))
+
+        // Create approval reset leg (security: prevents over-approval)
+        let revoke = ERC20.approve(spender: Sol.Address(stringLiteral: vaultRelayerAddress.checksummedWithoutPrefix),
+                                   value: Sol.UInt256(UInt256.zero))
+
+        let legs: [Leg] = [
+            Leg(name: "CowSwap Approve (GPv2VaultRelayer)",
+                operation: .call,
+                to: sellToken,
+                value: .zero,
+                data: approve.encode()),
+            Leg(name: "CowSwap setPreSignature (net)",
+                operation: .call,
+                to: settlement,
+                value: .zero,
+                data: setPreSignatureCall.encode()),
+            Leg(name: "Fee Transfer",
+                operation: .call,
+                to: sellToken,
+                value: .zero,
+                data: feeTransfer.encode()),
+            Leg(name: "CowSwap Approval Reset",
+                operation: .call,
+                to: sellToken,
+                value: .zero,
+                data: revoke.encode())
+        ]
+
+        return Computation(originalAmount: sellAmount,
+                           netAmount: netSellAmount,
+                           feeAmount: feeAmount,
+                           legs: legs)
+    }
+
+    private func computeStargateSwap(router: Address,
+                                     dstChainId: UInt16,
+                                     srcPoolId: UInt256,
+                                     dstPoolId: UInt256,
+                                     refundAddress: Address,
+                                     amountLD: UInt256,
+                                     minAmountLD: UInt256,
+                                     payload: Data) -> Computation? {
+        guard let feeAmount = calculateFee(for: amountLD) else {
+            TransactionFeeLogger.info("Stargate swap amount too small for fee – skipping.")
+            return nil
+        }
+        let netAmountLD = amountLD - feeAmount
+        guard netAmountLD > 0 else {
+            TransactionFeeLogger.warning("Stargate swap net amount would be zero – skipping.")
+            return nil
+        }
+
+        // Determine token address for approval from pool ID
+        // Stargate uses pool IDs to identify token pools
+        // We need to map pool ID to token address for approval
+        guard let tokenAddress = resolveTokenAddressFromPoolId(poolId: srcPoolId, chainId: safe.chain?.id ?? "1") else {
+            TransactionFeeLogger.warning("Stargate swap detected but unable to resolve token address from pool ID \(srcPoolId.asDecimalString) on chain \(safe.chain?.id ?? "unknown"). Skipping fee batching.")
+            return nil
+        }
+
+        // Calculate approval amount: exact amount needed
+        let approvalAmount = amountLD
+
+        // Create approval leg (approve Router contract)
+        let approve = ERC20.approve(spender: Sol.Address(stringLiteral: router.checksummedWithoutPrefix),
+                                    value: Sol.UInt256(approvalAmount))
+
+        // Adjust minAmountLD proportionally when reducing amountLD by fee
+        let adjustedMinAmountLD = (minAmountLD * netAmountLD) / amountLD
+        TransactionFeeLogger.debug("Adjusting minAmountLD from \(minAmountLD.asDecimalString) to \(adjustedMinAmountLD.asDecimalString) for proportional slippage.")
+
+        // Create swap call with net amount
+        let swapCall = StargateRouter.swap(dstChainId: Sol.UInt16(dstChainId),
+                                            srcPoolId: Sol.UInt256(srcPoolId),
+                                            dstPoolId: Sol.UInt256(dstPoolId),
+                                            refundAddress: Sol.Address(stringLiteral: refundAddress.checksummedWithoutPrefix),
+                                            amountLD: Sol.UInt256(netAmountLD),
+                                            minAmountLD: Sol.UInt256(adjustedMinAmountLD),
+                                            payload: Sol.Bytes(storage: payload))
+
+        // Create fee transfer leg
+        let feeTransfer = ERC20.transfer(to: Sol.Address(stringLiteral: config.treasury.checksummedWithoutPrefix),
+                                         value: Sol.UInt256(feeAmount))
+
+        // Create approval reset leg (security: prevents over-approval)
+        let revoke = ERC20.approve(spender: Sol.Address(stringLiteral: router.checksummedWithoutPrefix),
+                                   value: Sol.UInt256(UInt256.zero))
+
+        let legs: [Leg] = [
+            Leg(name: "Stargate Approve",
+                operation: .call,
+                to: tokenAddress,
+                value: .zero,
+                data: approve.encode()),
+            Leg(name: "Stargate Swap (net)",
+                operation: .call,
+                to: router,
+                value: .zero,
+                data: swapCall.encode()),
+            Leg(name: "Fee Transfer",
+                operation: .call,
+                to: tokenAddress,
+                value: .zero,
+                data: feeTransfer.encode()),
+            Leg(name: "Stargate Approval Reset",
+                operation: .call,
+                to: tokenAddress,
+                value: .zero,
+                data: revoke.encode())
+        ]
+
+        return Computation(originalAmount: amountLD,
+                           netAmount: netAmountLD,
+                           feeAmount: feeAmount,
+                           legs: legs)
+    }
+
+    /// Resolves token address from Stargate pool ID
+    /// Pool IDs are chain-specific and map to token addresses
+    /// Common pool IDs:
+    /// - Pool 1: USDC
+    /// - Pool 2: USDT
+    /// - Pool 3: DAI
+    /// - Pool 7: FRAX
+    /// - Pool 13: ETH
+    private func resolveTokenAddressFromPoolId(poolId: UInt256, chainId: String) -> Address? {
+        // Stargate pool ID to token address mapping per chain
+        // These are common pool IDs, but may vary by chain
+        // NOTE: These addresses need verification from Stargate documentation
+        let poolIdString = poolId.asDecimalString
+        
+        // Common pool IDs (may need adjustment per chain)
+        // Pool 1 = USDC, Pool 2 = USDT, Pool 3 = DAI, Pool 7 = FRAX, Pool 13 = ETH
+        switch chainId {
+        case "1": // Ethereum Mainnet
+            switch poolIdString {
+            case "1": // USDC
+                return try? Address(from: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
+            case "2": // USDT
+                return try? Address(from: "0xdAC17F958D2ee523a2206206994597C13D831ec7")
+            case "3": // DAI
+                return try? Address(from: "0x6B175474E89094C44Da98b954EedeAC495271d0F")
+            case "7": // FRAX
+                return try? Address(from: "0x853d955aCEf822Db058eb8505911ED77F175b99e")
+            case "13": // ETH
+                return try? Address(from: "0x0000000000000000000000000000000000000000") // Native ETH, but Stargate uses WETH
+            default:
+                TransactionFeeLogger.debug("Unknown Stargate pool ID \(poolIdString) on Ethereum. Token address resolution failed.")
+                return nil
+            }
+        case "137": // Polygon
+            switch poolIdString {
+            case "1": // USDC
+                return try? Address(from: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174")
+            case "2": // USDT
+                return try? Address(from: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F")
+            case "3": // DAI
+                return try? Address(from: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063")
+            default:
+                TransactionFeeLogger.debug("Unknown Stargate pool ID \(poolIdString) on Polygon. Token address resolution failed.")
+                return nil
+            }
+        case "42161": // Arbitrum
+            switch poolIdString {
+            case "1": // USDC
+                return try? Address(from: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8")
+            case "2": // USDT
+                return try? Address(from: "0xFd086BC7CD5C481DCC9C85ebE478A1C0b69FCbb9")
+            case "3": // DAI
+                return try? Address(from: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1")
+            default:
+                TransactionFeeLogger.debug("Unknown Stargate pool ID \(poolIdString) on Arbitrum. Token address resolution failed.")
+                return nil
+            }
+        case "10": // Optimism
+            switch poolIdString {
+            case "1": // USDC
+                return try? Address(from: "0x7F5c764cB1414f8692694C65C5F8C0F5C3b85Cb")
+            case "2": // USDT
+                return try? Address(from: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58")
+            case "3": // DAI
+                return try? Address(from: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1")
+            default:
+                TransactionFeeLogger.debug("Unknown Stargate pool ID \(poolIdString) on Optimism. Token address resolution failed.")
+                return nil
+            }
+        case "56": // BSC
+            switch poolIdString {
+            case "1": // USDC
+                return try? Address(from: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d")
+            case "2": // USDT
+                return try? Address(from: "0x55d398326f99059fF775485246999027B3197955")
+            case "3": // BUSD
+                return try? Address(from: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56")
+            default:
+                TransactionFeeLogger.debug("Unknown Stargate pool ID \(poolIdString) on BSC. Token address resolution failed.")
+                return nil
+            }
+        case "43114": // Avalanche
+            switch poolIdString {
+            case "1": // USDC
+                return try? Address(from: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E")
+            case "2": // USDT
+                return try? Address(from: "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7")
+            default:
+                TransactionFeeLogger.debug("Unknown Stargate pool ID \(poolIdString) on Avalanche. Token address resolution failed.")
+                return nil
+            }
+        case "100": // Gnosis Chain
+            // Stargate may not support Gnosis Chain, but include for completeness
+            TransactionFeeLogger.debug("Stargate pool ID resolution on Gnosis Chain not yet implemented.")
+            return nil
+        default:
+            TransactionFeeLogger.debug("Stargate pool ID resolution not implemented for chain \(chainId).")
+            return nil
+        }
     }
 
     private func assembleTransaction(legs: [Leg], chainId: String) -> (transaction: Transaction, multiSend: Address)? {

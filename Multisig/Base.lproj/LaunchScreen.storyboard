@@ -17,14 +17,12 @@
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="launchscreen-logo" translatesAutoresizingMaskIntoConstraints="NO" id="1gs-g6-Bnu">
-                                <rect key="frame" x="157" y="226.66666666666663" width="100" height="136"/>
-                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            </imageView>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="ico-splash-text" translatesAutoresizingMaskIntoConstraints="NO" id="Iqr-mN-Ycx">
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Self Private Banking" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" translatesAutoresizingMaskIntoConstraints="NO" id="Iqr-mN-Ycx">
                                 <rect key="frame" x="87" y="402.66666666666669" width="240" height="91"/>
-                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            </imageView>
+                                <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="28"/>
+                                <color key="textColor" red="0.83921568630000001" green="0.85882352940000004" blue="0.83137254900000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                             <imageView hidden="YES" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="imageView:HE7-XI-zng:image" translatesAutoresizingMaskIntoConstraints="NO" id="HE7-XI-zng">
                                 <rect key="frame" x="140" y="610" width="274" height="286"/>
                             </imageView>
@@ -32,12 +30,10 @@
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" name="splashBackground"/>
                         <constraints>
-                            <constraint firstItem="Iqr-mN-Ycx" firstAttribute="top" secondItem="1gs-g6-Bnu" secondAttribute="bottom" constant="40" id="AhB-Ob-69V"/>
                             <constraint firstItem="Iqr-mN-Ycx" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="GrW-9P-X2e"/>
                             <constraint firstItem="Iqr-mN-Ycx" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="LGN-tn-F0C"/>
                             <constraint firstItem="HE7-XI-zng" firstAttribute="trailing" secondItem="6Tk-OE-BBY" secondAttribute="trailing" id="O4b-CJ-Ype"/>
                             <constraint firstAttribute="bottom" secondItem="HE7-XI-zng" secondAttribute="bottom" id="YRA-K3-zF0"/>
-                            <constraint firstItem="1gs-g6-Bnu" firstAttribute="centerX" secondItem="Iqr-mN-Ycx" secondAttribute="centerX" id="hxY-7O-sOt"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -47,7 +43,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="ico-splash-text" width="240" height="91"/>
         <image name="imageView:HE7-XI-zng:image" width="274" height="286">
             <mutableData key="keyedArchiveRepresentation">
 YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMSAAGGoF8QD05T
@@ -73460,7 +73455,6 @@ AEMhMgBDITQAQyE2AEMhPwBDIUQAQyFKAEMhUgBDIVQAQyFWAEMhWABDIVoAQzL6AEMy/wBDMwwAQzMP
 AEMzHABDMyEAQzMpAEMzLABDMzEAQzM5AAAAAAAABAEAAAAAAAAAaAAAAAAAAAAAAAAAAABDMzw
 </mutableData>
         </image>
-        <image name="launchscreen-logo" width="100" height="136"/>
         <namedColor name="splashBackground">
             <color red="0.071000002324581146" green="0.075000002980232239" blue="0.071000002324581146" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
