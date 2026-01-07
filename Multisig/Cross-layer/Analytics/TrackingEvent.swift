@@ -530,6 +530,8 @@ extension KeyType {
             return "web3AuthGoogle"
         case .tangem:
             return "tangem"
+        case .tangem0:
+            return "tangem0"
         case .burner:
             return "burner"
         }

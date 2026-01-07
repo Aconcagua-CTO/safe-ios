@@ -14,28 +14,61 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
     
     var term: String = ""
     
-    var balances: [TokenBalance] = []
+    enum Mode {
+        case balances([TokenBalance])
+        case transferAssets([TransferSelectableAsset])
+    }
     
-    var filteredBalances: [TokenBalance] = []
+    private var mode: Mode = .balances([])
+    private var filteredBalances: [TokenBalance] = []
+    private var filteredTransferAssets: [TransferSelectableAsset] = []
     
-    override var isEmpty: Bool { filteredBalances.isEmpty }
+    override var isEmpty: Bool {
+        switch mode {
+        case .balances: return filteredBalances.isEmpty
+        case .transferAssets: return filteredTransferAssets.isEmpty
+        }
+    }
     
     private let tableBackgroundColor: UIColor = .backgroundPrimary
 
     convenience init(balances: [TokenBalance]) {
         self.init(namedClass: Self.superclass())
-        self.balances = balances
-        self.filteredBalances = balances
+        let sorted = Self.sortBalances(balances)
+        self.mode = .balances(sorted)
+        self.filteredBalances = sorted
+    }
+    
+    convenience init(transferAssets: [TransferSelectableAsset]) {
+        self.init(namedClass: Self.superclass())
+        let sorted = Self.sortTransferAssets(transferAssets)
+        self.mode = .transferAssets(sorted)
+        self.filteredTransferAssets = sorted
     }
     
     func updateSearchResults(for searchController: UISearchController) {
         term = searchController.searchBar.text?.lowercased() ?? ""
-        if !term.isEmpty {
-            filteredBalances = balances.filter { balance in
-                return balance.symbol.lowercased().contains(term) || balance.name.lowercased().contains(term)
+        switch mode {
+        case .balances(let balances):
+            if !term.isEmpty {
+                filteredBalances = balances.filter { balance in
+                    return balance.symbol.lowercased().contains(term) || balance.name.lowercased().contains(term)
+                }
+            } else {
+                filteredBalances = balances
             }
-        } else {
-            filteredBalances = balances
+            filteredBalances = Self.sortBalances(filteredBalances)
+        case .transferAssets(let assets):
+            if !term.isEmpty {
+                filteredTransferAssets = assets.filter { asset in
+                    return asset.token.symbol.lowercased().contains(term)
+                    || asset.token.name.lowercased().contains(term)
+                    || asset.chainName.lowercased().contains(term)
+                }
+            } else {
+                filteredTransferAssets = assets
+            }
+            filteredTransferAssets = Self.sortTransferAssets(filteredTransferAssets)
         }
         if isEmpty {
             showOnly(view: emptyView)
@@ -48,11 +81,12 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        navigationItem.title = "Select an asset"
+        navigationItem.title = "¿Qué querés retirar?"
         navigationItem.searchController = searchController
         navigationItem.backButtonTitle = "Back"
         
-        tableView.registerCell(BalanceTableViewCell.self)
+        // Use a custom cell so we can show chain on the left and amount on the right (2-line layout).
+        tableView.register(SelectAssetRowCell.self, forCellReuseIdentifier: SelectAssetRowCell.reuseID)
         
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 60
@@ -84,27 +118,57 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        filteredBalances.count
+        switch mode {
+        case .balances:
+            return filteredBalances.count
+        case .transferAssets:
+            return filteredTransferAssets.count
+        }
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let item = filteredBalances[indexPath.row]
-        let cell = tableView.dequeueCell(BalanceTableViewCell.self, for: indexPath)
-        cell.setMainText(item.symbol)
-        cell.setDetailText(item.balance)
-        cell.setSubDetailText(item.fiatBalance)
-        if let image = item.image {
-            cell.setImage(image)
-        } else {
-            cell.setImage(with: item.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
+        let cell = tableView.dequeueCell(SelectAssetRowCell.self, for: indexPath)
+        switch mode {
+        case .balances:
+            let item = filteredBalances[indexPath.row]
+            cell.setSymbol(item.symbol)
+            cell.setChain("") // single-vault mode has no chain label
+            cell.setFiat(item.fiatBalance)
+            cell.setAmount(item.balanceFormatted5)
+            applyMoneyMarketBadgeIfNeeded(cell: cell, category: item.category)
+            if let image = item.image {
+                cell.setImage(image)
+            } else {
+                cell.setImage(with: item.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
+            }
+        case .transferAssets:
+            let asset = filteredTransferAssets[indexPath.row]
+            let token = asset.token
+            cell.setSymbol(token.symbol)
+            cell.setChain(asset.chainName)
+            cell.setFiat(token.fiatBalance)            // 2 decimals from formatter
+            cell.setAmount(token.balanceFormatted5)    // up to 5 decimals, no symbol
+            applyMoneyMarketBadgeIfNeeded(cell: cell, category: token.category)
+            if let image = token.image {
+                cell.setImage(image)
+            } else {
+                cell.setImage(with: token.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
+            }
         }
         return cell
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let transferFundsVC = TransactionViewController()
+        let transferFundsVC = TransferAmountViewController()
         let ribbon = RibbonViewController(rootViewController: transferFundsVC)
-        transferFundsVC.tokenBalance = filteredBalances[indexPath.row]
+        switch mode {
+        case .balances:
+            transferFundsVC.tokenBalance = filteredBalances[indexPath.row]
+        case .transferAssets:
+            let asset = filteredTransferAssets[indexPath.row]
+            asset.preferredSafe.select()
+            transferFundsVC.tokenBalance = asset.preferredSafeToken
+        }
         show(ribbon, sender: self)
     }
 }
@@ -134,6 +198,45 @@ extension SelectAssetViewController: UITextFieldDelegate {
             }else{
                 return false
             }
+        }
+    }
+}
+
+// MARK: - Sorting helpers
+private extension SelectAssetViewController {
+    static func sortBalances(_ balances: [TokenBalance]) -> [TokenBalance] {
+        balances.sorted {
+            if $0.fiatValue == $1.fiatValue {
+                return $0.symbol.localizedCaseInsensitiveCompare($1.symbol) == .orderedAscending
+            }
+            return $0.fiatValue > $1.fiatValue
+        }
+    }
+    
+    static func sortTransferAssets(_ assets: [TransferSelectableAsset]) -> [TransferSelectableAsset] {
+        assets.sorted {
+            if $0.token.fiatValue == $1.token.fiatValue {
+                if $0.token.symbol.caseInsensitiveCompare($1.token.symbol) == .orderedSame {
+                    return $0.chainName.localizedCaseInsensitiveCompare($1.chainName) == .orderedAscending
+                }
+                return $0.token.symbol.localizedCaseInsensitiveCompare($1.token.symbol) == .orderedAscending
+            }
+            return $0.token.fiatValue > $1.token.fiatValue
+        }
+    }
+}
+
+// MARK: - Badge helpers
+private extension SelectAssetViewController {
+    func applyMoneyMarketBadgeIfNeeded(cell: SelectAssetRowCell, category: String) {
+        let normalized = category
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+        if normalized == "moneymarket" {
+            cell.setBadge(text: "3.75%", backgroundColor: .success)
+        } else {
+            cell.setBadge(text: nil)
         }
     }
 }

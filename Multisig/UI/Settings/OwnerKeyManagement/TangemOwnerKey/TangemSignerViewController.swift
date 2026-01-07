@@ -9,9 +9,9 @@ final class TangemSignerViewController: UINavigationController {
     var onClose: (() -> Void)?
 
     private let request: SignRequest
-    private let tangemService: TangemService
+    private let tangemService: TangemSigningService
 
-    init(request: SignRequest, service: TangemService = .shared) {
+    init(request: SignRequest, service: TangemSigningService = TangemService.shared) {
         self.request = request
         self.tangemService = service
         let contentVC = TangemSignContentViewController(request: request, service: service)
@@ -93,7 +93,7 @@ private final class TangemSignContentViewController: UIViewController {
     }
 
     private let request: SignRequest
-    private let service: TangemService
+    private let service: TangemSigningService
 
     private let statusLabel = UILabel()
     private let detailLabel = UILabel()
@@ -108,7 +108,7 @@ private final class TangemSignContentViewController: UIViewController {
     private var signingTask: Task<Void, Never>?
     private var hasStarted = false
 
-    init(request: SignRequest, service: TangemService) {
+    init(request: SignRequest, service: TangemSigningService) {
         self.request = request
         self.service = service
         super.init(nibName: nil, bundle: nil)
@@ -216,7 +216,7 @@ private final class TangemSignContentViewController: UIViewController {
                     body: "Hold your Tangem card near the top of your iPhone to sign."
                 )
                 
-                TangemLogger.debug("TangemSigner ▶️ Invoking TangemService.signHash (signingMethod=signHash)")
+                TangemLogger.debug("TangemSigner ▶️ Invoking signing service \(String(describing: type(of: self.service)))")
                 let result = try await self.service.signHash(cardId: metadata.cardId,
                                                              walletPublicKey: metadata.walletPublicKey,
                                                              hash: payload.hash,
@@ -225,6 +225,7 @@ private final class TangemSignContentViewController: UIViewController {
                                                              initialMessage: signingMessage)
                 TangemLogger.debug("TangemSigner ▶️ Tangem service returned signature (\(result.signature.count) bytes) totalSigned=\(result.totalSignedHashes ?? -1)")
                 TangemLogger.debug("TangemSigner ▶️ Raw signature = \(result.signature.tangemHexDescription())")
+                TangemLogger.debug("TangemSigner ▶️ Terminal linked status: \(result.linkedTerminalStatus?.rawValue ?? "unknown")")
 
                 await MainActor.run {
                     self.state = .signing
@@ -261,8 +262,23 @@ private final class TangemSignContentViewController: UIViewController {
     }
 
     private func metadata() throws -> KeyInfo.TangemKeyMetadata {
-        guard let data = request.signer.metadata,
-              let metadata = KeyInfo.TangemKeyMetadata.from(data: data) else {
+        guard let data = request.signer.metadata else {
+            throw TangemSignerError.missingMetadata
+        }
+
+        if request.signer.keyType == .tangem0 {
+            guard let metadata = KeyInfo.Tangem0KeyMetadata.from(data: data) else {
+                throw TangemSignerError.missingMetadata
+            }
+            return KeyInfo.TangemKeyMetadata(
+                cardId: metadata.cardId,
+                walletPublicKey: metadata.walletPublicKey,
+                derivationPath: metadata.derivationPath,
+                walletIndex: metadata.walletIndex
+            )
+        }
+
+        guard let metadata = KeyInfo.TangemKeyMetadata.from(data: data) else {
             throw TangemSignerError.missingMetadata
         }
         return metadata
@@ -304,7 +320,7 @@ private final class TangemSignContentViewController: UIViewController {
         TangemLogger.debug("TangemSigner ▶️ Processing signature. Expected address=\(expectedAddress.checksummed)")
         TangemLogger.debug("TangemSigner ▶️ Hash (\(hash.count) bytes) = \(hash.tangemHexDescription())")
         TangemLogger.debug("TangemSigner ▶️ Normalized public key (\(normalizedPublicKey.count) bytes) = \(normalizedPublicKey.tangemHexDescription())")
-        
+
         let ownerAddress = try service.ethereumAddress(fromNormalizedPublicKey: normalizedPublicKey)
         guard ownerAddress == expectedAddress else {
             TangemLogger.error("TangemSigner ❌ Signer mismatch. Derived address=\(ownerAddress.checksummed) expected=\(expectedAddress.checksummed)")

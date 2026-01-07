@@ -26,16 +26,29 @@ class ReviewSendFundsTransactionHeaderTableViewCell: UITableViewCell {
     }
 
     func setFromAddress(_ address: Address, label: String?, prefix: String?) {
-        fromAddressInfoView.setAddress(address, label: label, prefix: prefix)
+        // From section: vault name (white) + abbreviated address (grey), without identicon.
+        fromAddressInfoView.setAddress(address,
+                                       label: label,
+                                       showIdenticon: false,
+                                       prefix: prefix)
     }
 
     func setToAddress(_ address: Address, label: String?, imageUri: URL?, prefix: String?) {
-        toAddressInfoView.setAddress(address, label: label, imageUri: imageUri, prefix: prefix)
+        // To section should show only the address in white (no secondary line), without identicon.
+        toAddressInfoView.setAddressOneLine(address,
+                                            hideAddress: true,
+                                            label: label,
+                                            imageUri: imageUri,
+                                            showIdenticon: false,
+                                            prefix: prefix)
     }
 
-    func setToken(amount: String, symbol: String, fiatBalance: String?, image url: URL?) {
-        tokenInfoView.setText("\(amount) \(symbol)", style: .headline)
-        tokenInfoView.setDetail(fiatBalance, style: .subheadline)
+    /// Configure the Amount block:
+    /// - Primary (white): fiat value
+    /// - Secondary (grey): token amount (up to 5 decimals)
+    func setToken(fiatValue: String, tokenAmount: String, image url: URL?) {
+        tokenInfoView.setText(fiatValue, style: .headline)
+        tokenInfoView.setDetail(tokenAmount, style: .footnoteSecondary)
         tokenInfoView.setImage(url)
     }
 }

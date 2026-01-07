@@ -77,6 +77,17 @@ class LoginViewModel: ObservableObject {
                         // Don't block login flow - sync failures are logged but don't affect authentication
                     }
                 }
+
+                // Trigger token whitelist sync after login
+                LogService.shared.info("[Whitelist] Triggering post-login whitelist sync")
+                App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { result in
+                    switch result {
+                    case .success:
+                        LogService.shared.info("[Whitelist] Sync completed after login")
+                    case .failure(let error):
+                        LogService.shared.error("[Whitelist] Sync failed after login: \(error.localizedDescription)")
+                    }
+                }
                 
             case .failure(let error):
                 AuthLogger.error("Sign-in failed", error: error)

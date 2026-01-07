@@ -12,8 +12,28 @@ struct SafeInfoRequest: JSONRequest {
     let safeAddress: String
     let chainId: String
     
+    // Chains that must use Transaction Service style paths (no /v1/chains/{id} prefix)
+    private static let txServiceStyleChains: Set<String> = [Chain.ChainID.rootstock]
+    
     var httpMethod: String { "GET" }
-    var urlPath: String { "/v1/chains/\(chainId)/safes/\(safeAddress)/" }
+    var urlPath: String {
+        let path: String
+        if Self.txServiceStyleChains.contains(chainId) {
+            // Transaction Service style (matches backend usage for custom chains like Rootstock)
+            // Rootstock gateway uses path without trailing slash
+            path = "/api/v1/safes/\(safeAddress)"
+            #if DEBUG
+            LogService.shared.debug("[SafeInfoRequest] Using Transaction Service style path for chainId: \(chainId), path: \(path)")
+            #endif
+        } else {
+            // Default Safe Client Gateway multi-chain path
+            path = "/v1/chains/\(chainId)/safes/\(safeAddress)/"
+            #if DEBUG
+            LogService.shared.debug("[SafeInfoRequest] Using multi-chain gateway path for chainId: \(chainId), path: \(path)")
+            #endif
+        }
+        return path
+    }
 
     typealias ResponseType = SCGModels.SafeInfoExtended
 }

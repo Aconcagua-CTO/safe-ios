@@ -22,7 +22,12 @@ final class HeaderViewController: ContainerViewController {
     private var rootViewController: UIViewController?
     private var currentDataTask: URLSessionTask?
 
-    var clientGatewayService = App.shared.clientGatewayService
+    private var clientGatewayService: SafeClientGatewayService {
+        guard let chain = try? Safe.getSelected()?.chain else {
+            return App.shared.clientGatewayService
+        }
+        return chain.gatewayService()
+    }
     var notificationCenter = NotificationCenter.default
     
     private var addSafeFlow: AddSafeFlow!
@@ -114,7 +119,7 @@ final class HeaderViewController: ContainerViewController {
             noSafeBarView.isHidden = hasSafe
 
             if let safe = selectedSafe {
-                safeBarView.setName(safe.displayName)
+                safeBarView.setName(currentUserFirstName())
 
                 switch safe.safeStatus {
                 case .deployed:
@@ -161,5 +166,16 @@ final class HeaderViewController: ContainerViewController {
         } catch {
             LogService.shared.error("Failed to reload Safe Account info: \(error)")
         }
+    }
+
+    private func currentUserFirstName() -> String? {
+        guard let displayName = App.shared.authRepository.getCurrentUser()?.displayName else {
+            return nil
+        }
+
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        return trimmed.split(whereSeparator: { $0.isWhitespace }).first.map(String.init)
     }
 }

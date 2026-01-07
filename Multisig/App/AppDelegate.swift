@@ -55,6 +55,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Tracker.setNumKeys(KeyInfo.count(.web3AuthApple), type: .web3AuthApple)
         Tracker.setNumKeys(KeyInfo.count(.web3AuthGoogle), type: .web3AuthGoogle)
         Tracker.setNumKeys(KeyInfo.count(.tangem), type: .tangem)
+        Tracker.setNumKeys(KeyInfo.count(.tangem0), type: .tangem0)
         Tracker.setPasscodeIsSet(to: App.shared.auth.isPasscodeSetAndAvailable)        
         Tracker.setWalletConnectForDappsEnabled(true)
 

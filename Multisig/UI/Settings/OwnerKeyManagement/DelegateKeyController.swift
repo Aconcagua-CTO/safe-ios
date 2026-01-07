@@ -11,7 +11,12 @@ import UIKit
 class DelegateKeyController {
 
     weak var presenter: UIViewController?
-    private var clientGatewayService = App.shared.clientGatewayService
+    private var clientGatewayService: SafeClientGatewayService {
+        guard let chain = try? Safe.getSelected()?.chain else {
+            return App.shared.clientGatewayService
+        }
+        return chain.gatewayService()
+    }
     private var keystoneSignFlow: KeystoneSignFlow!
 
     private let keyInfo: KeyInfo
@@ -182,12 +187,13 @@ class DelegateKeyController {
                     completion(.failure(GSError.AddDelegateKeyCancelled()))
                 }
             }
-        case .tangem:
+        case .tangem, .tangem0:
             let request = SignRequest(title: title,
                                       tracking: ["action": "confirm_push"],
                                       signer: keyInfo,
                                       hexToSign: hexMessage)
-            let vc = TangemSignerViewController(request: request)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
             presenter?.present(vc, animated: true, completion: nil)
 
             var isSuccess = false

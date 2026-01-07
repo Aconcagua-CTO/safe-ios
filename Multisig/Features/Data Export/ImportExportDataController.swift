@@ -312,6 +312,17 @@ class ImportExportDataController {
                 data.tangemWalletPublicKey = metadata.walletPublicKey
                 data.tangemDerivationPath = metadata.derivationPath
                 data.tangemWalletIndex = metadata.walletIndex
+            case .tangem0:
+                guard let rawMetadata = key.metadata,
+                      let metadata = KeyInfo.Tangem0KeyMetadata.from(data: rawMetadata) else {
+                    logs.append("Skipping key named '\(key.name!)' with address \(key.address): " +
+                                "could not load tangem0 key metadata")
+                    continue
+                }
+                data.tangemCardId = metadata.cardId
+                data.tangemWalletPublicKey = metadata.walletPublicKey
+                data.tangemDerivationPath = metadata.derivationPath
+                data.tangemWalletIndex = metadata.walletIndex
             case .burner:
                 guard let rawMetadata = key.metadata,
                       let metadata = KeyInfo.BurnerKeyMetadata.from(data: rawMetadata) else {
@@ -387,7 +398,8 @@ class ImportExportDataController {
         
         func safeInfo(address: Address, chain: Chain) async -> SCGModels.SafeInfoExtended? {
             await withCheckedContinuation { continuation in
-                _ = App.shared.clientGatewayService.asyncSafeInfo(safeAddress: address, chainId: chain.id!) { result in
+                let gatewayService = chain.gatewayService()
+                _ = gatewayService.asyncSafeInfo(safeAddress: address, chainId: chain.id!) { result in
                     do {
                         let info = try result.get()
                         continuation.resume(returning: info)
@@ -559,6 +571,17 @@ class ImportExportDataController {
                        let walletPublicKey = key.tangemWalletPublicKey {
                         didAdd = OwnerKeyController.importKey(
                             tangemCardId: cardId,
+                            walletPublicKey: walletPublicKey,
+                            address: address,
+                            name: name,
+                            derivationPath: key.tangemDerivationPath,
+                            walletIndex: key.tangemWalletIndex)
+                    }
+                case .tangem0:
+                    if let cardId = key.tangemCardId,
+                       let walletPublicKey = key.tangemWalletPublicKey {
+                        didAdd = OwnerKeyController.importKey(
+                            tangem0CardId: cardId,
                             walletPublicKey: walletPublicKey,
                             address: address,
                             name: name,

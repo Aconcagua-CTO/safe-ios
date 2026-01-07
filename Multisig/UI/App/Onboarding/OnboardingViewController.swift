@@ -23,24 +23,12 @@ class OnboardingViewController: UIViewController {
     private var createSafeFlow: CreateSafeFlow!
     private var addSafeFlow: AddSafeFlow!
     
-    private let steps: [OnboardingStep] = [OnboardingStep(title: (text: "The world of Web3 in your pocket",
-                                                                  highlightedText: "Web3"),
+    private let steps: [OnboardingStep] = [OnboardingStep(title: (text: "Get Money, Grow Money",
+                                                                  highlightedText: nil),
                                                           description: (text: "Use the most popular Ethereum-compatible networks, connect to dApps, get transaction notifications and more.",
                                                                         highlightedText: "connect to dApps"),
-                                                          image: UIImage(named: "ico-onboarding-1")!,
-                                                          trackingEvent: .screenOnboarding1),
-                                           OnboardingStep(title: (text: "Stay in control of your funds",
-                                                                  highlightedText: "in control"),
-                                                          description: (text: "Define how you manage digital assets and who gets authorized access to your crypto. Use multiple signer keys for better security.",
-                                                                        highlightedText: "multiple signer keys"),
-                                                          image: UIImage(named: "ico-onboarding-2")!,
-                                                          trackingEvent: .screenOnboarding2),
-                                           OnboardingStep(title: (text: "Enjoy stealth security from Multi-signature",
-                                                                  highlightedText: "Multi-signature"),
-                                                          description: (text:"About $107B worth of digital assets are already securely stored by individuals and teams using Safe.",
-                                                                        highlightedText: "$107B worth of digital assets"),
-                                                          image: UIImage(named: "ico-onboarding-3")!,
-                                                          trackingEvent: .screenOnboarding3)
+                                                          image: UIImage(named: "ico-onboarding-key")!,
+                                                          trackingEvent: .screenOnboarding1)
     ]
 
     private var completion: () -> () = { }
@@ -103,13 +91,8 @@ class OnboardingViewController: UIViewController {
 
     @IBAction private func skipButtonTouched(_ sender: Any) {
         Tracker.trackEvent(.onboardingSkipped)
-        let page = steps.count - 1
-        collectionView.scrollToItem(at: IndexPath(item: page, section: 0),
-                                    at: .centeredHorizontally,
-                                    animated: true)
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(1000)) { [weak self] in
-            self?.bindCurrentStep(page: page)
-        }
+        // Skip directly to completion (which will show login)
+        completion()
     }
 
     @IBAction func pageChanged(_ sender: Any) {
@@ -122,13 +105,15 @@ class OnboardingViewController: UIViewController {
     private func bindCurrentStep(page: Int) {
         pageControl.currentPage = page
 
+        // Always hide actions screen - we go directly to login after onboarding
         UIView.transition(with: actionsContainerView, duration: 0.4,
                           options: .transitionCrossDissolve,
                           animations: { [weak self] in
             guard let self = self else { return }
-            self.actionsContainerView.isHidden = page != self.pageControl.numberOfPages - 1
+            self.actionsContainerView.isHidden = true
           })
 
+        // Show close button on last page
         UIView.transition(with: skipButton, duration: 0.4,
                           options: .transitionCrossDissolve,
                           animations: { [weak self] in
@@ -136,6 +121,7 @@ class OnboardingViewController: UIViewController {
             self.closeButton.isHidden = page != self.pageControl.numberOfPages - 1
           })
 
+        // Hide skip button on last page (use close button instead)
         UIView.transition(with: skipButton, duration: 0.4,
                           options: .transitionCrossDissolve,
                           animations: { [weak self] in

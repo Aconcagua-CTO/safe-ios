@@ -229,7 +229,7 @@ Before sending, customize these sections:
 
 ### 1. Rollback the Patch
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/restore-tangem-sdk.sh
 
 # Clean and rebuild

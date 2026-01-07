@@ -159,7 +159,7 @@ class ExtendedNavigationRouter: NavigationRouter {
             guard let safeAddress = eip3770AddressQueryParameter(named: "safe", in: url) else {
                 return nil
             }
-            let route = NavigationRoute.showCollectibles(
+            let route = NavigationRoute.showAssets(
                 safeAddress.address,
                 chainId: safeAddress.chainId
             )
@@ -381,14 +381,7 @@ extension NavigationRoute {
     }
     
     static func showCollectibles(_ address: String? = nil, chainId: String? = nil) -> NavigationRoute {
-        var route = NavigationRoute(path: "/assets/collectibles/")
-        if let address = address,
-           let chainId = chainId {
-            route.info["address"] = address
-            route.info["chainId"] = chainId
-        }
-        
-        return route
+        return showAssets(address, chainId: chainId)
     }
 
     // MARK: Transactions

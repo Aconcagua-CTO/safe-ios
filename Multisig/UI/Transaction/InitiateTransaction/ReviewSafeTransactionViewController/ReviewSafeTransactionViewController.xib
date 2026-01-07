@@ -118,9 +118,7 @@
                             <constraints>
                                 <constraint firstAttribute="height" constant="56" id="TEN-dA-36H"/>
                             </constraints>
-                            <userDefinedRuntimeAttributes>
-                                <userDefinedRuntimeAttribute type="string" keyPath="title" value="Confirm"/>
-                            </userDefinedRuntimeAttributes>
+                            
                         </view>
                     </subviews>
                     <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>

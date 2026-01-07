@@ -74,11 +74,21 @@ extension AppSettings {
     @UserDefault(key: "io.gnosis.multisig.useLocalVaults")
     private static var _useLocalVaults: Bool?
     
+    @UserDefault(key: "io.gnosis.multisig.multiVaultBalancesEnabled")
+    private static var _multiVaultBalancesEnabled: Bool?
+    
     /// Feature flag: Use local vaults instead of syncing from backend
     /// Default: false (use backend)
     static var useLocalVaults: Bool {
         get { _useLocalVaults ?? false }
         set { _useLocalVaults = newValue }
+    }
+    
+    /// Feature flag: Aggregate balances across all vaults
+    /// Default: true (aggregate)
+    static var multiVaultBalancesEnabled: Bool {
+        get { _multiVaultBalancesEnabled ?? true }
+        set { _multiVaultBalancesEnabled = newValue }
     }
     
     @UserDefault(key: "global.safe.ios.connectToWebDeprecationMessageShown")

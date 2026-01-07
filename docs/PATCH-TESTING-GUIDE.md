@@ -37,7 +37,7 @@
 rm -rf ~/Library/Developer/Xcode/DerivedData/
 
 # Remove build artifacts
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 rm -rf Build/
 
 # Optional: Clear Swift package manager cache
@@ -330,7 +330,7 @@ rm -rf ~/Library/Developer/Xcode/DerivedData/
 **Immediate Action:**
 ```bash
 # Rollback the patch
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/restore-tangem-sdk.sh
 
 # Clean and rebuild
@@ -394,7 +394,7 @@ After successful testing:
 
 ```bash
 # 1. Restore original SDK
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/restore-tangem-sdk.sh
 
 # 2. Verify patch removed

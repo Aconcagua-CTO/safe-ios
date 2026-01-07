@@ -235,9 +235,11 @@ class RemoteNotificationHandler {
     }
 
     private func unregister(address: Address, chainId: String) {
-        App.shared.clientGatewayService.unregister(deviceID: self.storedDeviceID!,
-                                                   address: address,
-                                                   chainId: chainId)
+        guard let deviceID = self.storedDeviceID else { return }
+        let gateway = Chain.by(chainId)?.gatewayService() ?? App.shared.clientGatewayService
+        gateway.unregister(deviceID: deviceID,
+                           address: address,
+                           chainId: chainId)
     }
 
     private func registerAll() {
@@ -249,10 +251,12 @@ class RemoteNotificationHandler {
 
         let appConfig = App.configuration.app
         let timestamp = String(format: "%.0f", Date().timeIntervalSince1970)
-        let registrationsTask = Task { () -> [SafeRegistration] in
-            var registrations: [SafeRegistration] = []
+        let registrationsTask = Task { () -> [(registration: SafeRegistration, gatewayUrl: URL)] in
+            var registrations: [(SafeRegistration, URL)] = []
             do {
                 for chainSafes in Chain.chainSafes() {
+                    let gateway = chainSafes.chain.gatewayService()
+                    let gatewayUrl = chainSafes.chain.gatewayURL
                     let safes = chainSafes.safes
                         .compactMap { $0.address }
                         .compactMap { Address($0) }
@@ -270,18 +274,20 @@ class RemoteNotificationHandler {
                                                                   token: pushToken,
                                                                   timestamp: timestamp)
 
-                        registrations.append(SafeRegistration(chainId: chainSafes.chain.id!,
-                                                              safes: safes,
-                                                              signatures: signResult.signatures))
+                        registrations.append((SafeRegistration(chainId: chainSafes.chain.id!,
+                                                               safes: safes,
+                                                               signatures: signResult.signatures),
+                                              gatewayUrl))
                     } else {
                         let signResult = try Self.sign(safes: safes,
                                                        deviceID: deviceID,
                                                        token: pushToken,
                                                        timestamp: timestamp)
 
-                        registrations.append(SafeRegistration(chainId: chainSafes.chain.id!,
-                                                              safes: safes,
-                                                              signatures: signResult.signatures))
+                        registrations.append((SafeRegistration(chainId: chainSafes.chain.id!,
+                                                               safes: safes,
+                                                               signatures: signResult.signatures),
+                                              gatewayUrl))
                     }
                 }
             } catch {
@@ -293,13 +299,20 @@ class RemoteNotificationHandler {
 
         Task {
             let registrations = await registrationsTask.value
-            App.shared.clientGatewayService.registerNotification(uuid: deviceID,
-                                                                 cloudMessagingToken: pushToken,
-                                                                 buildNumber: appConfig.buildVersion,
-                                                                 bundle: appConfig.bundleIdentifier,
-                                                                 version: appConfig.marketingVersion,
-                                                                 timestamp: timestamp,
-                                                                 safeRegistrations: registrations) { _ in }
+            let grouped = Dictionary(grouping: registrations, by: { $0.gatewayUrl.absoluteString })
+
+            for (_, items) in grouped {
+                guard let gatewayUrl = items.first?.gatewayUrl,
+                      let service = Chain.by(items.first!.registration.chainId)?.gatewayService() ?? App.shared.clientGatewayService as SafeClientGatewayService? else { continue }
+                let safeRegistrations = items.map { $0.registration }
+                service.registerNotification(uuid: deviceID,
+                                             cloudMessagingToken: pushToken,
+                                             buildNumber: appConfig.buildVersion,
+                                             bundle: appConfig.bundleIdentifier,
+                                             version: appConfig.marketingVersion,
+                                             timestamp: timestamp,
+                                             safeRegistrations: safeRegistrations) { _ in }
+            }
         }
     }
 

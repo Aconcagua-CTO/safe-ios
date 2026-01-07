@@ -90,6 +90,9 @@ class HTTPClient {
         let url: URL
         if let requestURL = request.url {
             url = requestURL
+            #if DEBUG
+            logger?.debug("[HTTPClient] urlRequest() - Using provided URL: \(url.absoluteString)")
+            #endif
         } else {
             var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
             // Properly append path instead of replacing it
@@ -106,6 +109,9 @@ class HTTPClient {
                 fatalError("Failed to construct URL from baseURL: \(baseURL), path: \(request.urlPath), query: \(request.query ?? "nil")")
             }
             url = constructedURL
+            #if DEBUG
+            logger?.debug("[HTTPClient] urlRequest() - Constructed URL - baseURL: \(baseURL.absoluteString), path: \(request.urlPath), query: \(request.query ?? "nil"), finalURL: \(url.absoluteString)")
+            #endif
         }
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = request.httpMethod
@@ -142,8 +148,20 @@ class HTTPClient {
     }
 
     private func response(from request: URLRequest, result: URLDataTaskResult) throws -> Data {
-        if let data = result.data, let rawResponse = String(data: data, encoding: .utf8) {
-            logger?.debug(rawResponse)
+        if let data = result.data {
+            #if DEBUG
+            let maxPreview = 2000
+            if let rawResponse = String(data: data, encoding: .utf8) {
+                if rawResponse.count > maxPreview {
+                    let preview = rawResponse.prefix(maxPreview)
+                    logger?.debug("[HTTPClient] response preview (\(data.count) bytes, truncated to \(maxPreview)):\n\(preview)...")
+                } else {
+                    logger?.debug(rawResponse)
+                }
+            } else {
+                logger?.debug("[HTTPClient] response \(data.count) bytes (non-UTF8)")
+            }
+            #endif
         }
         if let httpResponse = result.response as? HTTPURLResponse,
             (200...299).contains(httpResponse.statusCode) {

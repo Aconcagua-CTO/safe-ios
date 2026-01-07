@@ -35,6 +35,10 @@ class ReviewSafeTransactionViewController: UIViewController {
     var safeTxGas: UInt256String?
     var minimalNonce: UInt256String?
 
+    private var gatewayService: SafeClientGatewayService {
+        safe.chain?.gatewayService() ?? App.shared.clientGatewayService
+    }
+
     var transactionPreview: SCGModels.TrasactionPreview?
     var feeBatchResult: TransactionBatchBuilder.Result?
     var preparedTransaction: Transaction?
@@ -91,39 +95,21 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     func didConfirm() {
-        let keys = KeyInfo.owners(safe: self.safe)
-        if keys.isEmpty {
-            let addOwnerVC = AddOwnerFirstViewController()
-            addOwnerVC.onSuccess = { [weak self] in
-                self?.dismiss(animated: true) {
-                    guard let self = self else { return }
-                    // check if we actually added an owner and not some irrelevant key
-                    guard !KeyInfo.owners(safe: self.safe).isEmpty else { return }
-                    self.didConfirm()
-                }
-            }
-            let nav = ViewControllerFactory.modal(viewController: addOwnerVC)
-            presentModal(nav)
+        // Dual-signature flow: auto-pick local, then card.
+        let localKeys = DualSignatureKeySelector.localOwnerKeys(for: safe)
+        guard let localKey = localKeys.first else {
+            App.shared.snackbar.show(message: "No se encuentra la llave local")
             return
         }
 
-        let descriptionText = "An owner key will be used to confirm this transaction."
-        let vc = ChooseOwnerKeyViewController(
-            owners: { keys },
-            chainID: self.safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) { [weak self] keyInfo in
-            guard let `self` = self else { return }
-            self.dismiss(animated: true) {
-                if let info = keyInfo {
-                    self.startConfirm()
-                    self.sign(info)
-                }
-            }
+        guard let transaction = transactionWithFee(),
+              let safeTxHash = transaction.safeTxHash?.description else {
+            preconditionFailure("Unexpected Error")
         }
 
-        let navigationController = UINavigationController(rootViewController: vc)
-        self.presentModal(navigationController)
+        startConfirm()
+
+        signAndPropose(transaction: transaction, localKey: localKey, safeTxHash: safeTxHash)
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -156,7 +142,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         startLoading()
         currentDataTask?.cancel()
         
-        currentDataTask = App.shared.clientGatewayService.asyncTransactionEstimation(
+        currentDataTask = gatewayService.asyncTransactionEstimation(
             chainId: chainId,
             safeAddress: safeAddress,
             to: tx.to.address,
@@ -187,7 +173,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         startLoading()
         currentDataTask?.cancel()
 
-        currentDataTask = App.shared.clientGatewayService.asyncSafeNonces(
+        currentDataTask = gatewayService.asyncSafeNonces(
             chainId: chainId,
             safeAddress: safeAddress
         ) { [weak self] result in
@@ -224,7 +210,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         if self.shouldLoadTransactionPreview, let transaction = transactionForPreview {
             self.transactionPreview = nil
             
-            self.currentDataTask = App.shared.clientGatewayService.asyncPreviewTransaction(
+            self.currentDataTask = gatewayService.asyncPreviewTransaction(
                 transaction: transaction,
                 sender: AddressString(self.safe.addressValue),
                 chainId: self.safe.chain!.id!
@@ -280,111 +266,152 @@ class ReviewSafeTransactionViewController: UIViewController {
         self.confirmButtonView.state = .normal
     }
 
-    private func sign(_ keyInfo: KeyInfo) {
-        guard let transaction = transactionWithFee(),
-              let safeTxHash = transaction.safeTxHash?.description else {
-            preconditionFailure("Unexpected Error")
+    // MARK: - Dual signature orchestration
+
+    private func signAndPropose(transaction: Transaction, localKey: KeyInfo, safeTxHash: String) {
+        Wallet.shared.sign(transaction, keyInfo: localKey) { [unowned self] result in
+            do {
+                let signature = try result.get()
+                proposeTransaction(
+                    transaction: transaction,
+                    keyInfo: localKey,
+                    signature: signature.hexadecimal,
+                    safeTxHash: safeTxHash
+                )
+            } catch {
+                App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction",
+                                                              error: error))
+                endConfirm()
+            }
+        }
+    }
+
+    private func proposeTransaction(transaction: Transaction,
+                                    keyInfo: KeyInfo,
+                                    signature: String,
+                                    safeTxHash: String) {
+        currentDataTask = gatewayService.asyncProposeTransaction(transaction: transaction,
+                                                                 sender: AddressString(keyInfo.address),
+                                                                 signature: signature,
+                                                                 chainId: safe.chain!.id!) { [weak self] result in
+            guard let self = self else { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
+                DispatchQueue.main.async {
+                    switch result {
+                    case .failure(let error):
+                        if (error as NSError).code == URLError.cancelled.rawValue &&
+                            (error as NSError).domain == NSURLErrorDomain {
+                            return
+                        }
+                        self.endConfirm()
+                        App.shared.snackbar.show(error: GSError.error(description: "Failed to create transaction", error: error))
+                    case .success(let transactionDetails):
+                        NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
+                        self.handleCardSignatureIfNeeded(proposedTransaction: transactionDetails, safeTxHash: safeTxHash)
+                    }
+                }
+            }
+        }
+    }
+
+    private func handleCardSignatureIfNeeded(proposedTransaction: SCGModels.TransactionDetails, safeTxHash: String) {
+        let cardKeys = DualSignatureKeySelector.cardOwnerKeys(for: safe)
+        guard let cardKey = cardKeys.first else {
+            // No card key available; leave as-is.
+            endConfirm()
+            App.shared.snackbar.show(message: "No card key available; transaction proposed with local signature.")
+            onSuccess(transaction: proposedTransaction)
+            return
         }
 
-        switch keyInfo.keyType {
-        case .deviceImported, .deviceGenerated, .web3AuthApple, .web3AuthGoogle:
-            Wallet.shared.sign(transaction, keyInfo: keyInfo) { [unowned self] result in
-                do {
-                    let signature = try result.get()
-                    proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature.hexadecimal)
-
-                } catch {
-                    App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction",
-                                                                  error: error))
-                    endConfirm()
-                }
-            }
-
-        case .walletConnect:
-            let signVC = SignatureRequestToWalletViewController(transaction, keyInfo: keyInfo, chain: safe.chain!)
-            signVC.onSuccess = { [weak self] signature in
-                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature)
-            }
-            signVC.onCancel = { [weak self] in
-                self?.endConfirm()
-            }
-            let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
-            presentModal(vc)
-
-        case .ledgerNanoX:
-            let request = SignRequest(title: "Confirm Transaction",
-                                      tracking: ["action" : "confirm"],
-                                      signer: keyInfo,
-                                      hexToSign: safeTxHash)
-            let vc = LedgerSignerViewController(request: request)
-
-            presentModal(vc)
-
-            vc.completion = { [weak self] signature in
-                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature)
-            }
-
-            vc.onClose = { [weak self] in
-                self?.endConfirm()
-            }
-        case .tangem:
-            let request = SignRequest(title: "Confirm Transaction",
-                                      tracking: ["action": "confirm"],
-                                      signer: keyInfo,
-                                      hexToSign: safeTxHash)
-            let vc = TangemSignerViewController(request: request)
-
-            presentModal(vc)
-
-            vc.completion = { [weak self] signature in
-                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature)
-            }
-
-            vc.onClose = { [weak self] in
-                self?.endConfirm()
-            }
+        switch cardKey.keyType {
+        case .tangem, .tangem0:
+            presentTangemSigner(cardKey: cardKey, safeTxHash: safeTxHash, proposedTransaction: proposedTransaction)
         case .burner:
-            let request = SignRequest(title: "Confirm Transaction",
-                                      tracking: ["action": "confirm"],
-                                      signer: keyInfo,
-                                      hexToSign: safeTxHash)
-            let vc = BurnerSignerViewController(request: request)
+            presentBurnerSigner(cardKey: cardKey, safeTxHash: safeTxHash, proposedTransaction: proposedTransaction)
+        default:
+            // Fallback: unsupported card type, finish with proposed tx.
+            endConfirm()
+            onSuccess(transaction: proposedTransaction)
+        }
+    }
 
-            presentModal(vc)
+    private func presentTangemSigner(cardKey: KeyInfo, safeTxHash: String, proposedTransaction: SCGModels.TransactionDetails) {
+        let request = SignRequest(title: "Confirm Transaction",
+                                  tracking: ["action": "confirm"],
+                                  signer: cardKey,
+                                  hexToSign: safeTxHash)
+        let tangemService: TangemSigningService = cardKey.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+        let vc = TangemSignerViewController(request: request, service: tangemService)
 
-            vc.completion = { [weak self] signature in
-                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: signature)
+        var didSign = false
+
+        vc.completion = { [weak self] signature in
+            didSign = true
+            self?.confirmWithCardSignature(signature: signature, cardKey: cardKey, safeTxHash: safeTxHash, proposedTransaction: proposedTransaction)
+        }
+
+        vc.onClose = { [weak self] in
+            guard let self = self else { return }
+            if !didSign {
+                self.endConfirm()
+                App.shared.snackbar.show(message: "Card signature pending; complete from Queue.")
+                self.onSuccess(transaction: proposedTransaction)
             }
+        }
 
-            vc.onClose = { [weak self] in
-                self?.endConfirm()
+        presentModal(vc)
+    }
+
+    private func presentBurnerSigner(cardKey: KeyInfo, safeTxHash: String, proposedTransaction: SCGModels.TransactionDetails) {
+        let request = SignRequest(title: "Confirm Transaction",
+                                  tracking: ["action": "confirm"],
+                                  signer: cardKey,
+                                  hexToSign: safeTxHash)
+        let vc = BurnerSignerViewController(request: request)
+
+        var didSign = false
+
+        vc.completion = { [weak self] signature in
+            didSign = true
+            self?.confirmWithCardSignature(signature: signature, cardKey: cardKey, safeTxHash: safeTxHash, proposedTransaction: proposedTransaction)
+        }
+
+        vc.onClose = { [weak self] in
+            guard let self = self else { return }
+            if !didSign {
+                self.endConfirm()
+                App.shared.snackbar.show(message: "Card signature pending; complete from Queue.")
+                self.onSuccess(transaction: proposedTransaction)
             }
+        }
 
-        case .keystone:
-            let signInfo = KeystoneSignInfo(
-                signData: transaction.safeTxHash.hash.toHexString(),
-                chain: safe.chain,
-                keyInfo: keyInfo,
-                signType: .personalMessage
-            )
-            let signCompletion = { [unowned self] (success: Bool) in
-                keystoneSignFlow = nil
-                if !success {
-                    App.shared.snackbar.show(error: GSError.KeystoneSignFailed())
-                    endConfirm()
+        presentModal(vc)
+    }
+
+    private func confirmWithCardSignature(signature: String,
+                                          cardKey: KeyInfo,
+                                          safeTxHash: String,
+                                          proposedTransaction: SCGModels.TransactionDetails) {
+        currentDataTask = gatewayService.asyncConfirm(safeTxHash: safeTxHash,
+                                                      signature: signature,
+                                                      chainId: safe.chain!.id!) { [weak self] result in
+            guard let self = self else { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
+                DispatchQueue.main.async {
+                    switch result {
+                    case .failure(let error):
+                        self.endConfirm()
+                        App.shared.snackbar.show(error: GSError.error(description: "Failed to add card signature", error: error))
+                        // Leave proposed tx as is.
+                        self.onSuccess(transaction: proposedTransaction)
+                    case .success(let confirmedTx):
+                        NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
+                        self.endConfirm()
+                        self.onSuccess(transaction: confirmedTx)
+                    }
                 }
             }
-            guard let signFlow = KeystoneSignFlow(signInfo: signInfo, completion: signCompletion) else {
-                App.shared.snackbar.show(error: GSError.KeystoneStartSignFailed())
-                endConfirm()
-                return
-            }
-            
-            keystoneSignFlow = signFlow
-            keystoneSignFlow.signCompletion = { [weak self] unmarshaledSignature in
-                self?.proposeTransaction(transaction: transaction, keyInfo: keyInfo, signature: unmarshaledSignature.safeSignature)
-            }
-            present(flow: keystoneSignFlow)
         }
     }
 
@@ -434,34 +461,6 @@ class ReviewSafeTransactionViewController: UIViewController {
                 TransactionFeeLogger.info("Fee batch simulation succeeded.")
             case .failure(let error):
                 TransactionFeeLogger.warning("Fee batch simulation returned error: \(error)")
-            }
-        }
-    }
-
-    private func proposeTransaction(transaction: Transaction, keyInfo: KeyInfo, signature: String) {
-        currentDataTask = App.shared.clientGatewayService.asyncProposeTransaction(transaction: transaction,
-                                                                                  sender: AddressString(keyInfo.address),
-                                                                                  signature: signature,
-                                                                                  chainId: safe.chain!.id!) { result in
-            // NOTE: sometimes the data of the transaction list is not
-            // updated right away, we'll give a moment for the backend
-            // to catch up before finishing with this request.
-            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
-                DispatchQueue.main.async { [weak self] in
-                    guard let `self` = self else { return }
-                    self.endConfirm()
-                    switch result {
-                    case .failure(let error):
-                        if (error as NSError).code == URLError.cancelled.rawValue &&
-                            (error as NSError).domain == NSURLErrorDomain {
-                            return
-                        }
-                        App.shared.snackbar.show(error: GSError.error(description: "Failed to create transaction", error: error))
-                    case .success(let transaction):
-                        NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
-                        self.onSuccess(transaction: transaction)
-                    }
-                }
             }
         }
     }

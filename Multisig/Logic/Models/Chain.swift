@@ -38,29 +38,47 @@ extension Chain {
     }
 
     static func by(_ id: String) -> Chain? {
-        dispatchPrecondition(condition: .onQueue(.main))
-        let context = App.shared.coreDataStack.viewContext
-        let fr = Chain.fetchRequest().by(id: id)
-        guard let chain = try? context.fetch(fr).first else { return nil }
-        return chain
+        // Ensure CoreData access happens on main thread
+        if Thread.isMainThread {
+            let context = App.shared.coreDataStack.viewContext
+            let fr = Chain.fetchRequest().by(id: id)
+            guard let chain = try? context.fetch(fr).first else { return nil }
+            return chain
+        } else {
+            return DispatchQueue.main.sync {
+                let context = App.shared.coreDataStack.viewContext
+                let fr = Chain.fetchRequest().by(id: id)
+                guard let chain = try? context.fetch(fr).first else { return nil }
+                return chain
+            }
+        }
     }
 
     static func by(shortName: String) -> Chain? {
-        dispatchPrecondition(condition: .onQueue(.main))
-        let context = App.shared.coreDataStack.viewContext
-        let fr = Chain.fetchRequest().by(shortName: shortName)
-        guard let chain = try? context.fetch(fr).first else { return nil }
-        return chain
+        // Ensure CoreData access happens on main thread
+        if Thread.isMainThread {
+            let context = App.shared.coreDataStack.viewContext
+            let fr = Chain.fetchRequest().by(shortName: shortName)
+            guard let chain = try? context.fetch(fr).first else { return nil }
+            return chain
+        } else {
+            return DispatchQueue.main.sync {
+                let context = App.shared.coreDataStack.viewContext
+                let fr = Chain.fetchRequest().by(shortName: shortName)
+                guard let chain = try? context.fetch(fr).first else { return nil }
+                return chain
+            }
+        }
     }
 
     @discardableResult
-    static func createOrUpdate(_ chainInfo: SCGModels.Chain) -> Chain {
+    static func createOrUpdate(_ chainInfo: SCGModels.Chain, gatewayUrl: URL? = nil) -> Chain {
         guard let chain = Chain.by(chainInfo.id) else {
             // should not fail, otherwise programmer error
-            return try! Chain.create(chainInfo)
+            return try! Chain.create(chainInfo, gatewayUrl: gatewayUrl)
         }
         // can't fail because chain id is correct
-        try! chain.update(from: chainInfo)
+        try! chain.update(from: chainInfo, gatewayUrl: gatewayUrl)
         return chain
     }
 
@@ -78,7 +96,8 @@ extension Chain {
                        currencyDecimals: Int,
                        currencyLogo: URL,
                        themeTextColor: String,
-                       themeBackgroundColor: String) throws -> Chain {
+                       themeBackgroundColor: String,
+                       gatewayUrl: URL? = nil) throws -> Chain {
         dispatchPrecondition(condition: .onQueue(.main))
         let context = App.shared.coreDataStack.viewContext
 
@@ -91,6 +110,7 @@ extension Chain {
         chain.blockExplorerUrlTxHash = blockExplorerUrlTxHash
         chain.ensRegistryAddress = ensRegistryAddress
         chain.shortName = shortName
+        chain.gatewayUrl = gatewayUrl
 
         let theme = ChainTheme(context: context)
         theme.textColor = themeTextColor
@@ -110,7 +130,7 @@ extension Chain {
     }
 
     @discardableResult
-    static func create(_ chainInfo: SCGModels.Chain) throws -> Chain {
+    static func create(_ chainInfo: SCGModels.Chain, gatewayUrl: URL? = nil) throws -> Chain {
         try Chain.create(chainId: chainInfo.id,
                          chainName: chainInfo.chainName,
                          rpcUrl: chainInfo.rpcUri.value,
@@ -124,12 +144,13 @@ extension Chain {
                          currencyDecimals: chainInfo.nativeCurrency.decimals,
                          currencyLogo: chainInfo.nativeCurrency.logoUri,
                          themeTextColor: chainInfo.theme.textColor.description,
-                         themeBackgroundColor: chainInfo.theme.backgroundColor.description)
+                         themeBackgroundColor: chainInfo.theme.backgroundColor.description,
+                         gatewayUrl: gatewayUrl)
     }
 
-    static func updateIfExist(_ chainInfo: SCGModels.Chain) {
+    static func updateIfExist(_ chainInfo: SCGModels.Chain, gatewayUrl: URL? = nil) {
         guard let chain = Chain.by(chainInfo.chainId.description) else { return }
-        try! chain.update(from: chainInfo)
+        try! chain.update(from: chainInfo, gatewayUrl: gatewayUrl)
     }
 
     static func remove(chain: Chain) {
@@ -147,9 +168,27 @@ extension Chain {
 }
 
 extension Chain {
-    func update(from chainInfo: SCGModels.Chain) throws {
+    func update(from chainInfo: SCGModels.Chain, gatewayUrl: URL? = nil) throws {
         guard id == chainInfo.id else {
             throw GSError.ChainIdMismatch()
+        }
+
+        let gatewayUrlChanged: Bool
+        if let gatewayUrl = gatewayUrl {
+            gatewayUrlChanged = self.gatewayUrl != gatewayUrl
+            #if DEBUG
+            if gatewayUrlChanged {
+                LogService.shared.debug("[Chain] update() - Gateway URL changed for chainId: \(chainInfo.id), old: \(self.gatewayUrl?.absoluteString ?? "nil"), new: \(gatewayUrl.absoluteString)")
+            } else {
+                LogService.shared.debug("[Chain] update() - Gateway URL unchanged for chainId: \(chainInfo.id), url: \(gatewayUrl.absoluteString)")
+            }
+            #endif
+            self.gatewayUrl = gatewayUrl
+        } else {
+            gatewayUrlChanged = false
+            #if DEBUG
+            LogService.shared.debug("[Chain] update() - No gateway URL provided for chainId: \(chainInfo.id), keeping existing: \(self.gatewayUrl?.absoluteString ?? "nil")")
+            #endif
         }
 
         name =  chainInfo.chainName
@@ -173,6 +212,14 @@ extension Chain {
         gasPrice = chainInfo.gasPrice
         
         try App.shared.coreDataStack.viewContext.save()
+
+        // Invalidate cached gateway service if gateway URL changed
+        if gatewayUrlChanged, let chainId = id {
+            #if DEBUG
+            LogService.shared.debug("[Chain] update() - Clearing gateway service cache for chainId: \(chainId)")
+            #endif
+            Chain.clearGatewayServiceCache(for: chainId)
+        }
     }
 
     var gasPrice: [SCGModels.GasPrice] {
@@ -281,6 +328,7 @@ extension Chain {
         static let avalanche = "43114"
         static let optimism = "10"
         static let goerli = "5"
+        static let rootstock = "30"
     }
 
     static func mainnetChain() -> Chain {
@@ -394,6 +442,9 @@ extension Chain {
 }
 
 extension Chain {
+    private static var gatewayServiceCache: [String: SafeClientGatewayService] = [:]
+    private static let gatewayServiceQueue = DispatchQueue(label: "io.gnosis.multisig.chainGatewayServiceCache")
+
     var authenticatedRpcUrl: URL {
         switch self.rpcUrlAuthentication {
         case SCGModels.RpcAuthentication.Authentication.apiKeyPath.rawValue:
@@ -412,6 +463,51 @@ extension Chain {
 
     var backgroundColor: UIColor? {
         theme?.backgroundColor.flatMap(UIColor.init(hex:))
+    }
+
+    /// Resolved gateway URL for this chain (custom if set, otherwise default)
+    var gatewayURL: URL {
+        gatewayUrl ?? App.configuration.services.clientGatewayURL
+    }
+
+    /// Returns chain-specific Safe Client Gateway service
+    func gatewayService() -> SafeClientGatewayService {
+        guard let chainId = id else {
+            #if DEBUG
+            LogService.shared.debug("[Chain] gatewayService() - No chainId, using default gateway service")
+            #endif
+            return App.shared.clientGatewayService
+        }
+
+        return Chain.gatewayServiceQueue.sync {
+            if let cached = Chain.gatewayServiceCache[chainId] {
+                #if DEBUG
+                LogService.shared.debug("[Chain] gatewayService() - Using cached service for chainId: \(chainId), gatewayURL: \(gatewayURL.absoluteString)")
+                #endif
+                return cached
+            }
+
+            #if DEBUG
+            LogService.shared.debug("[Chain] gatewayService() - Creating new service for chainId: \(chainId), gatewayURL: \(gatewayURL.absoluteString), customGateway: \(gatewayUrl?.absoluteString ?? "nil")")
+            #endif
+            let service = SafeClientGatewayService(url: gatewayURL, logger: LogService.shared)
+            Chain.gatewayServiceCache[chainId] = service
+            return service
+        }
+    }
+
+    /// Clear the gateway service cache for a specific chain
+    static func clearGatewayServiceCache(for chainId: String) {
+        gatewayServiceQueue.sync {
+            gatewayServiceCache.removeValue(forKey: chainId)
+        }
+    }
+
+    /// Clear all gateway service caches
+    static func clearAllGatewayServiceCaches() {
+        gatewayServiceQueue.sync {
+            gatewayServiceCache.removeAll()
+        }
     }
 }
 

@@ -87,6 +87,8 @@ extension KeyType {
             return "key-type-web3auth-google"
         case .tangem:
             return "key-type-ledger"
+        case .tangem0:
+            return "key-type-ledger"
         case .burner:
             return "key-type-burner"
         }

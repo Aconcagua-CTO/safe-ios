@@ -1,0 +1,30 @@
+[
+  {
+    "chainId": "30",
+    "chainName": "Rootstock",
+    "rpcUri": {
+      "authentication": "NO_AUTHENTICATION",
+      "value": "https://public-node.rsk.co"
+    },
+    "blockExplorerUriTemplate": {
+      "address": "https://explorer.rsk.co/address/{{address}}",
+      "txHash": "https://explorer.rsk.co/tx/{{txHash}}"
+    },
+    "nativeCurrency": {
+      "name": "Rootstock Bitcoin",
+      "symbol": "RBTC",
+      "decimals": 18,
+      "logoUri": "https://safe-transaction-assets.safe.global/chains/30/currency_logo.png"
+    },
+    "theme": {
+      "textColor": "#F7931A",
+      "backgroundColor": "#1A1A1A"
+    },
+    "ensRegistryAddress": null,
+    "shortName": "rsk",
+    "l2": false,
+    "features": [],
+    "gasPrice": [],
+    "gatewayUrl": "https://transaction.safe.rootstock.io/"
+  }
+]

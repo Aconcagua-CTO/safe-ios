@@ -35,7 +35,7 @@ Patch the SDK binary to remove the firmware version check, enabling:
 1. **File** → **Read Executable to Disassemble**
 2. Navigate to:
    ```
-   /Users/manuelrm/Documents/GitHub/safe-ios/Multisig/Logic/Tangem/TangemSdk.xcframework/ios-arm64/TangemSdk.framework/TangemSdk
+   /Users/manuelrm/Documents/GitHub/CTO/safe-ios/Multisig/Logic/Tangem/TangemSdk.xcframework/ios-arm64/TangemSdk.framework/TangemSdk
    ```
 3. Click **OK** and wait for analysis (~2-3 minutes)
 
@@ -87,7 +87,7 @@ Patch the SDK binary to remove the firmware version check, enabling:
 
 2. **Run the patch script:**
    ```bash
-   cd /Users/manuelrm/Documents/GitHub/safe-ios
+   cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
    ./scripts/patch-tangem-sdk.sh
    ```
 

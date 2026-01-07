@@ -226,14 +226,15 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
                 signature[64] -= 4
                 self?.confirm(signature: signature)
             }
-        case .tangem:
+        case .tangem, .tangem0:
             let hexToSign = request.message.toHexStringWithPrefix()
             let request = SignRequest(title: "Sign Message",
                                       tracking: ["action": "signMessage"],
                                       signer: keyInfo,
                                       hexToSign: hexToSign)
 
-            let tangemSignerVC = TangemSignerViewController(request: request)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let tangemSignerVC = TangemSignerViewController(request: request, service: tangemService)
 
             present(tangemSignerVC, animated: true)
 

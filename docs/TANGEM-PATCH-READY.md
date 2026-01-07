@@ -27,7 +27,7 @@ I successfully analyzed the binary and located the exact firmware version check 
 ### Option 1: Automated Script (Recommended)
 
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/patch-tangem-sdk.sh
 ```
 
@@ -172,7 +172,7 @@ This restores from the automatic backup.
 **You're ready to go!** Just run:
 
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/patch-tangem-sdk.sh
 ```
 

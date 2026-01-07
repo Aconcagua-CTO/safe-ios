@@ -37,7 +37,18 @@ class CoreDataStack: CoreDataProtocol {
         let didNotMigrate = defaultStoreExists && !sharedStoreExists
 
         if !didNotMigrate {
-            container.persistentStoreDescriptions = [NSPersistentStoreDescription(url: sharedStoreUrl)]
+            let desc = NSPersistentStoreDescription(url: sharedStoreUrl)
+            // Enable lightweight migration. We rely on versioned `.xcdatamodeld` in the bundle.
+            desc.shouldMigrateStoreAutomatically = true
+            desc.shouldInferMappingModelAutomatically = true
+            container.persistentStoreDescriptions = [desc]
+        } else {
+            // Default store (sandbox) will be loaded first, then migrated to app group.
+            // Still enable lightweight migration on the default description.
+            if let desc = container.persistentStoreDescriptions.first {
+                desc.shouldMigrateStoreAutomatically = true
+                desc.shouldInferMappingModelAutomatically = true
+            }
         }
 
         container.loadPersistentStores { [unowned container] storeDescription, error in

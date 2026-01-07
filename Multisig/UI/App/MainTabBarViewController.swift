@@ -9,7 +9,7 @@
 import UIKit
 import WhatsNewKit
 
-class MainTabBarViewController: UITabBarController {
+class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
     var onFirstAppear: (_ vc: MainTabBarViewController) -> Void = { _ in
     }
 
@@ -28,20 +28,22 @@ class MainTabBarViewController: UITabBarController {
 
     enum Path {
         static let assets: IndexPath = [0]
-        static let balances: IndexPath = assets.appending(0)
-        static let collectibles: IndexPath = assets.appending(1)
+        static let balances: IndexPath = assets
 
-        static let transactions: IndexPath = [1]
+        static let invertir: IndexPath = [1]
+
+        static let pedir: IndexPath = [2]
+
+        static let transactions: IndexPath = [3]
         static let queue: IndexPath = transactions.appending(0)
         static let history: IndexPath = transactions.appending(1)
 
-        static let dapps: IndexPath = [2]
-
-        static let settings: IndexPath = [3]
+        static let settings: IndexPath = [4]
         static let appSettings: IndexPath = settings.appending(0)
         static let safeSettings: IndexPath = settings.appending(1)
+        static let dappsSettings: IndexPath = settings.appending(2)
 
-        static let count = [assets, transactions, dapps, settings].count
+        static let count = [assets, transactions, invertir, settings, pedir].count
     }
 
     lazy var balancesTabVC: BalancesUINavigationController = {
@@ -52,22 +54,30 @@ class MainTabBarViewController: UITabBarController {
         transactionsTabViewController()
     }()
 
-    lazy var dappsTabVC: UIViewController = {
-        dappsTabViewController()
+    lazy var invertirTabVC: UIViewController = {
+        invertirTabViewController()
     }()
 
     lazy var settingsTabVC: SettingsUINavigationController = {
         settingsTabViewController()
     }()
 
+    lazy var pedirTabVC: UIViewController = {
+        pedirTabViewController()
+    }()
+
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        delegate = self
+        LogService.shared.debug("[Tabs] MainTabBar viewDidLoad")
 
         tabBar.isTranslucent = false
         tabBar.barTintColor = .backgroundSecondary
         tabBar.backgroundColor = .backgroundSecondary
 
         updateTabs()
+        LogService.shared.debug("[Tabs] configured viewControllers=\(viewControllers?.map { String(describing: type(of: $0)) }.joined(separator: ", ") ?? "nil") selectedIndex=\(selectedIndex)")
 
         let notificationCenter = NotificationCenter.default
 
@@ -150,7 +160,7 @@ class MainTabBarViewController: UITabBarController {
         let tabRoot = HeaderViewController(rootViewController: noSafesVC)
         let balances = balancesTabViewController(
             root: tabRoot,
-            title: "Assets",
+            title: "Boveda",
             image: UIImage(named: "tab-icon-balances")!.scaled(to: tabIconSize),
             tag: Path.balances[0]
         )
@@ -194,22 +204,26 @@ class MainTabBarViewController: UITabBarController {
             tag: Path.transactions[0])
     }
 
-    private func dappsTabViewController() -> UIViewController {
+    private func invertirTabViewController() -> UIViewController {
+        let invertirVC = InvertirViewController()
+
         let noSafesVC = NoSafesViewController()
         let loadSafeViewController = LoadSafeViewController()
+        loadSafeViewController.trackingEvent = .assetsNoSafe
+
         let deploySafeVC = SafeDeployingViewController()
 
-        loadSafeViewController.trackingEvent = .dappsNoSafe
-        noSafesVC.hasSafeViewController = RibbonViewController(rootViewController: DappsViewController())
+        let ribbonVC = RibbonViewController(rootViewController: invertirVC)
+        noSafesVC.hasSafeViewController = ribbonVC
         noSafesVC.noSafeViewController = loadSafeViewController
         noSafesVC.safeDepolyingViewContoller = ViewControllerFactory.ribbonWith(viewController: deploySafeVC)
 
         let tabRoot = HeaderViewController(rootViewController: noSafesVC)
         return tabViewController(
             root: tabRoot,
-            title: "dApps",
-            image: UIImage(named: "tab-icon-dapps")!,
-            tag: Path.dapps[0]
+            title: "Invertir",
+            image: UIImage(named: "tab-icon-invertir")!,
+            tag: Path.invertir[0]
         )
     }
 
@@ -218,22 +232,34 @@ class MainTabBarViewController: UITabBarController {
         let loadSafeViewController = LoadSafeViewController()
         let deploySafeVC = SafeDeployingViewController()
         let safeSettingsVC = SafeSettingsViewController()
+        let dappsVC = DappsViewController(namedClass: nil)
         
         loadSafeViewController.trackingEvent = .settingsSafeNoSafe
         noSafesVC.hasSafeViewController = safeSettingsVC
         noSafesVC.noSafeViewController = loadSafeViewController
         noSafesVC.safeDepolyingViewContoller = deploySafeVC
 
+        let dappsNoSafesVC = NoSafesViewController()
+        let dappsLoadSafeViewController = LoadSafeViewController()
+        dappsLoadSafeViewController.trackingEvent = .dappsNoSafe
+        let dappsDeploySafeVC = SafeDeployingViewController()
+
+        dappsNoSafesVC.hasSafeViewController = dappsVC
+        dappsNoSafesVC.noSafeViewController = dappsLoadSafeViewController
+        dappsNoSafesVC.safeDepolyingViewContoller = dappsDeploySafeVC
+
         let appSettingsVC = AppSettingsViewController()
 
         let segmentVC = SegmentViewController(namedClass: nil)
         segmentVC.segmentItems = [
             SegmentBarItem(image: UIImage(named: "ico-app-settings")!, title: "App Settings"),
-            SegmentBarItem(image: UIImage(named: "ico-safe-settings")!, title: "My Safe Account")
+            SegmentBarItem(image: UIImage(named: "ico-safe-settings")!, title: "My Safe Account"),
+            SegmentBarItem(image: UIImage(named: "tab-icon-dapps")!, title: "Dapps")
         ]
         segmentVC.viewControllers = [
             appSettingsVC,
-            noSafesVC
+            noSafesVC,
+            dappsNoSafesVC
         ]
         segmentVC.selectedIndex = Path.appSettings.last
         let ribbonVC = RibbonViewController(rootViewController: segmentVC)
@@ -249,6 +275,29 @@ class MainTabBarViewController: UITabBarController {
         settingsTabVC.appSettingsViewController = appSettingsVC
         settingsTabVC.safeSettingsViewController = safeSettingsVC
         return settingsTabVC
+    }
+
+    private func pedirTabViewController() -> UIViewController {
+        let pedirVC = PedirViewController()
+
+        let noSafesVC = NoSafesViewController()
+        let loadSafeViewController = LoadSafeViewController()
+        loadSafeViewController.trackingEvent = .assetsNoSafe
+
+        let deploySafeVC = SafeDeployingViewController()
+
+        let ribbonVC = RibbonViewController(rootViewController: pedirVC)
+        noSafesVC.hasSafeViewController = ribbonVC
+        noSafesVC.noSafeViewController = loadSafeViewController
+        noSafesVC.safeDepolyingViewContoller = ViewControllerFactory.ribbonWith(viewController: deploySafeVC)
+
+        let tabRoot = HeaderViewController(rootViewController: noSafesVC)
+        return tabViewController(
+            root: tabRoot,
+            title: "Pedir",
+            image: UIImage(named: "tab-icon-coins")!,
+            tag: Path.pedir[0]
+        )
     }
 
     private func balancesTabViewController(root: UIViewController, title: String, image: UIImage, tag: Int) -> BalancesUINavigationController {
@@ -290,7 +339,8 @@ class MainTabBarViewController: UITabBarController {
     }
     
     @objc private func updateTabs() {
-        viewControllers = [balancesTabVC, transactionsTabVC, dappsTabVC, settingsTabVC]        
+        viewControllers = [balancesTabVC, invertirTabVC, pedirTabVC, transactionsTabVC, settingsTabVC]
+        LogService.shared.debug("[Tabs] updateTabs() set viewControllers count=\(viewControllers?.count ?? -1) selectedIndex=\(selectedIndex)")
     }
 
     @objc func handleConfirmTransactionNotificationReceived(_ notification: Notification) {
@@ -408,8 +458,6 @@ extension MainTabBarViewController: NavigationRouter {
             return true
         } else if route.path == NavigationRoute.showAssets().path {
             return true
-        } else if route.path == NavigationRoute.showCollectibles().path {
-            return true
         } else if route.path == NavigationRoute.deploymentFailedPath {
             return true
         } else if route.path == NavigationRoute.requestToAddOwnerPath {
@@ -468,9 +516,6 @@ extension MainTabBarViewController: NavigationRouter {
         } else if route.path == NavigationRoute.showAssets().path {
             guard selectSafe(from: route) else { return }
             switchTo(indexPath: Path.balances)
-        } else if route.path == NavigationRoute.showCollectibles().path {
-            guard selectSafe(from: route) else { return }
-            switchTo(indexPath: Path.collectibles)
         } else if route.path == NavigationRoute.deploymentFailedPath {
             presentFailedDeployment(safe: route.info["safe"] as! Safe)
         } else if route.path == NavigationRoute.requestToAddOwnerPath {
@@ -503,7 +548,9 @@ extension MainTabBarViewController: NavigationRouter {
             present(flow: createSafeFlow)
         } else if route.path == NavigationRoute.dapps().path {
             selectSafe(from: route)
-            switchTo(indexPath: Path.dapps)
+            switchTo(indexPath: Path.dappsSettings)
+        } else if route.path.starts(with: "/pedir/") {
+            switchTo(indexPath: Path.pedir)
         }
     }
     
@@ -539,11 +586,17 @@ extension MainTabBarViewController: NavigationRouter {
         case Path.assets.first:
             switchAssets(segment: segment)
 
+        case Path.invertir.first:
+            break
+
         case Path.transactions.first:
             switchTransactions(segment: segment)
 
         case Path.settings.first:
             switchSettings(segment: segment)
+
+        case Path.pedir.first:
+            break
 
         default:
             break
@@ -558,13 +611,18 @@ extension MainTabBarViewController: NavigationRouter {
 
     func switchTab(index: Int) {
         guard let vcs = viewControllers, index < vcs.count, index != selectedIndex else { return }
+        let from = selectedIndex
         selectedIndex = index
+        LogService.shared.debug("[Tabs] switchTab from=\(from) to=\(index) vc=\(String(describing: type(of: vcs[index])))")
     }
 
-    func switchAssets(segment: Int) {
-        guard let vc = balancesTabVC.assetsViewController, segment < vc.segmentVC.segmentItems.count else { return }
-        vc.segmentVC.selectSegment(at: segment)
+    // MARK: - UITabBarControllerDelegate
+
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        LogService.shared.debug("[Tabs] didSelect index=\(tabBarController.selectedIndex) vc=\(String(describing: type(of: viewController)))")
     }
+
+    func switchAssets(segment: Int) { }
 
     func switchSettings(segment: Int) {
         guard let segmentVC = settingsTabVC.segmentViewController, segment < segmentVC.segmentItems.count else {

@@ -43,6 +43,11 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
     private var accountBalances: [AccountBalanceUIModel]?
     private var isLoading: Bool = false
     private var pullToRefreshControl: UIRefreshControl!
+    
+    // Empty state view
+    private var emptyStateLabel: UILabel!
+    private var emptyMessage: String?
+    private var keyFilter: (([KeyInfo]) -> [KeyInfo])?
 
     var trackingEvent: TrackingEvent = .chooseOwner
     var completionHandler: ((KeyInfo?) -> Void)?
@@ -65,6 +70,8 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
         // when passed in, then this controller will show account balances.
         balancesLoader: AccountBalanceLoader? = nil,
         showsAddOwnerAction: Bool = false,
+        keyFilter: (([KeyInfo]) -> [KeyInfo])? = nil,
+        emptyMessage: String? = "No se encuentra la llave local",
         completionHandler: ((KeyInfo?) -> Void)? = nil
     ) {
         self.init()
@@ -77,6 +84,11 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
         self.balancesLoader = balancesLoader
         self.addButtonEnabled = showsAddOwnerAction
         self.completionHandler = completionHandler
+        // Default to local-only filter unless caller provides a custom one.
+        self.keyFilter = keyFilter ?? { keys in
+            keys.filter { $0.keyType == .deviceImported || $0.keyType == .deviceGenerated }
+        }
+        self.emptyMessage = emptyMessage
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -88,7 +100,7 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
         super.viewDidLoad()
         navigationItem.title = titleText
         
-        owners = loadOwners()
+        owners = applyFilter(loadOwners())
 
         if showsCloseButton {
             navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -104,6 +116,7 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
         tableView.registerCell(SigningKeyTableViewCell.self)
 
         configureHeader()
+        setupEmptyState()
 
         NotificationCenter.default.addObserver(
             self,
@@ -120,14 +133,58 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
             tableView.refreshControl = pullToRefreshControl
         }
 
+        updateEmptyStateVisibility()
         reloadBalances()
     }
 
     @objc func reload() {
         DispatchQueue.main.async { [unowned self] in
-            self.owners = loadOwners?() ?? []
+            self.owners = applyFilter(loadOwners?() ?? [])
+            self.updateEmptyStateVisibility()
             self.tableView.reloadData()
         }
+    }
+    
+    // MARK: - Key Filtering
+    
+    private func applyFilter(_ allKeys: [KeyInfo]) -> [KeyInfo] {
+        let filtered = keyFilter?(allKeys) ?? allKeys
+
+        if let selected = selectedKey, !filtered.contains(selected) {
+            selectedKey = nil
+        }
+
+        return filtered
+    }
+    
+    // MARK: - Empty State
+    
+    private func setupEmptyState() {
+        guard let message = emptyMessage else { return }
+        emptyStateLabel = UILabel()
+        emptyStateLabel.text = message
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.font = .systemFont(ofSize: 17, weight: .medium)
+        emptyStateLabel.textColor = .labelSecondary
+        emptyStateLabel.numberOfLines = 0
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(emptyStateLabel)
+        
+        NSLayoutConstraint.activate([
+            emptyStateLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyStateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
+            emptyStateLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32)
+        ])
+    }
+    
+    private func updateEmptyStateVisibility() {
+        let isEmpty = owners.isEmpty
+        if let emptyLabel = emptyStateLabel {
+            emptyLabel.isHidden = !isEmpty
+        }
+        tableView.isHidden = isEmpty
     }
 
     @objc private func didTapCloseButton() {
@@ -196,6 +253,7 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
             case .success(let balances):
                 // reload data
                 self.accountBalances = balances
+                self.updateEmptyStateVisibility()
                 self.tableView.reloadData()
             }
         })
@@ -263,7 +321,7 @@ extension ChooseOwnerKeyViewController: UITableViewDelegate, UITableViewDataSour
             case .connectionProblem:
                 App.shared.snackbar.show(error: GSError.KeyConnectionProblem())
             }
-        } else if keyInfo.keyType == .ledgerNanoX || keyInfo.keyType == .keystone || keyInfo.keyType == .tangem || keyInfo.keyType == .burner {
+        } else if keyInfo.keyType == .ledgerNanoX || keyInfo.keyType == .keystone || keyInfo.keyType == .tangem || keyInfo.keyType == .tangem0 || keyInfo.keyType == .burner {
             completionHandler?(keyInfo)
         } else if requestsPassCode {
             if AppConfiguration.FeatureToggles.securityCenter {

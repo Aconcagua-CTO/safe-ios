@@ -376,7 +376,7 @@ Contact Tangem support and request they:
 1. Download **Hopper Disassembler** (free trial): https://www.hopperapp.com/download.html
 2. Open the binary:
    ```
-   /Users/manuelrm/Documents/GitHub/safe-ios/Multisig/Logic/Tangem/TangemSdk.xcframework/ios-arm64/TangemSdk.framework/TangemSdk
+   /Users/manuelrm/Documents/GitHub/CTO/safe-ios/Multisig/Logic/Tangem/TangemSdk.xcframework/ios-arm64/TangemSdk.framework/TangemSdk
    ```
 3. Search for string: `"Linked terminal feature disabled"`
 4. Right-click → "References to" → Find the function

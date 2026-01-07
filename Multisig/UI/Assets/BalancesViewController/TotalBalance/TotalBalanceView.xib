@@ -13,10 +13,10 @@
         <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="TotalBalanceView" customModule="Multisig" customModuleProvider="target">
             <connections>
                 <outlet property="amountLabel" destination="U0l-py-63V" id="0mq-wM-2Lb"/>
-                <outlet property="buyButton" destination="6ZP-TO-xfp" id="aNV-B7-Zw9"/>
-                <outlet property="receiveButton" destination="vaz-jF-aeE" id="UhY-PC-GAm"/>
+                <outlet property="ribbonView" destination="Bln-Tt-Rbn" id="Bln-Tt-Out"/>
+                <outlet property="receiveButton" destination="Xvm-We-XBq" id="UhY-PC-GAm"/>
                 <outlet property="relayInfoBanner" destination="7Tc-43-uPc" id="Yoc-wh-3B0"/>
-                <outlet property="sendButton" destination="Xvm-We-XBq" id="Ov6-zm-MGr"/>
+                <outlet property="sendButton" destination="vaz-jF-aeE" id="Ov6-zm-MGr"/>
                 <outlet property="tokenBanner" destination="GI4-h0-5aY" id="yMz-uk-2bY"/>
             </connections>
         </placeholder>
@@ -34,11 +34,18 @@
                                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="oRb-jq-DOk">
                                     <rect key="frame" x="0.0" y="0.0" width="436" height="182"/>
                                     <subviews>
-                                        <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="eap-t5-4sj">
-                                            <rect key="frame" x="0.0" y="0.0" width="436" height="34"/>
+                                        <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="eap-t5-4sj">
+                                            <rect key="frame" x="0.0" y="0.0" width="436" height="66"/>
                                             <subviews>
+                                                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Bln-Tt-Rbn" customClass="RibbonView" customModule="Multisig" customModuleProvider="target">
+                                                    <rect key="frame" x="0.0" y="0.0" width="436" height="24"/>
+                                                    <constraints>
+                                                        <constraint firstAttribute="height" constant="24" id="Bln-Tt-Hgt"/>
+                                                    </constraints>
+                                                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                </view>
                                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="U0l-py-63V">
-                                                    <rect key="frame" x="0.0" y="0.0" width="436" height="34"/>
+                                                    <rect key="frame" x="0.0" y="24" width="436" height="34"/>
                                                     <constraints>
                                                         <constraint firstAttribute="height" constant="34" id="bWc-ow-moD"/>
                                                     </constraints>
@@ -61,7 +68,7 @@
                                 <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" spacing="10" translatesAutoresizingMaskIntoConstraints="NO" id="H5X-sT-Xhx">
                                     <rect key="frame" x="0.0" y="198" width="436" height="38"/>
                                     <subviews>
-                                        <button opaque="NO" contentMode="scaleToFill" enabled="NO" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Xvm-We-XBq">
+                                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Xvm-We-XBq">
                                             <rect key="frame" x="0.0" y="0.0" width="138.5" height="38"/>
                                             <inset key="titleEdgeInsets" minX="8" minY="0.0" maxX="0.0" maxY="0.0"/>
                                             <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="8" maxY="0.0"/>
@@ -69,7 +76,7 @@
                                                 <color key="titleColor" name="labelPrimary"/>
                                             </state>
                                             <connections>
-                                                <action selector="sendButtonClicked:" destination="-1" eventType="touchUpInside" id="obc-mQ-dEe"/>
+                                                <action selector="receiveButtonClicked:" destination="-1" eventType="touchUpInside" id="obc-mQ-dEe"/>
                                             </connections>
                                         </button>
                                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="vaz-jF-aeE">
@@ -80,17 +87,7 @@
                                                 <color key="titleColor" name="labelPrimary"/>
                                             </state>
                                             <connections>
-                                                <action selector="receiveButtonClicked:" destination="-1" eventType="touchUpInside" id="Hz8-An-UB5"/>
-                                            </connections>
-                                        </button>
-                                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="6ZP-TO-xfp">
-                                            <rect key="frame" x="297.5" y="0.0" width="138.5" height="38"/>
-                                            <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="2.2250738585072014e-308" maxY="0.0"/>
-                                            <state key="normal" title="Buy" image="ico-buy">
-                                                <color key="titleColor" name="labelPrimary"/>
-                                            </state>
-                                            <connections>
-                                                <action selector="buyButtonClicked:" destination="-1" eventType="touchUpInside" id="oSM-vs-pBc"/>
+                                                <action selector="sendButtonClicked:" destination="-1" eventType="touchUpInside" id="Hz8-An-UB5"/>
                                             </connections>
                                         </button>
                                     </subviews>
@@ -133,7 +130,6 @@
         </view>
     </objects>
     <resources>
-        <image name="ico-buy" width="16" height="16"/>
         <image name="ico-receive" width="16" height="16"/>
         <image name="ico-send" width="16" height="16"/>
         <namedColor name="labelPrimary">

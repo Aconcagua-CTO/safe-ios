@@ -224,7 +224,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                     
                     // Find Chain entity
                     guard let chain = Chain.by(resolvedChainId) else {
-                        VaultLogger.warning("Failed to parse vault \(index + 1): Chain not found for chainId \(vault.chainId)")
+                        VaultLogger.warning("Failed to parse vault \(index + 1): Chain not found for chainId \(resolvedChainId)")
                         skippedCount += 1
                         continue
                     }
@@ -437,6 +437,7 @@ private let vaultNetworkNameToChainId: [String: String] = [
     "GNOSIS": Chain.ChainID.gnosis,
     "BSC": Chain.ChainID.bsc,
     "AVALANCHE": Chain.ChainID.avalanche,
-    "OPTIMISM": Chain.ChainID.optimism
+    "OPTIMISM": Chain.ChainID.optimism,
+    "ROOTSTOCK": Chain.ChainID.rootstock
 ]
 

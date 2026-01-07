@@ -29,6 +29,15 @@
         }
       },
       {
+        "package": "DGCharts",
+        "repositoryURL": "https://github.com/ChartsOrg/Charts.git",
+        "state": {
+          "branch": null,
+          "revision": "dd9c72e3d7e751e769971092a6bd72d39198ae63",
+          "version": "5.1.0"
+        }
+      },
+      {
         "package": "CryptoSwift",
         "repositoryURL": "https://github.com/krzyzanowskim/CryptoSwift.git",
         "state": {
@@ -123,8 +132,8 @@
         "repositoryURL": "https://github.com/google/gtm-session-fetcher.git",
         "state": {
           "branch": null,
-          "revision": "0382ca27f22fb3494cf657d8dc356dc282cd1193",
-          "version": "3.4.1"
+          "revision": "a2ab612cb980066ee56d90d60d8462992c07f24b",
+          "version": "3.5.0"
         }
       },
       {

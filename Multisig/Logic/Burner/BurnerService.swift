@@ -17,7 +17,7 @@ enum BurnerAPDU {
     static let selectCoreCommand: Data = {
         var command: [UInt8] = [0x00, 0xA4, 0x04, 0x00, 0x07]
         command.append(contentsOf: haloAid)
-        command.append(0x00)
+        command.append(UInt8(0x00))
         return Data(command)
     }()
 }
@@ -170,6 +170,23 @@ final class BurnerService: NSObject {
         sessionQueue.async { [weak self] in
             self?.cachedCard = nil
         }
+    }
+    
+    /// Toggles whether the card exposes its NDEF as a URL (URI record) or as plain text (TEXT record).
+    ///
+    /// This matches the behavior of the LibHaLo `cfg_ndef` demo by toggling `flagUseText` only.
+    /// When enabled, the tag will emit a TEXT record instead of a URI record (disables iOS background URL handling).
+    func setBurnerNDEFUsesTextRecord(_ enabled: Bool,
+                                    alertMessage: String = "Hold your Burner (HaLo) card near the top of your iPhone.") async throws {
+        try await perform("configure Burner NDEF flags", alertMessage: alertMessage) { executor in
+            try await executor.ensureCoreSelected()
+            try await executor.cfgNdef(flagUseText: enabled)
+
+            // Best-effort verification (will read back either URI or TEXT record).
+            _ = try? await executor.readDynamicURL()
+        }
+
+        clearCache()
     }
     
     // MARK: - Identity Helpers
@@ -460,8 +477,11 @@ private final class BurnerNFCTagExecutor {
         static let claCore: UInt8 = 0xB0
         static let insCore: UInt8 = 0x51
         static let successStatusWords: Set<UInt16> = [0x9000, 0x9100]
-        static let firmwareCommand = Data([0x00, 0x51, 0x00, 0x00, 0x01, 0x07, 0x00])
-        static let addonCommand = Data([0x00, 0x51, 0x00, 0x00, 0x01, 0x10, 0x00])
+        static let firmwareCommand = Data([UInt8(0x00), UInt8(0x51), UInt8(0x00), UInt8(0x00), UInt8(0x01), UInt8(0x07), UInt8(0x00)])
+        static let addonCommand = Data([UInt8(0x00), UInt8(0x51), UInt8(0x00), UInt8(0x00), UInt8(0x01), UInt8(0x10), UInt8(0x00)])
+        
+        // LibHaLo shared command: SHARED_CMD_SET_NDEF_MODE (cfg_ndef)
+        static let sharedCmdSetNdefMode: UInt8 = 0xD8
     }
     
     private static let errorCodes: [UInt8: (String, String)] = [
@@ -518,7 +538,7 @@ private final class BurnerNFCTagExecutor {
     }
     
     func fetchPublicKeys() async throws -> [BurnerService.BurnerKeySlot] {
-        let payload = Data([0x02]) // SHARED_CMD_GET_PKEYS
+        let payload = Data([UInt8(0x02)]) // SHARED_CMD_GET_PKEYS
         let data = try await sendCoreCommand(name: "get_pkeys", payload: payload)
         let keys = try BurnerCommandParser.parsePublicKeys(from: data)
         BurnerLogger.info("BurnerService ✅ Retrieved \(keys.count) public keys from card.")
@@ -561,30 +581,80 @@ private final class BurnerNFCTagExecutor {
         }
         
         let message = try await readNdefMessage(on: ndefTag)
-        guard let record = message.records.first,
-              let payloadURL = record.wellKnownTypeURIPayload() else {
-            BurnerLogger.debug("BurnerService ▶️ No URI payload in NDEF message.")
+        guard let record = message.records.first else {
+            BurnerLogger.debug("BurnerService ▶️ No NDEF records found.")
             return nil
         }
         
         let rawPayload = record.payload
-        BurnerLogger.info("BurnerService ▶️ NDEF URL read: \(payloadURL.absoluteString)")
         
-        var queryItems = [String: String]()
-        if let components = URLComponents(url: payloadURL, resolvingAgainstBaseURL: false),
-           let items = components.queryItems {
-            for item in items {
-                queryItems[item.name] = item.value
+        // Try to read as URI record first (default behavior)
+        if let payloadURL = record.wellKnownTypeURIPayload() {
+            BurnerLogger.info("BurnerService ▶️ NDEF URL read: \(payloadURL.absoluteString)")
+            
+            var queryItems = [String: String]()
+            if let components = URLComponents(url: payloadURL, resolvingAgainstBaseURL: false),
+               let items = components.queryItems {
+                for item in items {
+                    queryItems[item.name] = item.value
+                }
+            }
+            
+            return BurnerService.BurnerNdefSnapshot(url: payloadURL,
+                                                    rawPayload: rawPayload,
+                                                    queryItems: queryItems)
+        }
+        
+        // Try to read as text record (when flagUseText=true)
+        let textPayload = record.wellKnownTypeTextPayload()
+        if let text = textPayload.0 {
+            let locale = textPayload.1 ?? Locale(identifier: "en")
+            BurnerLogger.info("BurnerService ▶️ NDEF TEXT read (locale: \(locale.identifier)): '\(text)'")
+            
+            // Convert text to URL for compatibility with existing code
+            // If it looks like a URL, try to parse it
+            if let url = URL(string: text) {
+                return BurnerService.BurnerNdefSnapshot(url: url,
+                                                        rawPayload: rawPayload,
+                                                        queryItems: [:])
+            } else if text.hasPrefix("http://") || text.hasPrefix("https://") {
+                // Try adding protocol if missing
+                if let url = URL(string: "http://\(text)") {
+                    return BurnerService.BurnerNdefSnapshot(url: url,
+                                                            rawPayload: rawPayload,
+                                                            queryItems: [:])
+                }
+            }
+            
+            // If text doesn't parse as URL, create a dummy URL for compatibility
+            // The text is in the rawPayload, which callers can check
+            if let dummyURL = URL(string: "text://\(text)") {
+                return BurnerService.BurnerNdefSnapshot(url: dummyURL,
+                                                        rawPayload: rawPayload,
+                                                        queryItems: ["text": text])
             }
         }
         
-        return BurnerService.BurnerNdefSnapshot(url: payloadURL,
-                                                rawPayload: rawPayload,
-                                                queryItems: queryItems)
+        BurnerLogger.debug("BurnerService ▶️ NDEF record is neither URI nor text type. Type: \(record.typeNameFormat.rawValue)")
+        return nil
+    }
+    
+    /// Implements the LibHaLo `cfg_ndef` command (aka SHARED_CMD_SET_NDEF_MODE / 0xD8).
+    ///
+    /// We only toggle `flagUseText` (bit 0 of byte 0). All other flags remain false.
+    func cfgNdef(flagUseText: Bool) async throws {
+        try await ensureCoreSelected()
+        
+        let flags0: UInt8 = flagUseText ? 0x01 : 0x00
+        let flags1: UInt8 = 0x00
+        let payload = Data([Constants.sharedCmdSetNdefMode, flags0, flags1])
+        
+        BurnerLogger.info("BurnerService ▶️ cfg_ndef: flagUseText=\(flagUseText) payload=\(payload.burnerHexDescription(maxBytes: 8))")
+        _ = try await sendCoreCommand(name: "cfg_ndef", payload: payload)
     }
     
     func sign(slot: Int, hash: Data) async throws -> SignResponse {
-        var payload = Data([0x06, UInt8(slot)]) // SHARED_CMD_FETCH_SIGN
+        var payload = Data([UInt8(0x06), UInt8(slot)]) // SHARED_CMD_FETCH_SIGN
         payload.append(hash)
         let response = try await sendCoreCommand(name: "fetch_sign", payload: payload)
         return try parseSignatureResponse(response)
@@ -634,9 +704,9 @@ private final class BurnerNFCTagExecutor {
     
     private func sendCoreCommand(name: String, payload: Data) async throws -> Data {
         try await ensureCoreSelected()
-        var body = Data([Constants.claCore, Constants.insCore, 0x00, 0x00, UInt8(payload.count)])
+        var body = Data([Constants.claCore, Constants.insCore, UInt8(0x00), UInt8(0x00), UInt8(payload.count)])
         body.append(payload)
-        body.append(0x00)
+        body.append(UInt8(0x00))
         guard let apdu = NFCISO7816APDU(data: body) else {
             throw BurnerCardError.invalidResponse(reason: "Unable to build APDU for \(name)")
         }

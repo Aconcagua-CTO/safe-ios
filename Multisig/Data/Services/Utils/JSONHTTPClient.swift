@@ -143,6 +143,11 @@ public class JSONHTTPClient {
         do {
             response = try jsonDecoder.decode(T.self, from: json)
         } catch {
+            #if DEBUG
+            if let jsonString = String(data: json, encoding: .utf8) {
+                logger?.debug("[JSONHTTPClient] Failed to decode response. Raw JSON: \(jsonString)")
+            }
+            #endif
             logger?.error("Failed to decode response: \(error)")
             throw error
         }

@@ -80,8 +80,9 @@ class AddressField: UINibView {
         let layoutStart = Date()
         VaultLogger.debug("[ADDRESS_FIELD_LAYOUT] showInputView called for \(String(describing: type(of: view)))")
 
-        // Avoid layout thrashing by checking if the view is already the current view
-        if inputStackView.arrangedSubviews.first === view {
+        // Avoid layout thrashing only if the stack already shows exactly this one view.
+        // Note: the XIB defines multiple arranged subviews initially; we must not early-return in that state.
+        if inputStackView.arrangedSubviews.count == 1, inputStackView.arrangedSubviews.first === view {
             VaultLogger.debug("[ADDRESS_FIELD_LAYOUT] View already current, skipping layout change")
             return
         }

@@ -214,6 +214,15 @@ final class SwitchSafesViewController: UITableViewController {
                 case .success:
                     VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
                     SnackbarViewController.show("Vault list refreshed", duration: 3.0)
+                    // Also refresh token whitelist
+                    LogService.shared.info("[Manual Refresh] Triggering token whitelist sync")
+                    App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { whitelistResult in
+                        if case .failure(let error) = whitelistResult {
+                            LogService.shared.error("[Manual Refresh] Whitelist sync failed: \(error.localizedDescription)")
+                        } else {
+                            LogService.shared.info("[Manual Refresh] Whitelist sync completed")
+                        }
+                    }
                     self.reloadData()
                 case .failure(let error):
                     VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)

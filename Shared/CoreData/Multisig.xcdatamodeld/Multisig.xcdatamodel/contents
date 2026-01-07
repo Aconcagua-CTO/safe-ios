@@ -106,6 +106,7 @@
         <attribute name="blockExplorerUrlTxHash" optional="YES" attributeType="String"/>
         <attribute name="ensRegistryAddress" optional="YES" attributeType="String"/>
         <attribute name="featuresCommaSeparated" optional="YES" attributeType="String"/>
+        <attribute name="gatewayUrl" optional="YES" attributeType="URI"/>
         <attribute name="id" attributeType="String"/>
         <attribute name="l2" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="name" attributeType="String"/>
@@ -136,7 +137,7 @@
         <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="theme" inverseEntity="Chain"/>
     </entity>
     <entity name="ChainToken" representedClassName="ChainToken" syncable="YES" codeGenerationType="class">
-        <attribute name="decimals" attributeType="Integer 32" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="decimals" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="logoUrl" attributeType="URI"/>
         <attribute name="name" attributeType="String"/>
         <attribute name="symbol" attributeType="String"/>
@@ -188,5 +189,31 @@
         <attribute name="statusRaw" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="topic" attributeType="String"/>
         <relationship name="safe" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Safe" inverseName="wcSessions" inverseEntity="Safe"/>
+    </entity>
+    <entity name="TokenWhitelist" representedClassName="TokenWhitelist" syncable="YES" codeGenerationType="manual">
+        <attribute name="id" attributeType="String"/>
+        <attribute name="tokenSymbol" optional="YES" attributeType="String"/>
+        <attribute name="tokenName" optional="YES" attributeType="String"/>
+        <attribute name="tokenType" optional="YES" attributeType="String"/>
+        <attribute name="tokenCategory" optional="YES" attributeType="String"/>
+        <attribute name="wrapLabel" optional="YES" attributeType="String"/>
+        <attribute name="network" optional="YES" attributeType="String"/>
+        <attribute name="networkAddress" optional="YES" attributeType="String"/>
+        <attribute name="decimals" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <attribute name="chainId" optional="YES" attributeType="String"/>
+        <attribute name="enabled" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="stable" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="rebasing" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="native" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="erc20" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="image" optional="YES" attributeType="String"/>
+        <attribute name="descriptionText" optional="YES" attributeType="String"/>
+        <attribute name="priceSource" optional="YES" attributeType="String"/>
+        <attribute name="priceSourceParam" optional="YES" attributeType="String"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
     </entity>
 </model>

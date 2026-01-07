@@ -588,7 +588,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             }
 
             present(vc, animated: true, completion: nil)
-        case .tangem:
+        case .tangem, .tangem0:
             let rawTransaction = controller.preimageForSigning()
             let chainId = controller.intChainId
             let isLegacy = controller.isLegacyTx
@@ -598,7 +598,8 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
 
-            let vc = TangemSignerViewController(request: request)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
 
             vc.txCompletion = { [weak self] signature in
                 guard let self = self else { return }

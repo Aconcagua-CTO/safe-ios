@@ -69,6 +69,7 @@ fileprivate extension KeyType {
         case .web3AuthApple: return "Login via Web2"
         case .web3AuthGoogle: return "Login via Web2"
         case .tangem: return "Connect Tangem Card"
+        case .tangem0: return "Connect Tangem0 Card"
         case .burner: return "Connect Burner Card"
         }
     }

@@ -32,7 +32,7 @@ The following new files have been created but need to be **manually added to the
 
 1. **Open Xcode Project:**
    ```bash
-   cd /Users/manuelrm/Documents/GitHub/safe-ios
+   cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
    open Multisig.xcodeproj
    ```
 

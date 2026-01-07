@@ -19,20 +19,23 @@ final class AddTangemKeyParameters: AddKeyParameters {
          cardId: String,
          walletPublicKey: Data,
          derivationPath: String?,
-         walletIndex: Int?) {
+         walletIndex: Int?,
+         keyType: KeyType = .tangem) {
         self.cardId = cardId
         self.walletPublicKey = walletPublicKey
         self.derivationPath = derivationPath
         self.walletIndex = walletIndex
-        super.init(address: address, name: defaultName, type: .tangem)
+        super.init(address: address, name: defaultName, type: keyType)
     }
 }
 
 final class TangemKeyFlowFactory: AddKeyFlowFactory {
-    private let service: TangemService
+    private let service: TangemCardService
+    private let keyType: KeyType
 
-    init(service: TangemService) {
+    init(service: TangemCardService, keyType: KeyType = .tangem) {
         self.service = service
+        self.keyType = keyType
     }
 
     override func intro(completion: @escaping () -> Void) -> AddKeyOnboardingViewController {
@@ -63,17 +66,19 @@ final class TangemKeyFlowFactory: AddKeyFlowFactory {
     }
 
     func defaultName(cardId: String, walletIndex: Int?) -> String {
-        let ordinal = KeyInfo.count(.tangem) + 1
+        let ordinal = KeyInfo.count(keyType) + 1
         let suffix = cardId.suffix(4)
+        let prefix = keyType == .tangem0 ? "Tangem0" : "Tangem"
         if let walletIndex = walletIndex {
-            return "Tangem \(ordinal) · \(suffix)#\(walletIndex)"
+            return "\(prefix) \(ordinal) · \(suffix)#\(walletIndex)"
         }
-        return "Tangem \(ordinal) · \(suffix)"
+        return "\(prefix) \(ordinal) · \(suffix)"
     }
 }
 
 final class TangemKeyFlow: AddKeyFlow {
-    private let tangemService: TangemService
+    private let tangemService: TangemCardService
+    private let keyType: KeyType
 
     private var tangemFactory: TangemKeyFlowFactory {
         factory as! TangemKeyFlowFactory
@@ -83,9 +88,10 @@ final class TangemKeyFlow: AddKeyFlow {
         keyParameters as? AddTangemKeyParameters
     }
 
-    init(service: TangemService = .shared, completion: @escaping (Bool) -> Void) {
+    init(service: TangemCardService = TangemService.shared, keyType: KeyType = .tangem, completion: @escaping (Bool) -> Void) {
         self.tangemService = service
-        super.init(factory: TangemKeyFlowFactory(service: service), completion: completion)
+        self.keyType = keyType
+        super.init(factory: TangemKeyFlowFactory(service: service, keyType: keyType), completion: completion)
     }
 
     override func didIntro() {
@@ -110,7 +116,8 @@ final class TangemKeyFlow: AddKeyFlow {
                                                 cardId: selection.cardId,
                                                 walletPublicKey: selection.walletPublicKey,
                                                 derivationPath: selection.derivationPath,
-                                                walletIndex: selection.walletIndex)
+                                                walletIndex: selection.walletIndex,
+                                                keyType: keyType)
         keyParameters = parameters
         TangemLogger.info("Prepared Tangem key import cardId=\(selection.cardId) walletIndex=\(selection.walletIndex ?? -1)")
         didGetKey()
@@ -125,12 +132,25 @@ final class TangemKeyFlow: AddKeyFlow {
 
         let walletIndexStr = params.walletIndex.map { String($0) } ?? "nil"
         TangemLogger.info("Importing Tangem key cardId=\(params.cardId) walletIndex=\(walletIndexStr)")
-        return OwnerKeyController.importKey(tangemCardId: params.cardId,
-                                            walletPublicKey: params.walletPublicKey,
-                                            address: params.address,
-                                            name: name,
-                                            derivationPath: params.derivationPath,
-                                            walletIndex: params.walletIndex)
+        switch keyType {
+        case .tangem:
+            return OwnerKeyController.importKey(tangemCardId: params.cardId,
+                                                walletPublicKey: params.walletPublicKey,
+                                                address: params.address,
+                                                name: name,
+                                                derivationPath: params.derivationPath,
+                                                walletIndex: params.walletIndex)
+        case .tangem0:
+            return OwnerKeyController.importKey(tangem0CardId: params.cardId,
+                                                walletPublicKey: params.walletPublicKey,
+                                                address: params.address,
+                                                name: name,
+                                                derivationPath: params.derivationPath,
+                                                walletIndex: params.walletIndex)
+        default:
+            assertionFailure("Unsupported Tangem key type \(keyType)")
+            return false
+        }
     }
 }
 

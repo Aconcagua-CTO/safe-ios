@@ -76,7 +76,7 @@ PATCH_BYTES="1F 20 03 D5"
 
 **Usage:**
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/patch-tangem-sdk.sh
 # Answer 'y' to apply patch
 ```
@@ -85,7 +85,7 @@ cd /Users/manuelrm/Documents/GitHub/safe-ios
 ```
 🔧 Tangem SDK Binary Patcher
 ==============================
-Working directory: /Users/manuelrm/Documents/GitHub/safe-ios
+Working directory: /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 
 📦 Creating backup...
 ✅ Backup saved to: Multisig/Logic/Tangem/TangemSdk.xcframework.backup-20251118-152452
@@ -150,7 +150,7 @@ Verification:
 ```
 🔄 Tangem SDK Restore
 ====================
-Working directory: /Users/manuelrm/Documents/GitHub/safe-ios
+Working directory: /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 
 📦 Found backup:
    Multisig/Logic/Tangem/TangemSdk.xcframework.backup-20251118-152452
@@ -183,7 +183,7 @@ Restore from this backup? (y/n) y
 ```
 🔍 Tangem SDK Patch Verification
 =================================
-Working directory: /Users/manuelrm/Documents/GitHub/safe-ios
+Working directory: /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 
 📍 Checking offset: 0xdd9c8
    Expected bytes: 1F2003D5

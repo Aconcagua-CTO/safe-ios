@@ -15,6 +15,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
         case ledger
         case keystone
         case tangem
+        case tangem0
         case burner
 
         var title: String {
@@ -25,6 +26,8 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 return "Connect Keystone"
             case .tangem:
                 return "Connect Tangem Card"
+            case .tangem0:
+                return "Connect Tangem0 Card"
             case .burner:
                 return "Connect Burner Card"
             }
@@ -38,6 +41,8 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
                 return UIImage(named: KeyType.ledgerNanoX.imageName)!
             case .tangem:
                 return UIImage(named: KeyType.tangem.imageName)!
+            case .tangem0:
+                return UIImage(named: KeyType.tangem0.imageName)!
             case .burner:
                 return UIImage(named: KeyType.burner.imageName)!
             }
@@ -50,6 +55,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
     private var connectKeystoneFlow: ConnectKeystoneFlow!
     private var ledgerKeyFlow: LedgerKeyFlow!
     private var tangemKeyFlow: TangemKeyFlow!
+    private var tangem0KeyFlow: TangemKeyFlow!
     private var burnerKeyFlow: BurnerKeyFlow!
 
     override func viewDidLoad() {
@@ -64,7 +70,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
         tableView.backgroundColor = .backgroundSecondary
         tableView.tableFooterView = UIView()
 
-        var hardwareOptions: [Row] = [.ledger, .keystone, .tangem]
+        var hardwareOptions: [Row] = [.ledger, .keystone, .tangem, .tangem0]
         if AppConfiguration.FeatureToggles.burnerWallet {
             hardwareOptions.append(.burner)
         }
@@ -117,11 +123,17 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
             push(flow: connectKeystoneFlow)
 
         case .tangem:
-            tangemKeyFlow = TangemKeyFlow { [unowned self] _ in
+            tangemKeyFlow = TangemKeyFlow(service: TangemService.shared) { [unowned self] _ in
                 tangemKeyFlow = nil
                 completion()
             }
             push(flow: tangemKeyFlow)
+        case .tangem0:
+            tangem0KeyFlow = TangemKeyFlow(service: Tangem0Service.shared, keyType: .tangem0) { [unowned self] _ in
+                tangem0KeyFlow = nil
+                completion()
+            }
+            push(flow: tangem0KeyFlow)
         case .burner:
             burnerKeyFlow = BurnerKeyFlow { [unowned self] _ in
                 burnerKeyFlow = nil

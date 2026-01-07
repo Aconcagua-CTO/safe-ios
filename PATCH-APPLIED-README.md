@@ -46,13 +46,13 @@ Removes firmware version check that prevented "Linked Terminal" feature from wor
 
 ### Verify Patch Status
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/verify-tangem-patch.sh
 ```
 
 ### Rollback to Original SDK
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/restore-tangem-sdk.sh
 
 # Then clean and rebuild:
@@ -63,7 +63,7 @@ rm -rf ~/Library/Developer/Xcode/DerivedData/
 
 ### Re-Apply Patch
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/patch-tangem-sdk.sh
 
 # Then clean and rebuild:

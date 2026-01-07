@@ -280,10 +280,10 @@ class LoginViewController: UIViewController {
             
         case .success:
             setLoading(false)
-            AuthLogger.info("Login successful, navigating to main app")
-            // Navigate to main app
+            AuthLogger.info("Login successful, re-checking app flow")
+            // Re-check the app flow to ensure proper routing (terms, security, etc.)
             if let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate {
-                sceneDelegate.showMainContentWindow()
+                sceneDelegate.onAppUpdateCompletion()
             }
             
         case .error(let message, let exception):

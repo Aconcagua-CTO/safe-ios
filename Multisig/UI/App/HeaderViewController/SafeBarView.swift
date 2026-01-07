@@ -48,7 +48,7 @@ class SafeBarView: UINibView {
         detailLabel.textAlignment = .left
         updatePrimaryTexts()
         configureHistoryButton()
-        setName("BOVEDA")
+        setName(nil)
         LogService.shared.debug("[SafeBarView] awakeFromNib - screen bounds: \(UIScreen.main.bounds)")
     }
     
@@ -98,10 +98,19 @@ class SafeBarView: UINibView {
         textLabel.text = displayName
     }
 
-    func setName(_ value: String) {
-        // Always display "BOVEDA" regardless of input
-        displayName = "BOVEDA"
+    func setName(_ value: String?) {
+        displayName = greeting(from: value)
         updatePrimaryTexts()
+    }
+
+    private func greeting(from name: String?) -> String {
+        guard let rawName = name?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawName.isEmpty else {
+            return "BOVEDA"
+        }
+
+        let firstComponent = rawName.split(whereSeparator: { $0.isWhitespace }).first.map(String.init) ?? rawName
+        return "Hola, \(firstComponent)"
     }
 
 

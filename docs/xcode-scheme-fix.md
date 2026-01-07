@@ -23,7 +23,7 @@ When attempting to run the app from Xcode, the following error appeared:
 
 ```
 Cannot launch simulated executable: no file found at 
-/Users/manuelrm/Documents/GitHub/safe-ios/.DerivedData/Multisig-avnfpchiqdehsidxfpphsrghadik/Build/Products/Debug.Development-iphonesimulator/.app
+/Users/manuelrm/Documents/GitHub/CTO/safe-ios/.DerivedData/Multisig-avnfpchiqdehsidxfpphsrghadik/Build/Products/Debug.Development-iphonesimulator/.app
 
 Domain: IDEFoundationErrorDomain
 Code: 1

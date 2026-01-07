@@ -190,7 +190,7 @@ All reports **explicitly disclose** the binary patch we applied:
 
 ### 3. Rollback Patch 🔙
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/restore-tangem-sdk.sh
 
 # Verify rollback

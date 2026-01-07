@@ -166,7 +166,7 @@ Total: <3 seconds 🚀
 
 **How to Apply:**
 ```bash
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/patch-tangem-sdk.sh
 # Answer 'y' to apply
 
@@ -225,7 +225,7 @@ xcodebuild -create-xcframework \
   -output TangemSdk.xcframework
 
 # 5. Replace in your project
-cp -R TangemSdk.xcframework /Users/manuelrm/Documents/GitHub/safe-ios/Multisig/Logic/Tangem/
+cp -R TangemSdk.xcframework /Users/manuelrm/Documents/GitHub/CTO/safe-ios/Multisig/Logic/Tangem/
 ```
 
 **Pros:**

@@ -3,7 +3,7 @@
 //  Multisig
 //
 //  Created by Dmitry Bespalov on 3/3/21.
-//  Copyright © 2021 Gnosis Ltd. All rights reserved.
+//  Copyright Â© 2021 Gnosis Ltd. All rights reserved.
 //
 
 import Foundation
@@ -25,6 +25,7 @@ enum KeyType: Int, CaseIterable {
     case web3AuthGoogle = 6
     case tangem = 7
     case burner = 8
+    case tangem0 = 9
 
     static var privateKeyTypes: [KeyType] {
         [.deviceImported, .deviceGenerated, .web3AuthApple, .web3AuthGoogle]
@@ -97,6 +98,21 @@ extension KeyInfo {
             try! JSONEncoder().encode(self)
         }
 
+        static func from(data: Data) -> Self? {
+            try? JSONDecoder().decode(Self.self, from: data)
+        }
+    }
+    
+    struct Tangem0KeyMetadata: Codable {
+        let cardId: String
+        let walletPublicKey: Data
+        let derivationPath: String?
+        let walletIndex: Int?
+        
+        var data: Data {
+            try! JSONEncoder().encode(self)
+        }
+        
         static func from(data: Data) -> Self? {
             try? JSONDecoder().decode(Self.self, from: data)
         }
@@ -373,6 +389,38 @@ extension KeyInfo {
                                           walletPublicKey: walletPublicKey,
                                           derivationPath: derivationPath,
                                           walletIndex: walletIndex).data
+
+        item.save()
+
+        return item
+    }
+    
+    @discardableResult
+    static func `import`(tangem0 cardId: String,
+                         walletPublicKey: Data,
+                         address: Address,
+                         name: String,
+                         derivationPath: String?,
+                         walletIndex: Int?) throws -> KeyInfo? {
+        let context = App.shared.coreDataStack.viewContext
+
+        let fr = KeyInfo.fetchRequest().by(address: address)
+        let item: KeyInfo
+
+        if (try context.fetch(fr).first) != nil {
+            throw GSError.DuplicateKey()
+        } else {
+            item = KeyInfo(context: context)
+            item.name = name
+        }
+
+        item.address = address
+        item.keyID = "tangem0:\(address.checksummed)"
+        item.keyType = .tangem0
+        item.metadata = Tangem0KeyMetadata(cardId: cardId,
+                                           walletPublicKey: walletPublicKey,
+                                           derivationPath: derivationPath,
+                                           walletIndex: walletIndex).data
 
         item.save()
 

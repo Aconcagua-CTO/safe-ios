@@ -15,17 +15,34 @@ class BalanceTableViewCell: UITableViewCell {
     @IBOutlet private weak var cellSubDetailLabel: UILabel!
     @IBOutlet private weak var cellImageView: UIImageView!
     @IBOutlet private weak var browseIcon: UIImageView!
+    @IBOutlet private weak var badgeContainerView: UIView!
+    @IBOutlet private weak var badgeLabel: UILabel!
 
     override func awakeFromNib() {
         super.awakeFromNib()
         cellMainLabel.setStyle(.headline)
-        cellDetailLabel.setStyle(.headline)
-        cellSubDetailLabel.setStyle(.footnoteSecondary)
+        // Swap styles: fiat (detail) should be emphasized, token amount secondary.
+        cellDetailLabel.setStyle(.headline)          // fiat value (white)
+        cellSubDetailLabel.setStyle(.footnoteSecondary) // token amount (grey, small)
+
+        badgeContainerView.isHidden = true
+        badgeLabel.text = nil
+        badgeContainerView.backgroundColor = .primary
+        badgeLabel.textColor = UIColor.primaryInverted ?? UIColor.backgroundSecondary
+        badgeContainerView.layer.cornerRadius = 4
+        badgeContainerView.layer.masksToBounds = true
 
         for label in [cellMainLabel, cellDetailLabel, cellSubDetailLabel] {
             label?.text = nil
         }
         cellImageView.image = nil
+        browseIcon.isHidden = true
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        setBadge(text: nil)
+        setDisclosureVisible(false)
     }
 
     func setMainText(_ value: String) {
@@ -48,7 +65,47 @@ class BalanceTableViewCell: UITableViewCell {
         cellImageView.image = image
     }
 
-    func setBrowsingEnabled(_ enabled: Bool = false) {
-        browseIcon.isHidden = !enabled
+    func setDisclosureVisible(_ visible: Bool) {
+        browseIcon.isHidden = !visible
+        if visible {
+            // Keep it consistent across iOS versions and avoid affecting layout like accessoryType does.
+            let config = UIImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+            browseIcon.image = UIImage(systemName: "chevron.forward", withConfiguration: config)?
+                .withRenderingMode(.alwaysTemplate)
+            browseIcon.tintColor = .labelSecondary
+        }
     }
+
+    func setBadge(text: String?,
+                  backgroundColor: UIColor? = .primary,
+                  textColor: UIColor? = UIColor.primaryInverted ?? UIColor.backgroundSecondary,
+                  prefix: String? = nil,
+                  prefixColor: UIColor? = nil) {
+        guard let text, !text.isEmpty else {
+            badgeLabel.text = nil
+            badgeLabel.attributedText = nil
+            badgeContainerView.isHidden = true
+            badgeContainerView.backgroundColor = .clear
+            return
+        }
+        badgeContainerView.isHidden = false
+        badgeContainerView.backgroundColor = backgroundColor
+
+        let attributed = NSMutableAttributedString()
+        if let prefix = prefix {
+            let prefixAttributes: [NSAttributedString.Key: Any] = [
+                .foregroundColor: prefixColor ?? textColor ?? UIColor.label,
+                .font: badgeLabel.font as Any
+            ]
+            attributed.append(NSAttributedString(string: "\(prefix) ", attributes: prefixAttributes))
+        }
+        let textAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: textColor ?? UIColor.label,
+            .font: badgeLabel.font as Any
+        ]
+        attributed.append(NSAttributedString(string: text, attributes: textAttributes))
+        badgeLabel.attributedText = attributed
+        badgeContainerView.isHidden = false
+    }
+
 }

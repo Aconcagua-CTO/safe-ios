@@ -40,6 +40,11 @@ class App {
         return VaultsRepositoryImpl(vaultsService: vaultsService, authRepository: authRepository)
     }()
 
+    lazy var tokenWhitelistRepository: TokenWhitelistRepository = {
+        let service = TokenWhitelistService(authRepository: authRepository, logger: LogService.shared)
+        return TokenWhitelistRepositoryImpl(service: service, authRepository: authRepository)
+    }()
+
     // MARK: - Data Layer
 
     var coreDataStack: CoreDataProtocol = CoreDataStack()

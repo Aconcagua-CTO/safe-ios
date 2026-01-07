@@ -12,7 +12,9 @@ import WalletConnectSwift
 import Version
 
 class TransactionDetailsViewController: LoadableViewController, UITableViewDataSource, UITableViewDelegate {
-    var clientGatewayService = App.shared.clientGatewayService
+    private var gatewayService: SafeClientGatewayService {
+        safe?.chain?.gatewayService() ?? App.shared.clientGatewayService
+    }
 
     private var cells: [UITableViewCell] = []
     private var tx: SCGModels.TransactionDetails?
@@ -119,8 +121,8 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     }
 
     private func updateSafeInfo() {
-        loadSafeInfoDataTask = clientGatewayService.asyncSafeInfo(safeAddress: safe.addressValue,
-                                                                             chainId: safe.chain!.id!) { result in
+        loadSafeInfoDataTask = gatewayService.asyncSafeInfo(safeAddress: safe.addressValue,
+                                                            chainId: safe.chain!.id!) { result in
             DispatchQueue.main.async { [weak self] in
                 switch result {
                 case .success(let safeInfo):
@@ -386,12 +388,13 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     self?.reloadData()
                 }
             }
-        case .tangem:
+        case .tangem, .tangem0:
             let request = SignRequest(title: "Confirm Transaction",
                                       tracking: ["action": "confirm"],
                                       signer: keyInfo,
                                       hexToSign: safeTxHash)
-            let vc = TangemSignerViewController(request: request)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
 
             present(vc, animated: true, completion: {
                 Tracker.trackEvent(.reviewExecutionTangem)
@@ -461,9 +464,9 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
 
     private func confirmAndRefresh(safeTxHash: String, signature: String, keyInfo: KeyInfo) {
         super.reloadData()
-        confirmDataTask = App.shared.clientGatewayService.asyncConfirm(safeTxHash: safeTxHash,
-                                                                       signature: signature,
-                                                                       chainId: safe.chain!.id!) {
+        confirmDataTask = gatewayService.asyncConfirm(safeTxHash: safeTxHash,
+                                                      signature: signature,
+                                                      chainId: safe.chain!.id!) {
             [weak self] result in
 
             // NOTE: sometimes the data of the transaction list is not
@@ -496,13 +499,13 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
 
         switch txSource {
         case .id(let txID):
-            reloadDataTask = clientGatewayService.asyncTransactionDetails(id: txID, chainId: chainId) {
+            reloadDataTask = gatewayService.asyncTransactionDetails(id: txID, chainId: chainId) {
                 [weak self] in
                 
                 self?.onLoadingCompleted(result: $0)
             }
         case .safeTxHash(let safeTxHash):
-            reloadDataTask = clientGatewayService.asyncTransactionDetails(safeTxHash: safeTxHash, chainId: chainId) { [weak self] in
+            reloadDataTask = gatewayService.asyncTransactionDetails(safeTxHash: safeTxHash, chainId: chainId) { [weak self] in
                 self?.onLoadingCompleted(result: $0)
             }
         case .data(let tx):

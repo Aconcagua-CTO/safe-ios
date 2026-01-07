@@ -10,31 +10,38 @@ import UIKit
 
 class AssetsViewController: ContainerViewController {
 
-    @IBOutlet private weak var totalBalanceView: TotalBalanceView!
+    // NOTE: `totalBalanceView` is intentionally non-private to allow subclasses (e.g. Invertir)
+    // to override the primary actions without duplicating the entire controller.
+    @IBOutlet weak var totalBalanceView: TotalBalanceView!
     @IBOutlet private weak var contentView: UIView!
     
     private var balances: [TokenBalance]?
-    
+
     private var safe: Safe?
-    let segmentVC = SegmentViewController(namedClass: nil)
+    private let balancesViewController: BalancesViewController
 
     private var relayOnboardingFlow: RelayOnboardingFlow? = nil
+
+    init(
+        balancesViewController: BalancesViewController = BalancesViewController(),
+        nibName: String = "AssetsViewController"
+    ) {
+        self.balancesViewController = balancesViewController
+        // Use the nib to ensure outlets (totalBalanceView, contentView) are loaded.
+        super.init(nibName: nibName, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        self.balancesViewController = BalancesViewController()
+        super.init(coder: coder)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        segmentVC.segmentItems = [
-            SegmentBarItem(image: UIImage(named: "ico-coins")!, title: "Coins"),
-            SegmentBarItem(image: UIImage(named: "ico-collectibles")!, title: "Collectibles")
-        ]
-        segmentVC.viewControllers = [
-            BalancesViewController(),
-            CollectiblesViewController()
-        ]
-        segmentVC.selectedIndex = 0
-        
-        viewControllers.append(segmentVC)
-        
+        LogService.shared.debug("[AssetsContainer] viewDidLoad container=\(String(describing: type(of: self))) childBalancesVC=\(String(describing: type(of: balancesViewController)))")
+
+        viewControllers = [balancesViewController]
         displayChild(at: 0, in: contentView)
         
         NotificationCenter.default.addObserver(
@@ -149,6 +156,7 @@ class AssetsViewController: ContainerViewController {
     }
 
     private var claimTokenFlow: ClaimSafeTokenFlow!
+    private var transferSelectableAssets: [TransferSelectableAsset]?
 
     private var shouldShowSafeTokenBanner: Bool {
         // claim period has ended -> no need to show the banner
@@ -162,6 +170,12 @@ class AssetsViewController: ContainerViewController {
 
     private func showSelectAssetsViewController() {
         guard let balances = self.balances else { return }
+        if AppSettings.multiVaultBalancesEnabled, let transferSelectableAssets {
+            let selectAssetVC = SelectAssetViewController(transferAssets: transferSelectableAssets)
+            let vc = ViewControllerFactory.modalWithRibbon(viewController: selectAssetVC)
+            present(vc, animated: true)
+            return
+        }
         let selectAssetVC = SelectAssetViewController(balances: balances)
         let vc = ViewControllerFactory.modalWithRibbon(viewController: selectAssetVC)
         present(vc, animated: true)
@@ -176,6 +190,11 @@ class AssetsViewController: ContainerViewController {
         let userInfo = notification.userInfo
         totalBalanceView.amount = userInfo?["total"] as? String
         self.balances = userInfo?["balances"] as? [TokenBalance]
+        if AppSettings.multiVaultBalancesEnabled {
+            self.transferSelectableAssets = userInfo?["transferSelectableAssets"] as? [TransferSelectableAsset]
+        } else {
+            self.transferSelectableAssets = nil
+        }
         totalBalanceView.sendEnabled = !(balances?.isEmpty ?? true)
     }
     

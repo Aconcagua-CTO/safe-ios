@@ -32,6 +32,9 @@ class RejectionConfirmationViewController: UIViewController {
     private var keyInfo: KeyInfo?
     private var ledgerController: LedgerController?
     private var keystoneSignFlow: KeystoneSignFlow!
+    private var gatewayService: SafeClientGatewayService {
+        safe.chain?.gatewayService() ?? App.shared.clientGatewayService
+    }
     
     convenience init(transaction: SCGModels.TransactionDetails) {
         self.init(namedClass: RejectionConfirmationViewController.self)
@@ -131,12 +134,13 @@ class RejectionConfirmationViewController: UIViewController {
             vc.onClose = { [weak self] in
                 self?.endLoading()
             }
-        case .tangem:
+        case .tangem, .tangem0:
             let request = SignRequest(title: "Reject Transaction",
                                       tracking: ["action": "reject"],
                                       signer: keyInfo,
                                       hexToSign: rejectionTransaction.safeTxHash.description)
-            let vc = TangemSignerViewController(request: request)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
             present(vc, animated: true, completion: nil)
 
             vc.completion = { [weak self] signature in
@@ -216,7 +220,7 @@ class RejectionConfirmationViewController: UIViewController {
     private func rejectAndCloseController(signature: String) {
         guard let keyInfo = keyInfo else { return }
         startLoading()
-        _ = App.shared.clientGatewayService.asyncProposeTransaction(
+        _ = gatewayService.asyncProposeTransaction(
             transaction: rejectionTransaction,
             sender: AddressString(keyInfo.address),
             signature: signature,

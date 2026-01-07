@@ -636,6 +636,122 @@ extension SCGModels {
         var `guard`: AddressInfo?
         var version: String?
         var implementationVersionState: ImplementationVersionState
+        
+        // Custom decoder to handle both Safe Client Gateway format and Transaction Service format
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            // Try to decode address as AddressInfo (Safe Client Gateway format)
+            if let addressInfo = try? container.decode(AddressInfo.self, forKey: .address) {
+                // Standard Safe Client Gateway format
+                self.address = addressInfo
+                self.nonce = try container.decode(UInt256String.self, forKey: .nonce)
+                self.threshold = try container.decode(UInt256String.self, forKey: .threshold)
+                self.owners = try container.decode([AddressInfo].self, forKey: .owners)
+                self.implementation = try container.decode(AddressInfo.self, forKey: .implementation)
+                self.modules = try container.decodeIfPresent([AddressInfo].self, forKey: .modules)
+                self.fallbackHandler = try container.decodeIfPresent(AddressInfo.self, forKey: .fallbackHandler)
+                self.guard = try container.decodeIfPresent(AddressInfo.self, forKey: .guard)
+                self.version = try container.decodeIfPresent(String.self, forKey: .version)
+                self.implementationVersionState = try container.decodeIfPresent(ImplementationVersionState.self, forKey: .implementationVersionState) ?? .unknown
+            } else {
+                // Transaction Service format (Rootstock and similar custom chains)
+                // Address is a string, owners are strings, masterCopy instead of implementation
+                let addressString = try container.decode(String.self, forKey: .address)
+                guard let addressValue = AddressString(addressString) else {
+                    throw DecodingError.dataCorruptedError(forKey: .address, in: container, debugDescription: "Invalid address format: \(addressString)")
+                }
+                self.address = AddressInfo(value: addressValue, name: nil, logoUri: nil)
+                
+                // Nonce as string
+                let nonceString = try container.decode(String.self, forKey: .nonce)
+                let uint256Value: UInt256
+                if nonceString.hasPrefix("0x") {
+                    let data = Data(ethHex: nonceString)
+                    uint256Value = UInt256(data)
+                } else if let value = UInt256(nonceString) {
+                    uint256Value = value
+                } else {
+                    throw DecodingError.dataCorruptedError(forKey: .nonce, in: container, debugDescription: "Invalid nonce format: \(nonceString)")
+                }
+                self.nonce = UInt256String(uint256Value)
+                
+                // Threshold as integer
+                let thresholdInt = try container.decode(Int.self, forKey: .threshold)
+                self.threshold = UInt256String(UInt256(thresholdInt))
+                
+                // Owners as array of strings
+                let ownerStrings = try container.decode([String].self, forKey: .owners)
+                self.owners = ownerStrings.compactMap { ownerString in
+                    guard let address = AddressString(ownerString) else { return nil }
+                    return AddressInfo(value: address, name: nil, logoUri: nil)
+                }
+                
+                // masterCopy instead of implementation
+                let masterCopyString: String
+                if let mcString = try? container.decode(String.self, forKey: .masterCopy) {
+                    masterCopyString = mcString
+                } else {
+                    masterCopyString = try container.decode(String.self, forKey: .implementation)
+                }
+                guard let masterCopyAddress = AddressString(masterCopyString) else {
+                    throw DecodingError.dataCorruptedError(forKey: .implementation, in: container, debugDescription: "Invalid masterCopy/implementation format: \(masterCopyString)")
+                }
+                self.implementation = AddressInfo(value: masterCopyAddress, name: nil, logoUri: nil)
+                
+                // Modules as array of strings (if present)
+                if let moduleStrings = try? container.decode([String].self, forKey: .modules) {
+                    self.modules = moduleStrings.compactMap { moduleString in
+                        guard let address = AddressString(moduleString) else { return nil }
+                        return AddressInfo(value: address, name: nil, logoUri: nil)
+                    }
+                } else {
+                    self.modules = nil
+                }
+                
+                // Fallback handler as string
+                if let fallbackString = try? container.decode(String.self, forKey: .fallbackHandler) {
+                    if let fallbackAddress = AddressString(fallbackString) {
+                        self.fallbackHandler = AddressInfo(value: fallbackAddress, name: nil, logoUri: nil)
+                    } else {
+                        self.fallbackHandler = nil
+                    }
+                } else {
+                    self.fallbackHandler = nil
+                }
+                
+                // Guard as string
+                if let guardString = try? container.decode(String.self, forKey: .guard) {
+                    if let guardAddress = AddressString(guardString), guardString.lowercased() != "0x0000000000000000000000000000000000000000" {
+                        self.guard = AddressInfo(value: guardAddress, name: nil, logoUri: nil)
+                    } else {
+                        self.guard = nil
+                    }
+                } else {
+                    self.guard = nil
+                }
+                
+                // Version as string
+                self.version = try container.decodeIfPresent(String.self, forKey: .version)
+                
+                // Implementation version state - not present in Transaction Service format, default to unknown
+                self.implementationVersionState = .unknown
+            }
+        }
+        
+        private enum CodingKeys: String, CodingKey {
+            case address
+            case nonce
+            case threshold
+            case owners
+            case implementation
+            case masterCopy
+            case modules
+            case fallbackHandler
+            case `guard`
+            case version
+            case implementationVersionState
+        }
     }
 
     enum ImplementationVersionState: String, Decodable {

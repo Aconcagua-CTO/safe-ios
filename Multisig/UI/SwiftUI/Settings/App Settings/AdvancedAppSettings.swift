@@ -25,6 +25,7 @@ struct AdvancedAppSettings: View {
         List {
             Section(header: SectionHeader("VAULTS")) {
                 ToggleVaultSourceRow()
+                ToggleMultiVaultBalancesRow()
             }
             
             Section(header: SectionHeader("TRACKING")) {
@@ -35,6 +36,9 @@ struct AdvancedAppSettings: View {
 
             // MARK: - Tangem Card Options
             TangemCardOptionsSection()
+            
+            // MARK: - Burner Card Options
+            BurnerCardOptionsSection()
 
             // NOTE: disabling to debug crash reporting in production environment
             if !(App.configuration.services.environment == .production) ||
@@ -116,6 +120,31 @@ struct AdvancedAppSettings: View {
                 .toggleStyle(SwitchToggleStyle(tint: Color.success))
                 
                 Text("When enabled, the app will use locally stored vaults instead of syncing from the backend. Turn this off to enable backend vault synchronization (default).")
+                    .body(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+    
+    struct ToggleMultiVaultBalancesRow: View {
+        @State
+        private var multiVaultEnabled = AppSettings.multiVaultBalancesEnabled
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $multiVaultEnabled.didSet { enabled in
+                    #if DEBUG
+                    LogService.shared.debug("[Multivault] Toggled multi-vault balances to \(enabled)")
+                    #endif
+                    AppSettings.multiVaultBalancesEnabled = enabled
+                }) {
+                    Text("Combine Balances from All Vaults").headline()
+                }
+                .frame(height: 60)
+                .toggleStyle(SwitchToggleStyle(tint: Color.success))
+                
+                Text("When enabled, balances from all your vaults are grouped by token and shown together.")
                     .body(.gray)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -276,6 +305,89 @@ struct TangemCardOptionsSection: View {
             TangemLogger.info("🔧 TANGEM OPTIONS: ✅ Owner imported successfully")
         } else {
             TangemLogger.error("🔧 TANGEM OPTIONS: ❌ Failed to import owner")
+        }
+    }
+}
+
+// MARK: - Burner Card Options Section
+
+struct BurnerCardOptionsSection: View {
+    @Environment(\.presentationMode) var presentationMode
+    @State private var isConfiguringNDEF = false
+    @State private var showError: String?
+    @State private var showSuccess = false
+    @State private var successMessage = ""
+    
+    var body: some View {
+        Section(header: SectionHeader("BURNER CARD")) {
+            Button(action: {
+                BurnerLogger.info("📝 BURNER OPTIONS: User tapped Disable Burner URL (TXT NDEF) from Advanced Settings")
+                setNdefUseTextRecord(true)
+            }) {
+                HStack {
+                    Text("Disable Burner URL (TXT NDEF)").body()
+                    if isConfiguringNDEF {
+                        Spacer()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    }
+                }
+            }
+            .disabled(isConfiguringNDEF)
+            
+            Button(action: {
+                BurnerLogger.info("📝 BURNER OPTIONS: User tapped Enable Burner URL (URI NDEF) from Advanced Settings")
+                setNdefUseTextRecord(false)
+            }) {
+                Text("Enable Burner URL (URI NDEF)").body()
+            }
+            .disabled(isConfiguringNDEF)
+        }
+        .alert("Success", isPresented: $showSuccess) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(successMessage)
+        }
+        .alert("Error", isPresented: .constant(showError != nil)) {
+            Button("OK", role: .cancel) {
+                showError = nil
+            }
+        } message: {
+            if let error = showError {
+                Text(error)
+            }
+        }
+    }
+    
+    private func setNdefUseTextRecord(_ enabled: Bool) {
+        guard !isConfiguringNDEF else { return }
+        isConfiguringNDEF = true
+        
+        Task {
+            do {
+                try await BurnerService.shared.setBurnerNDEFUsesTextRecord(
+                    enabled,
+                    alertMessage: enabled
+                        ? "Hold your Burner card near the top of your iPhone to disable URL handling (TXT NDEF)."
+                        : "Hold your Burner card near the top of your iPhone to enable URL handling (URI NDEF)."
+                )
+                
+                await MainActor.run {
+                    isConfiguringNDEF = false
+                    successMessage = enabled
+                        ? "Done. This Burner card will now expose a TEXT NDEF record instead of a URL (URI) record."
+                        : "Done. This Burner card will now expose a URL (URI) NDEF record instead of a TEXT record."
+                    showSuccess = true
+                    BurnerLogger.info("📝 BURNER OPTIONS: ✅ Burner NDEF flags updated successfully (flagUseText=\(enabled))")
+                }
+            } catch {
+                await MainActor.run {
+                    isConfiguringNDEF = false
+                    let errorMessage = (error as? BurnerService.BurnerServiceError)?.errorDescription ?? error.localizedDescription
+                    showError = errorMessage
+                    BurnerLogger.error("📝 BURNER OPTIONS: ❌ Failed to update Burner NDEF flags", error: error)
+                }
+            }
         }
     }
 }

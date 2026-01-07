@@ -150,7 +150,7 @@ final class ExtendedNavigationRouterTests: XCTestCase {
     func testCollectibles() {
         let url = "\(BASE_URL)/balances/nfts?safe=eth:0x46F228b5eFD19Be20952152c549ee478Bf1bf36b"
         let route = router.routeFrom(from: URL(url))
-        XCTAssertEqual(route?.path, "/assets/collectibles/")
+        XCTAssertEqual(route?.path, "/assets/")
         XCTAssertEqual(route?.info["address"] as? String, "0x46F228b5eFD19Be20952152c549ee478Bf1bf36b")
         XCTAssertEqual(route?.info["chainId"] as? String, "1")
     }

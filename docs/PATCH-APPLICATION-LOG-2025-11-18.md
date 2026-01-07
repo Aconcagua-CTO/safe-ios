@@ -324,7 +324,7 @@ class TerminalLinkingLogger: TangemSdkLogger {
 **Immediate Rollback:**
 ```bash
 # Run restore script
-cd /Users/manuelrm/Documents/GitHub/safe-ios
+cd /Users/manuelrm/Documents/GitHub/CTO/safe-ios
 ./scripts/restore-tangem-sdk.sh
 
 # Choose the most recent backup

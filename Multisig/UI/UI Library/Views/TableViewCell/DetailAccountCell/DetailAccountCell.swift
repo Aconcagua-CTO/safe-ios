@@ -21,6 +21,7 @@ class DetailAccountCell: UITableViewCell {
                     title: String? = nil,
                     imageUri: URL? = nil,
                     badgeName: String? = nil,
+                    showIdenticon: Bool = true,
                     showQRCode: Bool = false,
                     copyEnabled: Bool = true,
                     browseURL: URL? = nil,
@@ -28,8 +29,10 @@ class DetailAccountCell: UITableViewCell {
                     titleStyle: GNOTextStyle = .headline,
                     showDelegateWarning: Bool = false,
                     showAccessoryImage: Bool = false) {
-        addressInfoView.setAddress(address, label: label,
+        addressInfoView.setAddress(address,
+                                   label: label,
                                    imageUri: imageUri,
+                                   showIdenticon: showIdenticon,
                                    badgeName: badgeName,
                                    browseURL: browseURL,
                                    prefix: prefix)

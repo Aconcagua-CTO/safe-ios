@@ -19,7 +19,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         let address: Address
     }
 
-    private let service: TangemService
+    private let service: TangemCardService
 
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let statusLabel = UILabel()
@@ -37,7 +37,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
     private var scanTask: Task<Void, Never>?
     private var hasStarted = false
 
-    init(service: TangemService) {
+    init(service: TangemCardService) {
         self.service = service
         super.init(nibName: nil, bundle: nil)
     }
@@ -270,7 +270,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         tableView.deselectRow(at: indexPath, animated: true)
         guard let cardId = cardId else { return }
         let item = walletItems[indexPath.row]
-        let derivationPath = defaultDerivationPath(for: item.wallet)
+        let derivationPath = TangemDerivationPathPolicy.defaultDerivationPath(for: item.wallet)
         let selection = TangemWalletSelection(cardId: cardId,
                                               walletPublicKey: item.rawPublicKey,
                                               address: item.address,
@@ -281,14 +281,5 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         TangemLogger.info("User selected Tangem wallet index=\(item.wallet.index) cardId=\(cardId)")
         onWalletSelected?(selection)
     }
-}
-
-// MARK: - Derivation Path Helpers
-
-private func defaultDerivationPath(for wallet: TangemCardSummary.Wallet) -> String? {
-    // Expert recommendation: Always provide derivation path for SignRaw, even without chain code.
-    // COS 6.x requires explicit derivation path for SignRaw commands.
-    // Mirror Android behavior: derive Ethereum default path using wallet index.
-    return "m/44'/60'/0'/0/\(wallet.index)"
 }
 

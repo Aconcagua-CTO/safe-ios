@@ -429,7 +429,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             }
 
             present(vc, animated: true, completion: nil)
-        case .tangem:
+        case .tangem, .tangem0:
             let rawTransaction = transaction.preImageForSigning()
             let chainId = Int(chain.id!)!
             let isLegacy = transaction is Eth.TransactionLegacy
@@ -439,7 +439,8 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
 
-            let vc = TangemSignerViewController(request: request)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
 
             vc.txCompletion = { [weak self] signature in
                 guard let self = self else { return }

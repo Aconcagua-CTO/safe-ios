@@ -21,6 +21,42 @@ import Foundation
  */
 struct ApiConfig {
     
+    // MARK: - External Market Data Providers (configurable via Info.plist)
+    
+    /// Kraken public REST base URL used for market quotes.
+    /// Default: https://api.kraken.com/0/public
+    static var krakenPublicBaseURL: URL {
+        // Prefer Info.plist override if present and valid.
+        if let configured = configuredURL(forInfoPlistKey: "KRAKEN_PUBLIC_BASE_URL") {
+            return configured
+        }
+        return URL(string: "https://api.kraken.com/0/public")!
+    }
+    
+    /// Ondo webapp base URL used for markets (assets) pricing.
+    /// Default: https://app.ondo.finance
+    static var ondoAppBaseURL: URL {
+        if let configured = configuredURL(forInfoPlistKey: "ONDO_APP_BASE_URL") {
+            return configured
+        }
+        return URL(string: "https://app.ondo.finance")!
+    }
+    
+    private static func configuredURL(forInfoPlistKey key: String) -> URL? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
+            return nil
+        }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        
+        // If someone left a build-setting placeholder like "$(FOO)" in the plist, ignore it.
+        if trimmed.contains("$(") {
+            return nil
+        }
+        
+        return URL(string: trimmed)
+    }
+    
     // Base URL for Firebase Cloud Functions
     // Automatically selects environment based on build configuration (SERVICE_ENV)
     // All environments use deployed Firebase Cloud Functions (no local emulator)
@@ -47,6 +83,21 @@ struct ApiConfig {
         // CRITICAL: Endpoint is vaultsPolygon/ not vaults/
         guard let url = URL(string: "\(firebaseBaseURL)vaultsPolygon/") else {
             fatalError("Invalid vaults API URL")
+        }
+        return url
+    }()
+
+    static let marketApiURL: URL = {
+        guard let url = URL(string: "\(firebaseBaseURL)market/") else {
+            fatalError("Invalid market API URL")
+        }
+        return url
+    }()
+
+    // Custom chains API URL (served by Aconcagua backend)
+    static let customChainsApiURL: URL = {
+        guard let url = URL(string: "\(firebaseBaseURL)chains/") else {
+            fatalError("Invalid custom chains API URL")
         }
         return url
     }()

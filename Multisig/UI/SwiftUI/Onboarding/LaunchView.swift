@@ -59,7 +59,7 @@ struct LaunchView: View {
                         .padding(.bottom, self.textToButtonSpacing)
                 }
 
-                Button("Get Started") {
+                Button("Comenzar") {
                     self.showTerms = true
                     // overlay view is loaded immediately
                     // so we can not track on view appear

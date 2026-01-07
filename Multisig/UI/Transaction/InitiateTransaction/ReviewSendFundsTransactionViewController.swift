@@ -35,6 +35,19 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         assert(tokenBalance != nil)
 
         tableView.registerCell(ReviewSendFundsTransactionHeaderTableViewCell.self)
+        tableView.register(NetworkInfoTableViewCell.self, forCellReuseIdentifier: NetworkInfoTableViewCell.reuseID)
+
+        // Spanish UI copy + button label
+        confirmButtonView.actionTitle = "Retirar"
+        // Ensure the underlying UIButton text updates (it is set when state changes).
+        confirmButtonView.state = .normal
+
+        // Replace the default footer message
+        (self.value(forKey: "descriptionLabel") as? UILabel)?.text =
+            "Asegúrate que la red de origen y destino sean la misma o podés perder los fondos"
+
+        // Hide the top ribbon bar; we show network below the "A" section instead.
+        ribbonView.isHidden = true
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -56,10 +69,14 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         let prefix = safe.chain!.shortName
         cell.setFromAddress(safe.addressValue, label: safe.name, prefix: prefix)
         let (name, imageURL) = NamingPolicy.name(for: recipient, info: nil, chainId: safe.chain!.id!)
-        cell.setToAddress(recipient, label: name, imageUri: imageURL, prefix: prefix)
-        cell.setToken(amount: formattedAmount,
-                      symbol: tokenBalance.symbol,
-                      fiatBalance:  "",
+        // Show just the address in white. Prefer a resolved name if available.
+        let toLabel = name ?? recipient.ellipsized()
+        cell.setToAddress(recipient, label: toLabel, imageUri: imageURL, prefix: prefix)
+
+        let tokenAmount = Self.formatAmount5(amount)
+        let fiatValue = Self.formatFiatForAmount(amount: amount, tokenBalance: tokenBalance)
+        cell.setToken(fiatValue: fiatValue,
+                      tokenAmount: tokenAmount,
                       image: tokenBalance.imageURL)
 
         return cell
@@ -92,6 +109,12 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
 
     override func createSections() {
         sectionItems = [SectionItem.header(headerCell())]
+
+        // Network row below the \"A\" section
+        let networkCell = tableView.dequeueCell(NetworkInfoTableViewCell.self)
+        networkCell.set(chainId: safe.chain?.id, name: safe.chain?.name)
+        sectionItems.append(.safeInfo(networkCell))
+
         if let summary = feeSummaryCell() {
             sectionItems.append(.valueChange(summary))
         }
@@ -102,6 +125,44 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
             sectionItems.append(.safeInfo(feeRecipient))
         }
         sectionItems.append(.advanced(parametersCell()))
+    }
+
+    private static func formatAmount5(_ amount: BigDecimal) -> String {
+        // Convert to a plain decimal string (no grouping), then format with locale and up to 5 decimals.
+        let decimalString = TokenFormatter().string(from: amount,
+                                                    decimalSeparator: ".",
+                                                    thousandSeparator: "")
+        if let number = Decimal(string: decimalString) {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.locale = Locale.autoupdatingCurrent
+            formatter.usesGroupingSeparator = true
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 5
+            return formatter.string(from: number as NSDecimalNumber) ?? decimalString
+        }
+        return TokenFormatter().string(from: amount, shortFormat: false)
+    }
+
+    private static func formatFiatForAmount(amount: BigDecimal, tokenBalance: TokenBalance) -> String {
+        // Best-effort: derive fiat for the transfer amount using ratio (amount / totalBalance) * totalFiatValue.
+        let totalDecimalString = TokenFormatter().string(from: tokenBalance.balanceValue,
+                                                         decimalSeparator: ".",
+                                                         thousandSeparator: "")
+        let amountDecimalString = TokenFormatter().string(from: amount,
+                                                          decimalSeparator: ".",
+                                                          thousandSeparator: "")
+        guard let totalDec = Decimal(string: totalDecimalString),
+              let amountDec = Decimal(string: amountDecimalString),
+              totalDec != 0
+        else {
+            return TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode)
+        }
+        let ratio = (amountDec as NSDecimalNumber).doubleValue / (totalDec as NSDecimalNumber).doubleValue
+        let fiat = max(0, tokenBalance.fiatValue * ratio)
+        // `displayCurrency` expects an en_US numeric string.
+        let fiatString = String(format: "%.6f", fiat)
+        return TokenBalance.displayCurrency(from: fiatString, code: AppSettings.selectedFiatCode)
     }
 
     private func feeSummaryCell() -> UITableViewCell? {
@@ -137,6 +198,7 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         cell.setAccount(address: batch.treasury,
                         label: "Treasury",
                         title: "Fee recipient",
+                        showIdenticon: false,
                         copyEnabled: true,
                         browseURL: nil,
                         prefix: safe.chain?.shortName,

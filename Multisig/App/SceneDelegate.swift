@@ -320,27 +320,31 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func onAppUpdateCompletion() {
-        // Check authentication state first
+        // Check terms first - if not accepted, show launch screen and terms
+        if !AppSettings.termsAccepted {
+            AuthLogger.info("Terms not accepted, showing launch screen and terms")
+            showWindow(makeTermsWindow())
+            return
+        }
+        
+        // Terms accepted - check authentication state
         if !App.shared.authRepository.isAuthenticated() {
             AuthLogger.info("User not authenticated, showing login screen")
             showWindow(makeLoginWindow())
             return
         }
         
+        // Terms accepted and user authenticated - proceed with security checks
         AuthLogger.info("User authenticated, proceeding with normal app flow")
         
-        if !AppSettings.termsAccepted {
-            showWindow(makeTermsWindow())
-            // TODO: Enable when implemented new security center
-        } else if shouldShowPasscode && !AppConfiguration.FeatureToggles.securityCenter {
+        if shouldShowPasscode && !AppConfiguration.FeatureToggles.securityCenter {
             showWindow(makeEnterPasscodeWindow())
         } else if App.shared.securityCenter.shouldShowFaceID() {
             showWindow(makeFaceIDUnlockWindow())
         } else if App.shared.securityCenter.shouldShowPasscode() {
             showWindow(makeEnterPasscodeWindow())
         } else {
-            // If user is authenticated, skip onboarding and go directly to main content
-            // Onboarding is only for new/unauthenticated users
+            // Go directly to main content (assets screen)
             showMainContentWindow()
         }
     }
@@ -362,7 +366,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func onOnboardingCompletion() {
-        showMainContentWindow()
+        // After onboarding, show login screen (user needs to authenticate)
+        AuthLogger.info("Onboarding completed, showing login screen")
+        showWindow(makeLoginWindow())
     }
 
     // userPassword can be nil if passcode is disabled

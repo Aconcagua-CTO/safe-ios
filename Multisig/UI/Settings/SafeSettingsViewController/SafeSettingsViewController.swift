@@ -13,7 +13,13 @@ fileprivate protocol SectionItem {}
 
 class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
     private static let vaultListTitle = "Vault list / Lista de bóvedas"
-    var clientGatewayService = App.shared.clientGatewayService
+    private static let tokenListTitle = "Token list / Lista de Tokens"
+    private var clientGatewayService: SafeClientGatewayService {
+        guard let chain = try? Safe.getSelected()?.chain else {
+            return App.shared.clientGatewayService
+        }
+        return chain.gatewayService()
+    }
     let tableBackgroundColor: UIColor = .backgroundPrimary
     let advancedSectionHeaderHeight: CGFloat = 28
 
@@ -22,6 +28,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     private var currentDataTask: URLSessionTask?
     private var sections = [SectionItems]()
     private var safe: Safe?
+    private var isTokenWhitelistRefreshInProgress = false
 
     // We need this to get the correct order of owners, this is needed for replace&remove owner
     //and not guaranteed by SafeInfo endpoint
@@ -55,6 +62,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
 
         enum Advanced: SectionItem {
             case vaultList(String)
+            case tokenWhitelist(String)
             case advanced(String)
             case removeSafe
         }
@@ -218,7 +226,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         }
 
         var advancedItems: [Section.Advanced] = [
-            Section.Advanced.vaultList(Self.vaultListTitle)
+            Section.Advanced.vaultList(Self.vaultListTitle),
+            Section.Advanced.tokenWhitelist(Self.tokenListTitle)
         ]
 
         if safe != nil {
@@ -290,6 +299,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             return tableView.basicCell(name: name, indexPath: indexPath)
 
         case Section.Advanced.vaultList(let name):
+            return tableView.basicCell(name: name, indexPath: indexPath)
+        case Section.Advanced.tokenWhitelist(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
 
         case Section.Advanced.removeSafe:
@@ -396,6 +407,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
 
         case Section.Advanced.vaultList:
             presentVaultList()
+        case Section.Advanced.tokenWhitelist:
+            refreshTokenWhitelist()
 
         default:
             break
@@ -427,6 +440,38 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         let switchSafesVC = SwitchSafesViewController()
         let nav = UINavigationController(rootViewController: switchSafesVC)
         present(nav, animated: true)
+    }
+
+    private func refreshTokenWhitelist() {
+        guard App.shared.authRepository.isAuthenticated() else {
+            LogService.shared.info("[TokenWhitelist] User attempted refresh without authentication")
+            SnackbarViewController.show("Please log in before refreshing token list.", duration: 3.0)
+            return
+        }
+
+        guard !isTokenWhitelistRefreshInProgress else {
+            LogService.shared.debug("[TokenWhitelist] Refresh already in progress – ignoring tap")
+            SnackbarViewController.show("Token list refresh already in progress…", duration: 2.0)
+            return
+        }
+
+        isTokenWhitelistRefreshInProgress = true
+        LogService.shared.info("[TokenWhitelist] Manual refresh triggered from settings")
+        SnackbarViewController.show("Refreshing token list…", duration: 2.0)
+
+        App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { [weak self] result in
+            guard let self else { return }
+            self.isTokenWhitelistRefreshInProgress = false
+
+            switch result {
+            case .success:
+                LogService.shared.info("[TokenWhitelist] Manual refresh completed")
+                SnackbarViewController.show("Token list refreshed", duration: 3.0)
+            case .failure(let error):
+                LogService.shared.error("[TokenWhitelist] Manual refresh failed: \(error.localizedDescription)")
+                SnackbarViewController.show("Failed to refresh token list: \(error.localizedDescription)", duration: 4.0)
+            }
+        }
     }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection _section: Int) -> UIView? {
