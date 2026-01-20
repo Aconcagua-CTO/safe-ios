@@ -43,7 +43,10 @@ class BasicCell: UITableViewCell {
             iconImage.isHidden = true
             return
         }
-        let image = UIImage(named: value) ?? UIImage(systemName: value)
+        var image = UIImage(named: value) ?? UIImage(systemName: value)
+        if tintColor != nil {
+            image = image?.withRenderingMode(.alwaysTemplate)
+        }
         iconImage.image = image
         iconImage.isHidden = false
         iconImage.tintColor = tintColor

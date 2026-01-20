@@ -18,7 +18,7 @@ final class SwitchSafesViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Switch Safe Accounts"
+        title = "Cambiar bóveda"
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .close, target: self, action: #selector(didTapCloseButton))
         
@@ -237,5 +237,298 @@ final class SwitchSafesViewController: UITableViewController {
             return
         }
         cell.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
+    }
+}
+
+final class GroupedSwitchSafesViewController: UITableViewController {
+    struct GroupedVaultEntry {
+        let address: Address
+        let primarySafe: Safe
+        let safes: [Safe]
+        let networkShortNames: [String]
+        let isSelected: Bool
+    }
+
+    var notificationCenter = NotificationCenter.default
+
+    private var groupedEntries: [GroupedVaultEntry] = []
+    private let refreshSection = 0
+    private let listSection = 1
+    private var isManualVaultRefreshInProgress = false
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        title = "Cambiar bóveda"
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close, target: self, action: #selector(didTapCloseButton))
+
+        if #unavailable(iOS 15) {
+            // explicitly set background color to prevent transparent background in dark mode (iOS 14)
+            navigationController?.navigationBar.backgroundColor = .backgroundSecondary
+        }
+        tableView.register(AddSafeTableViewCell.nib(), forCellReuseIdentifier: "AddSafe")
+        tableView.register(SafeEntryTableViewCell.nib(), forCellReuseIdentifier: "SafeEntry")
+
+        if #available(iOS 15.0, *) {
+            tableView.sectionHeaderTopPadding = 0
+        }
+
+        notificationCenter.addObserver(
+            self, selector: #selector(reloadData), name: .selectedSafeChanged, object: nil)
+        notificationCenter.addObserver(
+            self, selector: #selector(reloadData), name: .selectedSafeUpdated, object: nil)
+
+        reloadData()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        Tracker.trackEvent(.safeSwitch)
+    }
+
+    @objc private func reloadData() {
+        groupedEntries = buildGroupedEntries()
+        VaultLogger.debug("Reloaded grouped safes: \(groupedEntries.count) entry(ies)")
+        tableView.reloadData()
+    }
+
+    @objc override func closeModal() {
+        // this will close this controller when the load Safe Account modal is closed
+        presentingViewController?.dismiss(animated: true, completion: nil)
+    }
+
+    @objc private func didTapCloseButton() {
+        dismiss(animated: true, completion: nil)
+    }
+
+    // MARK: - UITableViewDataSource
+
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        // Always include the manual refresh section at the top
+        listSection + 1
+    }
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == refreshSection {
+            return 1
+        }
+        return groupedEntries.count
+    }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        if indexPath.section == refreshSection {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "AddSafe", for: indexPath)
+            (cell as? AddSafeTableViewCell)?.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
+            return cell
+        }
+
+        let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
+        let entry = groupedEntries[indexPath.row]
+        let safe = entry.primarySafe
+        cell.setName(safe.displayName)
+        cell.setProgress(enabled: false)
+
+        switch safe.safeStatus {
+        case .deployed:
+            cell.setAddress(entry.address)
+            cell.setDetail(text: detailText(for: entry), style: .bodyTertiary)
+
+        case .deploying, .indexing:
+            cell.setAddress(entry.address, grayscale: true)
+            cell.setDetail(text: "Creating in progress...", style: .bodyTertiary)
+            cell.setProgress(enabled: true)
+
+        case .deploymentFailed:
+            cell.setAddress(entry.address, grayscale: true)
+            cell.setDetail(text: "Failed to create", style: .bodyError)
+        }
+
+        cell.setSelection(entry.isSelected)
+        return cell
+    }
+
+    // MARK: - UITableViewDelegate
+
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        indexPath.section == refreshSection ? 54 : 66
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        if indexPath.section == refreshSection {
+            refreshVaultList()
+        } else {
+            let entry = groupedEntries[indexPath.row]
+            entry.primarySafe.select()
+            didTapCloseButton()
+        }
+    }
+
+    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        nil
+    }
+
+    override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        0
+    }
+
+    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        indexPath.section != refreshSection
+    }
+
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        guard indexPath.section != refreshSection else { return nil }
+        let entry = groupedEntries[indexPath.row]
+
+        let deleteAction = UIContextualAction(style: .destructive, title: "Remove") { [weak self] _, _, completion in
+            self?.remove(safes: entry.safes, sourceIndexPath: indexPath)
+            completion(true)
+        }
+
+        return UISwipeActionsConfiguration(actions: [deleteAction])
+    }
+
+    private func remove(safes: [Safe], sourceIndexPath: IndexPath) {
+        let hasDeployed = safes.contains(where: { $0.safeStatus == .deployed })
+        let title = hasDeployed ?
+        "Removing a Safe only removes it from this app. It does not delete the Safe from the blockchain. Funds will not get lost." :
+        "Are you sure you want to remove this Safe? The transaction fees will not be returned."
+        let alertController = UIAlertController(
+            title: nil,
+            message: title,
+            preferredStyle: .multiplatformActionSheet)
+
+        let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
+            safes.forEach { Safe.remove(safe: $0) }
+        }
+        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        alertController.addAction(remove)
+        alertController.addAction(cancel)
+
+        if let popoverPresentationController = alertController.popoverPresentationController {
+            popoverPresentationController.sourceView = tableView
+            popoverPresentationController.sourceRect = tableView.rectForRow(at: sourceIndexPath)
+        }
+
+        present(alertController, animated: true)
+    }
+
+    private func refreshVaultList() {
+        guard App.shared.authRepository.isAuthenticated() else {
+            VaultLogger.warning("[Manual Refresh] User attempted to refresh vaults without authentication")
+            SnackbarViewController.show("Please log in before refreshing vaults.", duration: 3.0)
+            return
+        }
+
+        guard !isManualVaultRefreshInProgress else {
+            VaultLogger.debug("[Manual Refresh] Ignoring duplicate refresh request – already refreshing")
+            SnackbarViewController.show("Vault refresh already in progress…", duration: 2.0)
+            return
+        }
+
+        isManualVaultRefreshInProgress = true
+        updateRefreshCellAppearance()
+        VaultLogger.info("[Manual Refresh] User triggered vault refresh from GroupedSwitchSafesViewController")
+
+        App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.isManualVaultRefreshInProgress = false
+                self.updateRefreshCellAppearance()
+
+                switch result {
+                case .success:
+                    VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
+                    SnackbarViewController.show("Vault list refreshed", duration: 3.0)
+                    // Also refresh token whitelist
+                    LogService.shared.info("[Manual Refresh] Triggering token whitelist sync")
+                    App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { whitelistResult in
+                        if case .failure(let error) = whitelistResult {
+                            LogService.shared.error("[Manual Refresh] Whitelist sync failed: \(error.localizedDescription)")
+                        } else {
+                            LogService.shared.info("[Manual Refresh] Whitelist sync completed")
+                        }
+                    }
+                    self.reloadData()
+                case .failure(let error):
+                    VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)
+                    SnackbarViewController.show("Failed to refresh vaults: \(error.localizedDescription)", duration: 4.0)
+                }
+            }
+        }
+    }
+
+    private func updateRefreshCellAppearance() {
+        guard let cell = tableView.cellForRow(at: IndexPath(row: 0, section: refreshSection)) as? AddSafeTableViewCell else {
+            return
+        }
+        cell.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
+    }
+
+    private func buildGroupedEntries() -> [GroupedVaultEntry] {
+        guard let safes = try? Safe.getAll() else { return [] }
+
+        let grouped = Dictionary(grouping: safes) { safe in
+            safe.address?.lowercased() ?? ""
+        }
+
+        var entries: [GroupedVaultEntry] = []
+        entries.reserveCapacity(grouped.count)
+
+        for (addressKey, groupedSafes) in grouped where !addressKey.isEmpty {
+            let safesWithChain = groupedSafes.filter { $0.chain?.id != nil && $0.address != nil }
+            guard !safesWithChain.isEmpty else { continue }
+
+            let primarySafe = safesWithChain.min { chainIdValue(for: $0) < chainIdValue(for: $1) }!
+            let address = primarySafe.addressValue
+
+            let sortedSafes = safesWithChain.sorted { chainIdValue(for: $0) < chainIdValue(for: $1) }
+            var seenShortNames = Set<String>()
+            let networkShortNames = sortedSafes.compactMap { safe -> String? in
+                guard let shortName = safe.chain?.shortName else { return nil }
+                guard !seenShortNames.contains(shortName) else { return nil }
+                seenShortNames.insert(shortName)
+                return shortName
+            }
+
+            let isSelected = safesWithChain.contains(where: { $0.isSelected })
+
+            entries.append(GroupedVaultEntry(
+                address: address,
+                primarySafe: primarySafe,
+                safes: safesWithChain,
+                networkShortNames: networkShortNames,
+                isSelected: isSelected
+            ))
+        }
+
+        return entries.sorted { lhs, rhs in
+            if lhs.isSelected != rhs.isSelected {
+                return lhs.isSelected
+            }
+            let lhsDate = lhs.primarySafe.additionDate ?? .distantPast
+            let rhsDate = rhs.primarySafe.additionDate ?? .distantPast
+            if lhsDate != rhsDate {
+                return lhsDate > rhsDate
+            }
+            return lhs.address.description.lowercased() < rhs.address.description.lowercased()
+        }
+    }
+
+    private func detailText(for entry: GroupedVaultEntry) -> String {
+        let addressText = entry.address.ellipsized()
+        let networks = entry.networkShortNames.joined(separator: ", ")
+        if networks.isEmpty {
+            return addressText
+        }
+        return "\(addressText)\n\(networks)"
+    }
+
+    private func chainIdValue(for safe: Safe) -> UInt64 {
+        guard let chainId = safe.chain?.id, let numericId = UInt64(chainId) else {
+            return UInt64.max
+        }
+        return numericId
     }
 }

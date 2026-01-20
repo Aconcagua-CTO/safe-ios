@@ -44,6 +44,7 @@ class ChangeDisplayModeTableViewController: UITableViewController {
             UIImage(systemName: "checkmark")?.withTintColor(.primary) : nil
         let cell = tableView.basicCell(
             name: "\(items[indexPath.row].name)",
+            icon: nil,
             indexPath: indexPath,
             disclosureImage: disclosureImage
         )

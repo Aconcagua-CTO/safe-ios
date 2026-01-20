@@ -20,7 +20,7 @@ private struct CMCustomChainResponse: Decodable {
     var l2: Bool
     var features: [String]
     var gasPrice: [SCGModels.GasPrice]
-    var gatewayUrl: URL
+    var gatewayUrl: URL?
 
     func toSCGChain() -> SCGModels.Chain {
         SCGModels.Chain(
@@ -128,7 +128,8 @@ class ChainManager {
             #if DEBUG
             LogService.shared.debug("[ChainManager] loadCustomChainsFromStaticFile() - Loaded \(chains.count) custom chain(s)")
             for chain in chains {
-                LogService.shared.debug("[ChainManager] loadCustomChainsFromStaticFile() - Chain: \(chain.chainName) (id: \(chain.chainId)), gatewayUrl: \(chain.gatewayUrl.absoluteString)")
+                let gatewayDescription = chain.gatewayUrl?.absoluteString ?? "default"
+                LogService.shared.debug("[ChainManager] loadCustomChainsFromStaticFile() - Chain: \(chain.chainName) (id: \(chain.chainId)), gatewayUrl: \(gatewayDescription)")
             }
             #endif
             return chains

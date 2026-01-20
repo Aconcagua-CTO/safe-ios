@@ -11,6 +11,7 @@ import UIKit
 extension UITableView {
     func basicCell(name: String,
                    icon: String? = nil,
+                   iconTintColor: UIColor? = nil,
                    detail: String? = nil,
                    indexPath: IndexPath,
                    disclosureImage: UIImage? = UIImage(named: "arrow"),
@@ -18,7 +19,7 @@ extension UITableView {
                    canSelect: Bool = true) -> BasicCell {
         let cell = dequeueCell(BasicCell.self, for: indexPath)
         cell.setTitle(name)
-        cell.setIcon(icon)
+        cell.setIcon(icon, tintColor: iconTintColor)
         cell.setDetail(detail)
         cell.setDisclosureImage(disclosureImage)
         cell.setSupplementary(supplementaryImage)
@@ -27,7 +28,7 @@ extension UITableView {
     }
 
     func basicCell(name: String,
-                   iconURL: URL? = nil,
+                   iconURL: URL?,
                    placeholder: UIImage? = nil,
                    detail: String? = nil,
                    indexPath: IndexPath,

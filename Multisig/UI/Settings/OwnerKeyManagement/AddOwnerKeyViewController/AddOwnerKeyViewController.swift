@@ -25,26 +25,29 @@ class AddOwnerKeyViewController: UITableViewController {
         case importKey
         case hardware
         case walletConnect
+        case activateCard
 
         var title: String {
             switch self {
             case .social:
                 return "Create or import with Google or Apple ID"
             case .generate:
-                return "Create new owner key"
+                return "Crear nueva Card Key"
             case .importKey:
-                return "Import existing key"
+                return "Importar Mobile Key"
             case .hardware:
-                return "Pair hardware device"
+                return "Conectar una hardware wallet"
             case .walletConnect:
                 return "Connect a key"
+            case .activateCard:
+                return "Activar nueva Card Key"
             }
         }
 
         var image: UIImage {
             switch self {
             case .generate:
-                return UIImage(named: KeyType.deviceGenerated.imageName)!
+                return UIImage(named: "ico-mobile")!
             case .importKey:
                 return UIImage(named: KeyType.deviceImported.imageName)!
             case .walletConnect:
@@ -53,6 +56,8 @@ class AddOwnerKeyViewController: UITableViewController {
                 return UIImage(named: "ico-hardware-wallet")!
             case .social:
                 return UIImage(named: "ico-add")!
+            case .activateCard:
+                return UIImage(named: "ico-payment-key")!
             }
         }
 
@@ -71,6 +76,15 @@ class AddOwnerKeyViewController: UITableViewController {
                 return UIImage(named: "ico-wallet-logos")
             default:
                 return nil
+            }
+        }
+        
+        var isHidden: Bool {
+            switch self {
+            case .walletConnect:
+                return true
+            default:
+                return false
             }
         }
     }
@@ -115,13 +129,10 @@ class AddOwnerKeyViewController: UITableViewController {
             (section: "Start from scratch",
              items: AppConfiguration.FeatureToggles.socialLogin ? [.social, .generate] : [.generate]),
 
-            (section: "Already have a key?", items: [.walletConnect, .importKey, .hardware])
+            (section: "Already have a key?", items: [.activateCard, .importKey, .hardware])
         ]
 
-        let header = TableHeaderView(frame: CGRect(x: 0, y: 0, width: 0, height: 80))
-        header.set("Use owner keys independently or as Safe owners to login, confirm and transact.", backgroundColor: .clear)
-
-        tableView.tableHeaderView = header
+        tableView.tableHeaderView = nil
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -192,6 +203,12 @@ class AddOwnerKeyViewController: UITableViewController {
             vc.completion = completion
 
             show(vc, sender: self)
+            
+        case .activateCard:
+            let vc = ComingSoonViewController()
+            vc.title = "Activar nueva Card Key"
+            show(vc, sender: self)
+            
         case .social:
             socialKeyFlow = AddSocialKeyFlow { [weak self] _ in
                 self?.socialKeyFlow = nil

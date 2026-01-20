@@ -12,7 +12,7 @@ import SwiftUI
 fileprivate protocol SectionItem {}
 
 class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
-    private static let vaultListTitle = "Vault list / Lista de bóvedas"
+    private static let vaultListTitle = "Bóvedas"
     private static let tokenListTitle = "Token list / Lista de Tokens"
     private static let transactionNamesTitle = "Transaction names / Nombres de transacciones"
     private var clientGatewayService: SafeClientGatewayService {
@@ -445,7 +445,12 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     }
 
     private func presentVaultList() {
-        let switchSafesVC = SwitchSafesViewController()
+        let switchSafesVC: UIViewController
+        if App.configuration.services.environment.isDevelopment {
+            switchSafesVC = SwitchSafesViewController()
+        } else {
+            switchSafesVC = GroupedSwitchSafesViewController()
+        }
         let nav = UINavigationController(rootViewController: switchSafesVC)
         present(nav, animated: true)
     }

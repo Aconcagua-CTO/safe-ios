@@ -26,5 +26,61 @@
     "features": [],
     "gasPrice": [],
     "gatewayUrl": "https://transaction.safe.rootstock.io/"
+  },
+  {
+    "chainId": "8453",
+    "chainName": "Base",
+    "rpcUri": {
+      "authentication": "NO_AUTHENTICATION",
+      "value": "https://mainnet.base.org"
+    },
+    "blockExplorerUriTemplate": {
+      "address": "https://basescan.org/address/{{address}}",
+      "txHash": "https://basescan.org/tx/{{txHash}}"
+    },
+    "nativeCurrency": {
+      "name": "Ether",
+      "symbol": "ETH",
+      "decimals": 18,
+      "logoUri": "https://safe-transaction-assets.safe.global/chains/8453/currency_logo.png"
+    },
+    "theme": {
+      "textColor": "#FFFFFF",
+      "backgroundColor": "#0052FF"
+    },
+    "ensRegistryAddress": null,
+    "shortName": "base",
+    "l2": true,
+    "features": [],
+    "gasPrice": [],
+    "gatewayUrl": null
+  },
+  {
+    "chainId": "9745",
+    "chainName": "Plasma",
+    "rpcUri": {
+      "authentication": "NO_AUTHENTICATION",
+      "value": "https://rpc.plasma.to"
+    },
+    "blockExplorerUriTemplate": {
+      "address": "https://plasmascan.to/address/{{address}}",
+      "txHash": "https://plasmascan.to/tx/{{txHash}}"
+    },
+    "nativeCurrency": {
+      "name": "Plasma",
+      "symbol": "XPL",
+      "decimals": 18,
+      "logoUri": "https://safe-transaction-assets.safe.global/chains/9745/currency_logo.png"
+    },
+    "theme": {
+      "textColor": "#FFFFFF",
+      "backgroundColor": "#111111"
+    },
+    "ensRegistryAddress": null,
+    "shortName": "plasma",
+    "l2": true,
+    "features": [],
+    "gasPrice": [],
+    "gatewayUrl": null
   }
 ]

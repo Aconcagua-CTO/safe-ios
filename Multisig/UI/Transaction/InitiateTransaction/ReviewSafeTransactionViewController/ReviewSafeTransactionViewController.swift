@@ -321,6 +321,12 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     private func showError(_ error: DetailedLocalizedError) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.showError(error)
+            }
+            return
+        }
         App.shared.snackbar.show(error: error)
         loadingActivityIndicator.isHidden = true
         loadingActivityIndicator.stopAnimating()
@@ -329,22 +335,46 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     private func startLoading() {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.startLoading()
+            }
+            return
+        }
         loadingActivityIndicator.isHidden = false
         loadingActivityIndicator.startAnimating()
         contentContainerView.isHidden = true
     }
 
     private func endLoading() {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.endLoading()
+            }
+            return
+        }
         loadingActivityIndicator.isHidden = true
         loadingActivityIndicator.stopAnimating()
         contentContainerView.isHidden = false
     }
 
     private func startConfirm() {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.startConfirm()
+            }
+            return
+        }
         self.confirmButtonView.state = .loading
     }
 
     private func endConfirm() {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.endConfirm()
+            }
+            return
+        }
         self.confirmButtonView.state = .normal
     }
 

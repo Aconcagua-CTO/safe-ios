@@ -18,6 +18,8 @@ class SafeEntryTableViewCell: UITableViewCell {
         super.awakeFromNib()
         mainLabel.setStyle(.headline)
         detailLabel.setStyle(.bodyTertiary)
+        detailLabel.numberOfLines = 0
+        detailLabel.lineBreakMode = .byWordWrapping
         setProgress(enabled: false)
     }
 

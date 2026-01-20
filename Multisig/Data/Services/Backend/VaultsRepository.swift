@@ -261,7 +261,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                         continue
                     }
                     seenServerKeys.insert(key)
-                    
+
                     mappedSafes.append((
                         address: normalizedAddress,
                         name: vault.name,
@@ -455,6 +455,8 @@ private let vaultNetworkNameToChainId: [String: String] = [
     "BSC": Chain.ChainID.bsc,
     "AVALANCHE": Chain.ChainID.avalanche,
     "OPTIMISM": Chain.ChainID.optimism,
-    "ROOTSTOCK": Chain.ChainID.rootstock
+    "ROOTSTOCK": Chain.ChainID.rootstock,
+    "BASE": Chain.ChainID.base,
+    "PLASMA": Chain.ChainID.plasma
 ]
 

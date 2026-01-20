@@ -222,7 +222,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         return tabViewController(
             root: tabRoot,
             title: "Invertir",
-            image: UIImage(named: "tab-icon-invertir")!,
+            image: UIImage(named: "tab-icon-invertir")!.withRenderingMode(.alwaysTemplate),
             tag: Path.invertir[0]
         )
     }
@@ -251,6 +251,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         let appSettingsVC = AppSettingsViewController()
 
         let segmentVC = SegmentViewController(namedClass: nil)
+        segmentVC.showsSegmentBar = App.configuration.services.environment.isDevelopment
         
         if App.configuration.services.environment.isDevelopment {
             // Development environment (Debug + Release): show all tabs

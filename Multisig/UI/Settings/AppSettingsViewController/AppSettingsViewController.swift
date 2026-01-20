@@ -15,6 +15,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     var notificationCenter = NotificationCenter.default
     var app = App.configuration.app
     var legal = App.configuration.legal
+    private static let vaultListTitle = "Bóvedas"
 
     private let tableBackgroundColor: UIColor = .backgroundPrimary
     private let sectionHeaderHeight: CGFloat = 28
@@ -32,6 +33,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case about(String)
 
         enum App: SectionItem {
+            case vaultList(String)
             case desktopPairing(String)
             case ownerKeys(String, Bool, String)
             case addressBook(String)
@@ -98,19 +100,19 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         sections = []
         var appSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .app, items: [])
         
-        if App.configuration.services.environment.isDevelopment {
-            if FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
-                appSection.items.append(Section.App.desktopPairing("Connect to Web"))
-            }
-        }
-        
         appSection.items.append(contentsOf: [
+            Section.App.vaultList(Self.vaultListTitle),
             Section.App.ownerKeys("Llaves", !KeyInfo.keysWithoutBackup().isEmpty, "\(KeyInfo.count())"),
             Section.App.addressBook("Agenda"),
             Section.App.herencia("Herencia"),
             Section.App.seguridad("Seguridad"),
             Section.App.planes("Planes")
         ])
+
+        appSection.items.append(Section.Support.chatWithUs("Ayuda"))
+        if FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
+            appSection.items.append(Section.App.desktopPairing("Wallet connect"))
+        }
         
         // Show these settings in Development environment only (Debug + Release)
         if App.configuration.services.environment.isDevelopment {
@@ -125,35 +127,41 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         // Add logout option if user is authenticated
         if App.shared.authRepository.isAuthenticated() {
             appSection.items.append(Section.App.logout("Sign Out"))
-            appSection.items.append(Section.App.logoutAndReset("Sign Out & Reset"))
+            if App.configuration.services.environment.isDevelopment {
+                appSection.items.append(Section.App.logoutAndReset("Sign Out & Reset"))
+            }
         }
         
-        let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support("Support & Feedback"), items: [
-            Section.Support.chatWithUs("Ayuda"),
-            Section.Support.getSupport("Help Center")
-        ])
+        let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support("Support & Feedback"), items: [])
         var advancedSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .advanced("Advanced"), items: [
             Section.Advanced.advanced("Advanced"),
             Section.Advanced.dataExport("Export data"),
             Section.Advanced.dataImport("Import data")
         ])
         
-        if App.configuration.services.environment != .production {
+        if App.configuration.services.environment.isDevelopment {
             advancedSection.items.append(
                 Section.Advanced.toggles("Feature Toggles")
             )
         }
 
-        let aboutSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .about("About"), items: [
-            Section.About.aboutGnosisSafe("About Safe{Wallet}"),
-            Section.About.appVersion("App version", "\(app.marketingVersion) (\(app.buildVersion))"),
+        let aboutSectionTitle = App.configuration.services.environment.isDevelopment ? "About" : "Acerca de"
+        let aboutSafeTitle = App.configuration.services.environment.isDevelopment ? "About Safe{Wallet}" : "Acerca de Bóveda"
+        let appVersionTitle = App.configuration.services.environment.isDevelopment ? "App version" : "Versión"
+        let aboutSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .about(aboutSectionTitle), items: [
+            Section.About.aboutGnosisSafe(aboutSafeTitle),
+            Section.About.appVersion(appVersionTitle, "\(app.marketingVersion) (\(app.buildVersion))"),
         ])
         sections += [
             appSection,
-            supportSection,
-            advancedSection,
             aboutSection
         ]
+        if App.configuration.services.environment.isDevelopment {
+            sections.append(advancedSection)
+        }
+        if !supportSection.items.isEmpty {
+            sections.insert(supportSection, at: 1)
+        }
     }
 
     @objc func hidePresentedController() {
@@ -215,6 +223,17 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         show(vc, sender: self)
     }
 
+    private func presentVaultList() {
+        let switchSafesVC: UIViewController
+        if App.configuration.services.environment.isDevelopment {
+            switchSafesVC = SwitchSafesViewController()
+        } else {
+            switchSafesVC = GroupedSwitchSafesViewController()
+        }
+        let nav = UINavigationController(rootViewController: switchSafesVC)
+        present(nav, animated: true)
+    }
+
     private func showAddressBook() {
         show(AddressBookListTableViewController(), sender: self)
     }
@@ -243,11 +262,15 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let item = sections[indexPath.section].items[indexPath.row]
         switch item {
+
+        case Section.App.vaultList(let name):
+            return tableView.basicCell(name: name, icon: "tab-icon-balances", iconTintColor: .icon, indexPath: indexPath)
             
         case Section.App.desktopPairing(let name):
             return tableView.basicCell(
                 name: name,
-                icon: "ico-app-settings-desktop-pairing",
+                icon: "tab-icon-dapps",
+                iconTintColor: .icon,
                 indexPath: indexPath,
                 supplementaryImage: Self.shouldBringAttentionToDesktopPairing() ? UIImage(named: "ico-warning") : nil)
             
@@ -277,13 +300,13 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             return tableView.basicCell(name: name, icon: "ico-app-settings-package", indexPath: indexPath)
             
         case Section.App.herencia(let name):
-            return tableView.basicCell(name: name, icon: "person.2.fill", indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: "ico-app-settings-herencia", indexPath: indexPath)
             
         case Section.App.seguridad(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
             
         case Section.App.planes(let name):
-            return tableView.basicCell(name: name, icon: "desktopcomputer", indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: "ico-app-settings-desktop-pairing", indexPath: indexPath)
             
         case Section.App.logout(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
@@ -293,28 +316,34 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             
         case Section.Support.chatWithUs(let name):
             if IntercomConfig.unreadConversationCount() > 0 {
-                return tableView.basicCell(name: name, icon: "ico-app-settings-message-circle-with-badge", indexPath: indexPath)
+                return tableView.basicCell(name: name,
+                                           icon: "ico-app-settings-message-circle-with-badge",
+                                           iconTintColor: .icon,
+                                           indexPath: indexPath)
             } else {
-                return tableView.basicCell(name: name, icon: "ico-app-settings-message-circle", indexPath: indexPath)
+                return tableView.basicCell(name: name,
+                                           icon: "ico-app-settings-message-circle",
+                                           iconTintColor: .icon,
+                                           indexPath: indexPath)
             }
 
         case Section.Support.getSupport(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-support", indexPath: indexPath)
             
         case Section.Advanced.advanced(let name):
-            return tableView.basicCell(name: name, indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: nil, indexPath: indexPath)
             
         case Section.Advanced.dataExport(let name):
-            return tableView.basicCell(name: name, indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: nil, indexPath: indexPath)
             
         case Section.Advanced.dataImport(let name):
-            return tableView.basicCell(name: name, indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: nil, indexPath: indexPath)
 
         case Section.Advanced.toggles(let name):
-            return tableView.basicCell(name: name, indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: nil, indexPath: indexPath)
 
         case Section.About.aboutGnosisSafe(let name):
-            return tableView.basicCell(name: name, indexPath: indexPath)
+            return tableView.basicCell(name: name, icon: nil, indexPath: indexPath)
             
         case Section.About.appVersion(let name, let version):
             return tableView.infoCell(name: name, info: version, indexPath: indexPath)
@@ -330,6 +359,9 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         tableView.deselectRow(at: indexPath, animated: true)
         let item = sections[indexPath.section].items[indexPath.row]
         switch item {
+        case Section.App.vaultList:
+            presentVaultList()
+
         case Section.App.desktopPairing:
             showDesktopPairing()
 

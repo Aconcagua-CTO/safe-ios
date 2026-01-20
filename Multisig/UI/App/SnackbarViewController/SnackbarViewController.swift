@@ -57,7 +57,14 @@ class SnackbarViewController: UIViewController {
     }
 
     static func show(_ message: String, duration: TimeInterval = 4, icon: IconSource = .none) {
-        dispatchPrecondition(condition: .onQueue(.main))
+        // Some callers invoke snackbar from background queues (e.g. URLSession callbacks).
+        // Keep UI-safe behavior by hopping onto the main queue instead of crashing.
+        if !Thread.isMainThread {
+            DispatchQueue.main.async {
+                show(message, duration: duration, icon: icon)
+            }
+            return
+        }
         instance?.enqueue(Message(value: message, duration: duration, icon: icon))
         instance?.process()
     }
@@ -80,7 +87,12 @@ class SnackbarViewController: UIViewController {
 
     // displays the next message in queue and sets the auto-hiding timer
     @objc private func process() {
-        dispatchPrecondition(condition: .onQueue(.main))
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.process()
+            }
+            return
+        }
         guard currentMessage == nil, !messageQueue.isEmpty else { return }
         let message = messageQueue.removeFirst()
         currentMessage = message

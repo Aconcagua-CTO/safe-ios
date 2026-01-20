@@ -15,6 +15,7 @@ class SegmentViewController: ContainerViewController {
 
     var segmentItems = [SegmentBarItem]()
     var selectedIndex: Int?
+    var showsSegmentBar = true
 
     private var segmentViews = [SegmentView]()
 
@@ -41,9 +42,10 @@ class SegmentViewController: ContainerViewController {
             segmentBarStackView.addArrangedSubview(v)
         }
 
-        if segmentItems.isEmpty {
+        if !showsSegmentBar || segmentItems.isEmpty {
             segmentBar.isHidden = true
-        } else {
+        }
+        if !segmentItems.isEmpty {
             selectSegment(at: selectedIndex)
         }
     }

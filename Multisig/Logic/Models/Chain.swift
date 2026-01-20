@@ -329,6 +329,8 @@ extension Chain {
         static let optimism = "10"
         static let goerli = "5"
         static let rootstock = "30"
+        static let base = "8453"
+        static let plasma = "9745"
     }
 
     static func mainnetChain() -> Chain {
