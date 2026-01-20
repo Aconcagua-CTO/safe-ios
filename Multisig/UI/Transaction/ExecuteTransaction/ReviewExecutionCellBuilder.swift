@@ -19,16 +19,14 @@ class ReviewExecutionCellBuilder: TransactionDetailCellBuilder {
     var onTapAdvanced: () -> Void = {}
     var userSelectedSigner = false
 
-    private var safe: Safe!
-
-    init(vc: UIViewController, tableView: UITableView, chain: Chain, safe: Safe) {
+    override init(vc: UIViewController, tableView: UITableView, chain: Chain, safe: Safe) {
         executionOptionsCellBuilder = ExecutionOptionsCellBuilder(
             vc: vc,
             tableView: tableView,
-            chain: chain
+            chain: chain,
+            safe: safe
         )
-        super.init(vc: vc, tableView: tableView, chain: chain)
-        self.safe = safe
+        super.init(vc: vc, tableView: tableView, chain: chain, safe: safe)
 
         tableView.registerCell(BorderedInnerTableCell.self)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Spacer")

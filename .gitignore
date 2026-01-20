@@ -16,6 +16,7 @@ ModuleCache.noindex/
 Logs/
 build_logs
 Index/
+docs/
 
 ## Various settings
 *.pbxuser
@@ -27,6 +28,7 @@ Index/
 *.perspectivev3
 !default.perspectivev3
 xcuserdata/
+debug/
 
 ## Other
 *.moved-aside

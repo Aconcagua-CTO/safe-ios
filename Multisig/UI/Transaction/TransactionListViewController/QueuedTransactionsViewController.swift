@@ -12,6 +12,9 @@ class QueuedTransactionsViewController: TransactionListViewController {
     private weak var timer: Timer?
     private var localizedHeaders: [String: String] = ["next": "NEXT TRANSACTION",
                                                      "queued": "QUEUE"]
+
+    override var transactionListStyle: TransactionListStyle { .queue }
+    override var usesMultiSafeTransactions: Bool { true }
     override func viewDidLoad() {
         super.viewDidLoad()
         trackingEvent = .transactionsQueued
@@ -27,9 +30,17 @@ class QueuedTransactionsViewController: TransactionListViewController {
     
     override func asyncTransactionList(
         completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void) -> URLSessionTask? {
-        safe = try! Safe.getSelected()!
+        guard let safe = safe else { return nil }
+        return asyncTransactionList(for: safe, completion: completion)
+    }
+
+    override func asyncTransactionList(
+        for safe: Safe,
+        completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void
+    ) -> URLSessionTask? {
+        guard let chainId = safe.chain?.id else { return nil }
         return clientGatewayService.asyncQueuedTransactionsSummaryList(safeAddress: safe.addressValue,
-                                                                       chainId: safe.chain!.id!,
+                                                                       chainId: chainId,
                                                                        completion: completion)
     }
 

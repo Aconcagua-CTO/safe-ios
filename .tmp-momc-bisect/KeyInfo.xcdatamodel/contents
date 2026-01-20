@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="KeyInfo" representedClassName="KeyInfo" syncable="YES" codeGenerationType="class">
+        <attribute name="addressString" attributeType="String"/>
+        <attribute name="backedup" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="delegateAddressString" optional="YES" attributeType="String"/>
+        <attribute name="keyID" optional="YES" attributeType="String"/>
+        <attribute name="metadata" optional="YES" attributeType="Binary"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="type" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="connections" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDWCConnection" inverseName="keys" inverseEntity="CDWCConnection"/>
+        <relationship name="wallet" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDWCAppRegistryEntry" inverseName="keys" inverseEntity="CDWCAppRegistryEntry"/>
+    </entity>
+</model>

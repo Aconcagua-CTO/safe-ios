@@ -1,7 +1,7 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 6.2 effective-5.10 (swiftlang-6.2.0.19.9 clang-1700.3.19.1)
+// swift-compiler-version: Apple Swift version 6.2.3 effective-5.10 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
 // swift-module-flags: -target x86_64-apple-ios15.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -module-name TangemSdk
-// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2
+// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.3
 import AVFoundation
 import Bls_Signature
 import Combine
@@ -16,7 +16,6 @@ import LocalAuthentication
 import Security
 import Swift
 import SwiftUI
-@_exported import TangemSdk
 import TangemSdk_secp256k1
 import UIKit
 import _Concurrency
@@ -25,30 +24,30 @@ import _StringProcessing
 import _SwiftConcurrencyShims
 final public class DeleteFileCommand {
   public init(fileIndex: Swift.Int)
-  public typealias Response = TangemSdk.SuccessResponse
+  public typealias Response = SuccessResponse
   @objc deinit
 }
 public struct CommandApdu : Swift.Equatable {
-  public init(_ instruction: TangemSdk.Instruction, tlv: Foundation.Data)
+  public init(_ instruction: Instruction, tlv: Foundation.Data)
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(cla: TangemSdk.Byte = 0x00, ins: TangemSdk.Byte, p1: TangemSdk.Byte = 0x0, p2: TangemSdk.Byte = 0x0, le: Swift.Int? = nil, tlv: Foundation.Data)
+  public init(cla: Byte = 0x00, ins: Byte, p1: Byte = 0x0, p2: Byte = 0x0, le: Swift.Int? = nil, tlv: Foundation.Data)
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
-  public func encrypt(encryptionMode: TangemSdk.EncryptionMode, encryptionKey: Foundation.Data?) throws -> TangemSdk.CommandApdu
+  public func encrypt(encryptionMode: EncryptionMode, encryptionKey: Foundation.Data?) throws -> CommandApdu
   #endif
   public func serialize() -> Foundation.Data
-  public static func == (a: TangemSdk.CommandApdu, b: TangemSdk.CommandApdu) -> Swift.Bool
+  public static func == (a: CommandApdu, b: CommandApdu) -> Swift.Bool
 }
-extension TangemSdk.CommandApdu : Swift.CustomStringConvertible {
+extension CommandApdu : Swift.CustomStringConvertible {
   public var description: Swift.String {
     get
   }
 }
-public class DeriveWalletPublicKeysTask : TangemSdk.CardSessionRunnable {
-  public init(walletPublicKey: Foundation.Data, derivationPaths: [TangemSdk.DerivationPath])
+public class DeriveWalletPublicKeysTask : CardSessionRunnable {
+  public init(walletPublicKey: Foundation.Data, derivationPaths: [DerivationPath])
   @objc deinit
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.DerivedKeys>)
-  public typealias Response = TangemSdk.DerivedKeys
+  public func run(in session: CardSession, completion: @escaping CompletionResult<DerivedKeys>)
+  public typealias Response = DerivedKeys
 }
 public enum EncryptionMode : Swift.String {
   case none
@@ -68,9 +67,9 @@ public struct Secp256k1Signature {
   public func serializeDer() throws -> Foundation.Data
   public func verify(with publicKey: Foundation.Data, message: Foundation.Data) throws -> Swift.Bool
   public func verify(with publicKey: Foundation.Data, hash: Foundation.Data) throws -> Swift.Bool
-  public func unmarshal(with publicKey: Foundation.Data, hash: Foundation.Data) throws -> TangemSdk.Secp256k1Signature.Extended
+  public func unmarshal(with publicKey: Foundation.Data, hash: Foundation.Data) throws -> Secp256k1Signature.Extended
 }
-extension TangemSdk.Secp256k1Signature {
+extension Secp256k1Signature {
   public struct Extended {
     public let r: Foundation.Data
     public let s: Foundation.Data
@@ -93,7 +92,7 @@ public protocol SessionViewDelegate : AnyObject {
   func attestationDidFailDevCard(onContinue: @escaping () -> Swift.Void, onCancel: @escaping () -> Swift.Void)
   func attestationCompletedWithWarnings(onContinue: @escaping () -> Swift.Void)
   func attestationCompletedOffline(onContinue: @escaping () -> Swift.Void, onCancel: @escaping () -> Swift.Void, onRetry: @escaping () -> Swift.Void)
-  func setState(_ state: TangemSdk.SessionViewState)
+  func setState(_ state: SessionViewState)
 }
 public enum SessionViewState {
   case delay(remaining: Swift.Float, total: Swift.Float)
@@ -101,8 +100,8 @@ public enum SessionViewState {
   case `default`
   case empty
   case scan
-  case requestCode(_: TangemSdk.UserCodeType, cardId: Swift.String?, showForgotButton: Swift.Bool, completion: TangemSdk.CompletionResult<Swift.String>)
-  case requestCodeChange(_: TangemSdk.UserCodeType, cardId: Swift.String?, completion: TangemSdk.CompletionResult<Swift.String>)
+  case requestCode(_: UserCodeType, cardId: Swift.String?, showForgotButton: Swift.Bool, completion: CompletionResult<Swift.String>)
+  case requestCodeChange(_: UserCodeType, cardId: Swift.String?, completion: CompletionResult<Swift.String>)
 }
 extension Foundation.NSNotification.Name {
   public static let cardSessionDidStart: Foundation.Notification.Name
@@ -110,7 +109,7 @@ extension Foundation.NSNotification.Name {
 }
 public class BackupService {
   public static let maxBackupCardsCount: Swift.Int
-  public var currentState: TangemSdk.BackupService.State {
+  public var currentState: BackupService.State {
     get
   }
   public var canAddBackupCards: Swift.Bool {
@@ -119,7 +118,7 @@ public class BackupService {
   public var hasIncompletedBackup: Swift.Bool {
     get
   }
-  public var config: TangemSdk.Config {
+  public var config: Config {
     get
     set
   }
@@ -139,33 +138,33 @@ public class BackupService {
     get
   }
   #if compiler(>=5.3) && $NonescapableTypes
-  public var primaryCard: TangemSdk.PrimaryCard? {
+  public var primaryCard: PrimaryCard? {
     get
   }
   #endif
-  public var backupCards: [TangemSdk.BackupCard] {
+  public var backupCards: [BackupCard] {
     get
   }
   public var skipCompatibilityChecks: Swift.Bool
-  public init(sdk: TangemSdk.TangemSdk, networkService: TangemSdk.NetworkService)
+  public init(sdk: TangemSdk, networkService: NetworkService)
   @objc deinit
   public func discardIncompletedBackup()
-  public func addBackupCard(completion: @escaping TangemSdk.CompletionResult<TangemSdk.Card>)
+  public func addBackupCard(completion: @escaping CompletionResult<Card>)
   public func setAccessCode(_ code: Swift.String) throws
   public func setPasscode(_ code: Swift.String) throws
-  public func proceedBackup(completion: @escaping TangemSdk.CompletionResult<TangemSdk.Card>)
-  public func setPrimaryCard(_ primaryCard: TangemSdk.PrimaryCard)
+  public func proceedBackup(completion: @escaping CompletionResult<Card>)
+  public func setPrimaryCard(_ primaryCard: PrimaryCard)
   #if compiler(>=5.3) && $NonescapableTypes
-  public func readPrimaryCard(cardId: Swift.String? = nil, completion: @escaping TangemSdk.CompletionResult<Swift.Void>)
+  public func readPrimaryCard(cardId: Swift.String? = nil, completion: @escaping CompletionResult<Swift.Void>)
   #endif
 }
-extension TangemSdk.BackupService {
+extension BackupService {
   public enum State : Swift.Equatable {
     case preparing
     case finalizingPrimaryCard
     case finalizingBackupCard(index: Swift.Int)
     case finished
-    public static func == (a: TangemSdk.BackupService.State, b: TangemSdk.BackupService.State) -> Swift.Bool
+    public static func == (a: BackupService.State, b: BackupService.State) -> Swift.Bool
   }
 }
 public struct PrimaryCard : Swift.Codable {
@@ -174,10 +173,10 @@ public struct PrimaryCard : Swift.Codable {
   public let linkingKey: Foundation.Data
   public let existingWalletsCount: Swift.Int
   public let isHDWalletAllowed: Swift.Bool
-  public let issuer: TangemSdk.Card.Issuer
-  public let walletCurves: [TangemSdk.EllipticCurve]
+  public let issuer: Card.Issuer
+  public let walletCurves: [EllipticCurve]
   public let batchId: Swift.String?
-  public let firmwareVersion: TangemSdk.FirmwareVersion?
+  public let firmwareVersion: FirmwareVersion?
   public let isKeysImportAllowed: Swift.Bool?
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
@@ -185,39 +184,39 @@ public struct PrimaryCard : Swift.Codable {
 public struct BackupCard : Swift.Codable {
   public let cardId: Swift.String
   public let cardPublicKey: Foundation.Data
-  public let firmwareVersion: TangemSdk.FirmwareVersion?
+  public let firmwareVersion: FirmwareVersion?
   public let batchId: Swift.String?
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
 public protocol CardSessionRunnable {
-  var preflightReadMode: TangemSdk.PreflightReadMode { get }
+  var preflightReadMode: PreflightReadMode { get }
   var shouldAskForAccessCode: Swift.Bool { get }
-  var encryptionMode: TangemSdk.EncryptionMode { get }
+  var encryptionMode: EncryptionMode { get }
   associatedtype Response
-  func prepare(_ session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<Swift.Void>)
-  func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<Self.Response>)
+  func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+  func run(in session: CardSession, completion: @escaping CompletionResult<Self.Response>)
 }
-extension TangemSdk.CardSessionRunnable {
-  public var preflightReadMode: TangemSdk.PreflightReadMode {
+extension CardSessionRunnable {
+  public var preflightReadMode: PreflightReadMode {
     get
   }
   public var shouldAskForAccessCode: Swift.Bool {
     get
   }
-  public var encryptionMode: TangemSdk.EncryptionMode {
+  public var encryptionMode: EncryptionMode {
     get
   }
-  public func prepare(_ session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<Swift.Void>)
+  public func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
 }
-extension TangemSdk.CardSessionRunnable where Self.Response : TangemSdk.JSONStringConvertible {
-  public func eraseToAnyRunnable() -> TangemSdk.AnyJSONRPCRunnable
+extension CardSessionRunnable where Self.Response : JSONStringConvertible {
+  public func eraseToAnyRunnable() -> AnyJSONRPCRunnable
 }
 final public class TlvDecoder {
-  public init(tlv: [TangemSdk.Tlv])
-  final public func decode<T>(_ tag: TangemSdk.TlvTag) throws -> T where T : Swift.ExpressibleByNilLiteral
-  final public func decode<T>(_ tag: TangemSdk.TlvTag) throws -> T
-  final public func decodeArray<T>(_ tag: TangemSdk.TlvTag) throws -> [T]
+  public init(tlv: [Tlv])
+  final public func decode<T>(_ tag: TlvTag) throws -> T where T : Swift.ExpressibleByNilLiteral
+  final public func decode<T>(_ tag: TlvTag) throws -> T
+  final public func decodeArray<T>(_ tag: TlvTag) throws -> [T]
   @objc deinit
 }
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
@@ -226,43 +225,43 @@ final public class WriteIssuerExtraDataCommand {
   public init(issuerData: Foundation.Data, issuerPublicKey: Foundation.Data? = nil, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
   @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  public typealias Response = TangemSdk.SuccessResponse
+  public typealias Response = SuccessResponse
 }
 public struct CardConfig : Swift.Decodable {
   public init(from decoder: any Swift.Decoder) throws
 }
 public struct AnyMasterKeyFactory {
-  public init(mnemonic: TangemSdk.Mnemonic, passphrase: Swift.String)
-  public func makeMasterKey(for curve: TangemSdk.EllipticCurve) throws -> TangemSdk.ExtendedPrivateKey
+  public init(mnemonic: Mnemonic, passphrase: Swift.String)
+  public func makeMasterKey(for curve: EllipticCurve) throws -> ExtendedPrivateKey
 }
 public class PersonalizeCommand {
-  public var preflightReadMode: TangemSdk.PreflightReadMode {
+  public var preflightReadMode: PreflightReadMode {
     get
   }
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(config: TangemSdk.CardConfig, issuer: TangemSdk.Issuer, manufacturer: TangemSdk.Manufacturer, acquirer: TangemSdk.Acquirer? = nil)
+  public init(config: CardConfig, issuer: Issuer, manufacturer: Manufacturer, acquirer: Acquirer? = nil)
   #endif
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.Card>)
-  public typealias Response = TangemSdk.Card
+  public func run(in session: CardSession, completion: @escaping CompletionResult<Card>)
+  public typealias Response = Card
   @objc deinit
 }
 @_hasMissingDesignatedInitializers final public class ReadCommand {
-  final public var preflightReadMode: TangemSdk.PreflightReadMode {
+  final public var preflightReadMode: PreflightReadMode {
     get
   }
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.Card>)
-  public typealias Response = TangemSdk.Card
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<Card>)
+  public typealias Response = Card
 }
 @_hasMissingDesignatedInitializers public class Storage {
   @objc deinit
 }
 public protocol TangemSdkLogger {
-  func log(_ message: Swift.String, level: TangemSdk.Log.Level)
+  func log(_ message: Swift.String, level: Log.Level)
 }
-public struct FileHashData : TangemSdk.JSONStringConvertible {
+public struct FileHashData : JSONStringConvertible {
   public let startingHash: Foundation.Data
   public let finalizingHash: Foundation.Data
   public var startingSignature: Foundation.Data?
@@ -272,7 +271,7 @@ public struct FileHashData : TangemSdk.JSONStringConvertible {
   #endif
   public func encode(to encoder: any Swift.Encoder) throws
 }
-public enum TangemEndpoint : TangemSdk.NetworkEndpoint {
+public enum TangemEndpoint : NetworkEndpoint {
   case cardData(cardId: Swift.String, cardPublicKey: Foundation.Data)
   case artworks(cardId: Swift.String, cardPublicKey: Foundation.Data)
   public var baseUrl: Swift.String {
@@ -298,7 +297,7 @@ public enum TangemEndpoint : TangemSdk.NetworkEndpoint {
     get
   }
 }
-public struct SignResponse : TangemSdk.JSONStringConvertible {
+public struct SignResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let signatures: [Foundation.Data]
   public let totalSignedHashes: Swift.Int?
@@ -307,21 +306,21 @@ public struct SignResponse : TangemSdk.JSONStringConvertible {
 public struct BIP44 {
   public let coinType: Swift.UInt32
   public let account: Swift.UInt32
-  public let change: TangemSdk.BIP44.Chain
+  public let change: BIP44.Chain
   public let addressIndex: Swift.UInt32
   public static let purpose: Swift.UInt32
-  public init(coinType: Swift.UInt32, account: Swift.UInt32, change: TangemSdk.BIP44.Chain, addressIndex: Swift.UInt32)
+  public init(coinType: Swift.UInt32, account: Swift.UInt32, change: BIP44.Chain, addressIndex: Swift.UInt32)
   public init(coinType: Swift.UInt32)
-  public func buildPath() -> TangemSdk.DerivationPath
+  public func buildPath() -> DerivationPath
 }
-extension TangemSdk.BIP44 {
+extension BIP44 {
   public enum Chain {
     case external
     case `internal`
     public var index: Swift.UInt32 {
       get
     }
-    public static func == (a: TangemSdk.BIP44.Chain, b: TangemSdk.BIP44.Chain) -> Swift.Bool
+    public static func == (a: BIP44.Chain, b: BIP44.Chain) -> Swift.Bool
     public func hash(into hasher: inout Swift.Hasher)
     public var hashValue: Swift.Int {
       get
@@ -331,53 +330,53 @@ extension TangemSdk.BIP44 {
 extension Foundation.Date {
   public func toString(style: Foundation.DateFormatter.Style = .medium, locale: Foundation.Locale = .current) -> Swift.String
 }
-public struct CreateWalletResponse : TangemSdk.JSONStringConvertible {
+public struct CreateWalletResponse : JSONStringConvertible {
   public let cardId: Swift.String
-  public let wallet: TangemSdk.Card.Wallet
+  public let wallet: Card.Wallet
   public func encode(to encoder: any Swift.Encoder) throws
 }
 @_hasMissingDesignatedInitializers public class ResetCodesController {
-  public var cardIdDisplayFormat: TangemSdk.CardIdDisplayFormat
+  public var cardIdDisplayFormat: CardIdDisplayFormat
   @objc deinit
   #if compiler(>=5.3) && $NonescapableTypes
-  public func start(codeType: TangemSdk.UserCodeType, cardId: Swift.String?, completion: @escaping TangemSdk.CompletionResult<Swift.String>)
+  public func start(codeType: UserCodeType, cardId: Swift.String?, completion: @escaping CompletionResult<Swift.String>)
   #endif
 }
 public struct BiometricsSecureEnclaveService {
   public init()
 }
-extension TangemSdk.BiometricsSecureEnclaveService {
+extension BiometricsSecureEnclaveService {
   #if compiler(>=5.3) && $NonescapableTypes
   public func sign(data: Foundation.Data, keyTag: Swift.String, context: LocalAuthentication.LAContext?) throws -> Foundation.Data
   #endif
   public func verify(signature: Foundation.Data, message: Foundation.Data, keyTag: Swift.String, context: LocalAuthentication.LAContext) throws -> Swift.Bool
 }
-extension TangemSdk.BiometricsSecureEnclaveService {
+extension BiometricsSecureEnclaveService {
   #if compiler(>=5.3) && $NonescapableTypes
   public func encryptData(_ data: Foundation.Data, keyTag: Swift.String, context: LocalAuthentication.LAContext?) throws -> Foundation.Data
   #endif
   public func decryptData(_ data: Foundation.Data, keyTag: Swift.String, context: LocalAuthentication.LAContext) throws -> Foundation.Data
 }
-public class CreateWalletTask : TangemSdk.CardSessionRunnable {
-  public var encryptionMode: TangemSdk.EncryptionMode {
+public class CreateWalletTask : CardSessionRunnable {
+  public var encryptionMode: EncryptionMode {
     get
   }
-  public init(curve: TangemSdk.EllipticCurve)
-  public init(curve: TangemSdk.EllipticCurve, privateKey: TangemSdk.ExtendedPrivateKey)
+  public init(curve: EllipticCurve)
+  public init(curve: EllipticCurve, privateKey: ExtendedPrivateKey)
   @objc deinit
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.CreateWalletResponse>)
-  public typealias Response = TangemSdk.CreateWalletResponse
+  public func run(in session: CardSession, completion: @escaping CompletionResult<CreateWalletResponse>)
+  public typealias Response = CreateWalletResponse
 }
 @_hasMissingDesignatedInitializers public class TerminalKeysService {
   #if compiler(>=5.3) && $NonescapableTypes
-  public var keys: TangemSdk.KeyPair? {
+  public var keys: KeyPair? {
     get
     set
   }
   #endif
   @objc deinit
 }
-extension TangemSdk.Card {
+extension Card {
   public struct UserSettings : Swift.Codable {
     public var isUserCodeRecoveryAllowed: Swift.Bool {
       get
@@ -398,9 +397,9 @@ public enum EntropyLength : Swift.Int, Swift.CaseIterable {
   #if compiler(>=5.3) && $NonescapableTypes
   public init?(rawValue: Swift.Int)
   #endif
-  public typealias AllCases = [TangemSdk.EntropyLength]
+  public typealias AllCases = [EntropyLength]
   public typealias RawValue = Swift.Int
-  nonisolated public static var allCases: [TangemSdk.EntropyLength] {
+  nonisolated public static var allCases: [EntropyLength] {
     get
   }
   public var rawValue: Swift.Int {
@@ -411,14 +410,14 @@ public enum EntropyLength : Swift.Int, Swift.CaseIterable {
   public static var isAvailable: Swift.Bool {
     get
   }
-  public static func requestAccess(localizedReason: Swift.String, completion: @escaping TangemSdk.CompletionResult<LocalAuthentication.LAContext>)
-  public static func requestAccess(localizedReason: Swift.String) async throws(TangemSdk.TangemSdkError) -> LocalAuthentication.LAContext
+  public static func requestAccess(localizedReason: Swift.String, completion: @escaping CompletionResult<LocalAuthentication.LAContext>)
+  public static func requestAccess(localizedReason: Swift.String) async throws(TangemSdkError) -> LocalAuthentication.LAContext
   @objc deinit
 }
 public struct BLSUtils {
   public init()
 }
-extension TangemSdk.BLSUtils {
+extension BLSUtils {
   public func augSchemeMplG2Map(publicKey: Swift.String, message: Swift.String) throws -> Swift.String
   public func aggregate(signatures: [Swift.String]) throws -> Swift.String
   public func makePublicKey(from privateKey: Swift.String) throws -> Swift.String
@@ -426,11 +425,11 @@ extension TangemSdk.BLSUtils {
   public func verify(signatures: [Swift.String], with publicKey: Swift.String, message: Swift.String) throws -> Swift.Bool
   public func sign(hash: Swift.String, privateKey: Foundation.Data) throws -> Swift.String
 }
-public struct Issuer : Swift.Codable, TangemSdk.JSONStringConvertible {
+public struct Issuer : Swift.Codable, JSONStringConvertible {
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-public struct ExtendedPrivateKey : Swift.Equatable, Swift.Hashable, TangemSdk.JSONStringConvertible, Swift.Codable {
+public struct ExtendedPrivateKey : Swift.Equatable, Swift.Hashable, JSONStringConvertible, Swift.Codable {
   public let privateKey: Foundation.Data
   public let chainCode: Foundation.Data
   public let depth: Swift.Int
@@ -438,10 +437,10 @@ public struct ExtendedPrivateKey : Swift.Equatable, Swift.Hashable, TangemSdk.JS
   public let childNumber: Swift.UInt32
   public init(privateKey: Foundation.Data, chainCode: Foundation.Data, depth: Swift.Int, parentFingerprint: Foundation.Data, childNumber: Swift.UInt32) throws
   public init(privateKey: Foundation.Data, chainCode: Foundation.Data)
-  public func makePublicKey(for curve: TangemSdk.EllipticCurve) throws -> TangemSdk.ExtendedPublicKey
-  public func serializeToWIFCompressed(for networkType: TangemSdk.NetworkType) -> Swift.String
-  public func sign(_ data: Foundation.Data, curve: TangemSdk.EllipticCurve) throws -> Foundation.Data
-  public static func == (a: TangemSdk.ExtendedPrivateKey, b: TangemSdk.ExtendedPrivateKey) -> Swift.Bool
+  public func makePublicKey(for curve: EllipticCurve) throws -> ExtendedPublicKey
+  public func serializeToWIFCompressed(for networkType: NetworkType) -> Swift.String
+  public func sign(_ data: Foundation.Data, curve: EllipticCurve) throws -> Foundation.Data
+  public static func == (a: ExtendedPrivateKey, b: ExtendedPrivateKey) -> Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
@@ -449,25 +448,25 @@ public struct ExtendedPrivateKey : Swift.Equatable, Swift.Hashable, TangemSdk.JS
   }
   public init(from decoder: any Swift.Decoder) throws
 }
-extension TangemSdk.ExtendedPrivateKey : TangemSdk.ExtendedKeySerializable {
-  public init(from extendedKeyString: Swift.String, networkType: TangemSdk.NetworkType) throws
-  public func serialize(for networkType: TangemSdk.NetworkType) throws -> Swift.String
+extension ExtendedPrivateKey : ExtendedKeySerializable {
+  public init(from extendedKeyString: Swift.String, networkType: NetworkType) throws
+  public func serialize(for networkType: NetworkType) throws -> Swift.String
 }
 @_hasMissingDesignatedInitializers final public class JSONRPCConverter {
-  final public var handlers: [Swift.String : any TangemSdk.JSONRPCHandler] {
+  final public var handlers: [Swift.String : any JSONRPCHandler] {
     get
   }
   @objc deinit
-  final public func register(_ object: any TangemSdk.JSONRPCHandler)
-  final public func convert(request: TangemSdk.JSONRPCRequest) throws -> TangemSdk.AnyJSONRPCRunnable
-  final public func getHandler(from request: TangemSdk.JSONRPCRequest) throws -> any TangemSdk.JSONRPCHandler
+  final public func register(_ object: any JSONRPCHandler)
+  final public func convert(request: JSONRPCRequest) throws -> AnyJSONRPCRunnable
+  final public func getHandler(from request: JSONRPCRequest) throws -> any JSONRPCHandler
 }
-extension TangemSdk.JSONRPCConverter {
-  public static func makeDefaultConverter(networkService: TangemSdk.NetworkService) -> TangemSdk.JSONRPCConverter
+extension JSONRPCConverter {
+  public static func makeDefaultConverter(networkService: NetworkService) -> JSONRPCConverter
 }
 public protocol JSONRPCHandler {
   var method: Swift.String { get }
-  func makeRunnable(from parameters: [Swift.String : Any]) throws -> TangemSdk.AnyJSONRPCRunnable
+  func makeRunnable(from parameters: [Swift.String : Any]) throws -> AnyJSONRPCRunnable
 }
 public struct JSONRPCRequest {
   public let jsonrpc: Swift.String
@@ -481,41 +480,41 @@ public struct JSONRPCRequest {
   public init(data: Foundation.Data) throws
   public init(json: [Swift.String : Any]) throws
 }
-public struct JSONRPCResponse : TangemSdk.JSONStringConvertible {
+public struct JSONRPCResponse : JSONStringConvertible {
   public let jsonrpc: Swift.String
-  public let result: TangemSdk.AnyJSONRPCResponse?
-  public let error: TangemSdk.JSONRPCError?
+  public let result: AnyJSONRPCResponse?
+  public let error: JSONRPCError?
   public let id: Swift.Int?
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(id: Swift.Int?, result: TangemSdk.AnyJSONRPCResponse?, error: TangemSdk.JSONRPCError?)
+  public init(id: Swift.Int?, result: AnyJSONRPCResponse?, error: JSONRPCError?)
   #endif
   public func encode(to encoder: any Swift.Encoder) throws
 }
-extension Swift.Array : TangemSdk.JSONStringConvertible where Element : TangemSdk.JSONStringConvertible {
+extension Swift.Array : JSONStringConvertible where Element : JSONStringConvertible {
 }
-public struct JSONRPCError : Swift.Error, TangemSdk.JSONStringConvertible, Swift.Equatable {
+public struct JSONRPCError : Swift.Error, JSONStringConvertible, Swift.Equatable {
   public let code: Swift.Int
   public let message: Swift.String
-  public let data: TangemSdk.JSONRPCErrorData?
+  public let data: JSONRPCErrorData?
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(code: Swift.Int, message: Swift.String, data: TangemSdk.JSONRPCErrorData?)
+  public init(code: Swift.Int, message: Swift.String, data: JSONRPCErrorData?)
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(_ code: TangemSdk.JSONRPCError.Code, data: TangemSdk.JSONRPCErrorData? = nil)
+  public init(_ code: JSONRPCError.Code, data: JSONRPCErrorData? = nil)
   #endif
-  public static func == (a: TangemSdk.JSONRPCError, b: TangemSdk.JSONRPCError) -> Swift.Bool
+  public static func == (a: JSONRPCError, b: JSONRPCError) -> Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
 }
-public struct JSONRPCErrorData : Swift.Encodable, Swift.Equatable, TangemSdk.JSONStringConvertible {
+public struct JSONRPCErrorData : Swift.Encodable, Swift.Equatable, JSONStringConvertible {
   public let code: Swift.Int
   public let message: Swift.String
-  public static func == (a: TangemSdk.JSONRPCErrorData, b: TangemSdk.JSONRPCErrorData) -> Swift.Bool
+  public static func == (a: JSONRPCErrorData, b: JSONRPCErrorData) -> Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
 }
-extension TangemSdk.JSONRPCErrorData {
-  public init(_ code: TangemSdk.JSONRPCError.Code, message: Swift.String)
+extension JSONRPCErrorData {
+  public init(_ code: JSONRPCError.Code, message: Swift.String)
 }
-extension TangemSdk.JSONRPCError {
+extension JSONRPCError {
   public enum Code : Swift.Int {
     case parseError
     case invalidRequest
@@ -532,9 +531,9 @@ extension TangemSdk.JSONRPCError {
     }
   }
 }
-public class ConsoleLogger : TangemSdk.TangemSdkLogger {
+public class ConsoleLogger : TangemSdkLogger {
   public init()
-  public func log(_ message: Swift.String, level: TangemSdk.Log.Level)
+  public func log(_ message: Swift.String, level: Log.Level)
   @objc deinit
 }
 public class BiometricsStorage {
@@ -553,11 +552,11 @@ public class NetworkService {
   public init(session: Foundation.URLSession, additionalHeaders: [Swift.String : Swift.String])
   @objc deinit
 }
-extension TangemSdk.NetworkService {
-  public func request<T>(_ endpoint: any TangemSdk.NetworkEndpoint) async throws -> T where T : Swift.Decodable
+extension NetworkService {
+  public func request<T>(_ endpoint: any NetworkEndpoint) async throws -> T where T : Swift.Decodable
 }
-extension TangemSdk.NetworkService {
-  public func requestPublisher<T>(_ endpoint: any TangemSdk.NetworkEndpoint) -> Combine.AnyPublisher<T, TangemSdk.NetworkServiceError> where T : Swift.Decodable
+extension NetworkService {
+  public func requestPublisher<T>(_ endpoint: any NetworkEndpoint) -> Combine.AnyPublisher<T, NetworkServiceError> where T : Swift.Decodable
 }
 public protocol NetworkEndpoint {
   var baseUrl: Swift.String { get }
@@ -615,14 +614,14 @@ public enum NFCTagType : Swift.Equatable, Swift.CustomStringConvertible {
   public var description: Swift.String {
     get
   }
-  public static func == (a: TangemSdk.NFCTagType, b: TangemSdk.NFCTagType) -> Swift.Bool
+  public static func == (a: NFCTagType, b: NFCTagType) -> Swift.Bool
 }
 public protocol CardReader : AnyObject {
   var isPaused: Swift.Bool { get }
   var isReady: Swift.Bool { get }
   var alertMessage: Swift.String { get set }
-  var tag: Combine.CurrentValueSubject<TangemSdk.NFCTagType, TangemSdk.TangemSdkError> { get }
-  var viewEventsPublisher: Combine.CurrentValueSubject<TangemSdk.CardReaderViewEvent, Swift.Never> { get }
+  var tag: Combine.CurrentValueSubject<NFCTagType, TangemSdkError> { get }
+  var viewEventsPublisher: Combine.CurrentValueSubject<CardReaderViewEvent, Swift.Never> { get }
   func startSession(with message: Swift.String)
   func resumeSession()
   #if compiler(>=5.3) && $NonescapableTypes
@@ -632,10 +631,10 @@ public protocol CardReader : AnyObject {
   func pauseSession(with errorMessage: Swift.String?)
   #endif
   func stopSession(with error: any Swift.Error)
-  func sendPublisher(apdu: TangemSdk.CommandApdu) -> Combine.AnyPublisher<TangemSdk.ResponseApdu, TangemSdk.TangemSdkError>
+  func sendPublisher(apdu: CommandApdu) -> Combine.AnyPublisher<ResponseApdu, TangemSdkError>
   func restartPolling(silent: Swift.Bool)
 }
-extension TangemSdk.CardReader {
+extension CardReader {
   #if compiler(>=5.3) && $NonescapableTypes
   public func pauseSession(with errorMessage: Swift.String? = nil)
   #endif
@@ -649,19 +648,19 @@ public enum CardReaderViewEvent : Swift.Equatable {
   case sessionStopped
   case tagConnected
   case tagLost
-  public static func == (a: TangemSdk.CardReaderViewEvent, b: TangemSdk.CardReaderViewEvent) -> Swift.Bool
+  public static func == (a: CardReaderViewEvent, b: CardReaderViewEvent) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
   }
 }
-public struct WalletData : Swift.Equatable, Swift.Hashable, Swift.Codable, TangemSdk.JSONStringConvertible {
+public struct WalletData : Swift.Equatable, Swift.Hashable, Swift.Codable, JSONStringConvertible {
   public let blockchain: Swift.String
-  public let token: TangemSdk.WalletData.Token?
+  public let token: WalletData.Token?
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(blockchain: Swift.String, token: TangemSdk.WalletData.Token?)
+  public init(blockchain: Swift.String, token: WalletData.Token?)
   #endif
-  public static func == (a: TangemSdk.WalletData, b: TangemSdk.WalletData) -> Swift.Bool
+  public static func == (a: WalletData, b: WalletData) -> Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
@@ -669,14 +668,14 @@ public struct WalletData : Swift.Equatable, Swift.Hashable, Swift.Codable, Tange
   }
   public init(from decoder: any Swift.Decoder) throws
 }
-extension TangemSdk.WalletData {
-  public struct Token : Swift.Equatable, Swift.Hashable, Swift.Codable, TangemSdk.JSONStringConvertible {
+extension WalletData {
+  public struct Token : Swift.Equatable, Swift.Hashable, Swift.Codable, JSONStringConvertible {
     public let name: Swift.String
     public let symbol: Swift.String
     public let contractAddress: Swift.String
     public let decimals: Swift.Int
     public init(name: Swift.String, symbol: Swift.String, contractAddress: Swift.String, decimals: Swift.Int)
-    public static func == (a: TangemSdk.WalletData.Token, b: TangemSdk.WalletData.Token) -> Swift.Bool
+    public static func == (a: WalletData.Token, b: WalletData.Token) -> Swift.Bool
     public func encode(to encoder: any Swift.Encoder) throws
     public func hash(into hasher: inout Swift.Hasher)
     public var hashValue: Swift.Int {
@@ -710,11 +709,11 @@ extension Foundation.Data {
     get
   }
   public init(hexString: Swift.String)
-  public init(_ byte: TangemSdk.Byte)
+  public init(_ byte: Byte)
   public func getSha256() -> Foundation.Data
   public func getSha512() -> Foundation.Data
   public func getDoubleSha256() -> Foundation.Data
-  public var toBytes: [TangemSdk.Byte] {
+  public var toBytes: [Byte] {
     get
   }
   public func pbkdf2(hash: CommonCrypto.CCPBKDFAlgorithm, salt: Foundation.Data, keyByteCount: Swift.Int, rounds: Swift.Int) throws -> Foundation.Data
@@ -723,7 +722,7 @@ extension Foundation.Data {
   public func crc16() -> Foundation.Data
   public func encrypt(with encryptionKey: Foundation.Data) throws -> Foundation.Data
   public func decrypt(with encryptionKey: Foundation.Data) throws -> Foundation.Data
-  public func sign(privateKey: Foundation.Data, curve: TangemSdk.EllipticCurve = .secp256k1) throws -> Foundation.Data
+  public func sign(privateKey: Foundation.Data, curve: EllipticCurve = .secp256k1) throws -> Foundation.Data
 }
 public struct Message : Swift.Codable {
   #if compiler(>=5.3) && $NonescapableTypes
@@ -735,16 +734,16 @@ public struct Message : Swift.Codable {
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-@_hasMissingDesignatedInitializers public class AnyJSONRPCRunnable : TangemSdk.CardSessionRunnable {
-  public var preflightReadMode: TangemSdk.PreflightReadMode
+@_hasMissingDesignatedInitializers public class AnyJSONRPCRunnable : CardSessionRunnable {
+  public var preflightReadMode: PreflightReadMode
   public var id: Swift.Int?
   @objc deinit
-  public func prepare(_ session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<Swift.Void>)
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.AnyJSONRPCResponse>)
-  public typealias Response = TangemSdk.AnyJSONRPCResponse
+  public func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+  public func run(in session: CardSession, completion: @escaping CompletionResult<AnyJSONRPCResponse>)
+  public typealias Response = AnyJSONRPCResponse
 }
-public struct AnyJSONRPCResponse : TangemSdk.JSONStringConvertible {
-  public init<T>(_ response: T) where T : TangemSdk.JSONStringConvertible
+public struct AnyJSONRPCResponse : JSONStringConvertible {
+  public init<T>(_ response: T) where T : JSONStringConvertible
   public func encode(to encoder: any Swift.Encoder) throws
 }
 @_hasMissingDesignatedInitializers public class TrustedCardsRepo {
@@ -797,14 +796,14 @@ extension Swift.String {
   #endif
 }
 @_hasMissingDesignatedInitializers public class CardSession {
-  final public let viewDelegate: any TangemSdk.SessionViewDelegate
-  public var environment: TangemSdk.SessionEnvironment {
+  final public let viewDelegate: any SessionViewDelegate
+  public var environment: SessionEnvironment {
     get
   }
   @objc deinit
-  public func start<T>(with runnable: T, completion: @escaping TangemSdk.CompletionResult<T.Response>) where T : TangemSdk.CardSessionRunnable
+  public func start<T>(with runnable: T, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
   #if compiler(>=5.3) && $NonescapableTypes
-  public func start(_ onSessionStarted: @escaping (TangemSdk.CardSession, TangemSdk.TangemSdkError?) -> Swift.Void)
+  public func start(_ onSessionStarted: @escaping (CardSession, TangemSdkError?) -> Swift.Void)
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
   public func stop(message: Swift.String? = nil, completion: (() -> Swift.Void)? = nil)
@@ -814,12 +813,12 @@ extension Swift.String {
   #endif
   public func pause(message: Swift.String)
   #if compiler(>=5.3) && $NonescapableTypes
-  public func pause(error: TangemSdk.TangemSdkError? = nil)
+  public func pause(error: TangemSdkError? = nil)
   #endif
   public func resume()
   public func restartPolling(silent: Swift.Bool = false)
-  final public func send(apdu: TangemSdk.CommandApdu, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ResponseApdu>)
-  public func updateConfig(with newConfig: TangemSdk.Config)
+  final public func send(apdu: CommandApdu, completion: @escaping CompletionResult<ResponseApdu>)
+  public func updateConfig(with newConfig: Config)
 }
 public enum EllipticCurve : Swift.String, Swift.CaseIterable {
   case secp256k1
@@ -833,31 +832,31 @@ public enum EllipticCurve : Swift.String, Swift.CaseIterable {
   #if compiler(>=5.3) && $NonescapableTypes
   public init?(rawValue: Swift.String)
   #endif
-  public typealias AllCases = [TangemSdk.EllipticCurve]
+  public typealias AllCases = [EllipticCurve]
   public typealias RawValue = Swift.String
-  nonisolated public static var allCases: [TangemSdk.EllipticCurve] {
+  nonisolated public static var allCases: [EllipticCurve] {
     get
   }
   public var rawValue: Swift.String {
     get
   }
 }
-extension TangemSdk.EllipticCurve {
+extension EllipticCurve {
   public var supportsDerivation: Swift.Bool {
     get
   }
 }
 public class ResetPinService {
-  public var currentState: TangemSdk.ResetPinService.State {
+  public var currentState: ResetPinService.State {
     get
   }
-  public var currentStatePublisher: Combine.AnyPublisher<TangemSdk.ResetPinService.State, Swift.Never> {
+  public var currentStatePublisher: Combine.AnyPublisher<ResetPinService.State, Swift.Never> {
     get
   }
-  public var error: TangemSdk.TangemSdkError? {
+  public var error: TangemSdkError? {
     get
   }
-  public init(config: TangemSdk.Config)
+  public init(config: Config)
   @objc deinit
   public func setAccessCode(_ code: Swift.String) throws
   public func setPasscode(_ code: Swift.String) throws
@@ -865,16 +864,16 @@ public class ResetPinService {
   public func proceed(with resetCardId: Swift.String? = nil)
   #endif
 }
-extension TangemSdk.ResetPinService {
+extension ResetPinService {
   public enum State : Swift.Equatable, Swift.CaseIterable {
     case needCode
     case needScanResetCard
     case needScanConfirmationCard
     case needWriteResetCard
     case finished
-    public static func == (a: TangemSdk.ResetPinService.State, b: TangemSdk.ResetPinService.State) -> Swift.Bool
-    public typealias AllCases = [TangemSdk.ResetPinService.State]
-    nonisolated public static var allCases: [TangemSdk.ResetPinService.State] {
+    public static func == (a: ResetPinService.State, b: ResetPinService.State) -> Swift.Bool
+    public typealias AllCases = [ResetPinService.State]
+    nonisolated public static var allCases: [ResetPinService.State] {
       get
     }
     public func hash(into hasher: inout Swift.Hasher)
@@ -883,32 +882,32 @@ extension TangemSdk.ResetPinService {
     }
   }
 }
-extension TangemSdk.Card {
+extension Card {
   public struct Wallet : Swift.Codable {
     public let publicKey: Foundation.Data
     public let chainCode: Foundation.Data?
-    public let curve: TangemSdk.EllipticCurve
-    public let settings: TangemSdk.Card.Wallet.Settings
+    public let curve: EllipticCurve
+    public let settings: Card.Wallet.Settings
     public var totalSignedHashes: Swift.Int?
     public var remainingSignatures: Swift.Int?
     public let index: Swift.Int
     public let proof: Foundation.Data?
     public let isImported: Swift.Bool
     public var hasBackup: Swift.Bool
-    public var derivedKeys: TangemSdk.DerivedKeys
+    public var derivedKeys: DerivedKeys
     public func encode(to encoder: any Swift.Encoder) throws
     public init(from decoder: any Swift.Decoder) throws
   }
 }
-extension TangemSdk.Card.Wallet {
+extension Card.Wallet {
   public struct Settings : Swift.Codable {
     public let isPermanent: Swift.Bool
     public func encode(to encoder: any Swift.Encoder) throws
     public init(from decoder: any Swift.Decoder) throws
   }
 }
-extension TangemSdk.Card.Wallet {
-  public enum Status : Swift.Int, TangemSdk.JSONStringConvertible {
+extension Card.Wallet {
+  public enum Status : Swift.Int, JSONStringConvertible {
     case empty
     case loaded
     case purged
@@ -926,20 +925,20 @@ extension TangemSdk.Card.Wallet {
     }
   }
 }
-public struct WriteFilesResponse : TangemSdk.JSONStringConvertible {
+public struct WriteFilesResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let filesIndices: [Swift.Int]
   public func encode(to encoder: any Swift.Encoder) throws
 }
-final public class WriteFilesTask : TangemSdk.CardSessionRunnable {
-  public init(files: [TangemSdk.FileToWrite])
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.WriteFilesResponse>)
-  public typealias Response = TangemSdk.WriteFilesResponse
+final public class WriteFilesTask : CardSessionRunnable {
+  public init(files: [FileToWrite])
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<WriteFilesResponse>)
+  public typealias Response = WriteFilesResponse
   @objc deinit
 }
 public struct CardIdFormatter {
-  public var style: TangemSdk.CardIdDisplayFormat
-  public init(style: TangemSdk.CardIdDisplayFormat = .full)
+  public var style: CardIdDisplayFormat
+  public init(style: CardIdDisplayFormat = .full)
   #if compiler(>=5.3) && $NonescapableTypes
   public func string(from cardId: Swift.String) -> Swift.String?
   #endif
@@ -958,51 +957,51 @@ public struct FirmwareVersion : Swift.Codable {
   public var patch: Swift.Int {
     get
   }
-  public var type: TangemSdk.FirmwareVersion.FirmwareType {
+  public var type: FirmwareVersion.FirmwareType {
     get
   }
   public init(stringValue: Swift.String)
-  public init(major: Swift.Int, minor: Swift.Int, patch: Swift.Int = 0, type: TangemSdk.FirmwareVersion.FirmwareType = .sdk)
+  public init(major: Swift.Int, minor: Swift.Int, patch: Swift.Int = 0, type: FirmwareVersion.FirmwareType = .sdk)
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-extension TangemSdk.FirmwareVersion : Swift.Comparable {
-  public static func < (lhs: TangemSdk.FirmwareVersion, rhs: TangemSdk.FirmwareVersion) -> Swift.Bool
-  public static func == (lhs: TangemSdk.FirmwareVersion, rhs: TangemSdk.FirmwareVersion) -> Swift.Bool
-  public static func >= (lhs: TangemSdk.FirmwareVersion, rhs: TangemSdk.FirmwareVersion) -> Swift.Bool
+extension FirmwareVersion : Swift.Comparable {
+  public static func < (lhs: FirmwareVersion, rhs: FirmwareVersion) -> Swift.Bool
+  public static func == (lhs: FirmwareVersion, rhs: FirmwareVersion) -> Swift.Bool
+  public static func >= (lhs: FirmwareVersion, rhs: FirmwareVersion) -> Swift.Bool
   #if compiler(>=5.3) && $NonescapableTypes
-  public static func < (lhs: TangemSdk.FirmwareVersion?, rhs: TangemSdk.FirmwareVersion) -> Swift.Bool
+  public static func < (lhs: FirmwareVersion?, rhs: FirmwareVersion) -> Swift.Bool
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
-  public static func >= (lhs: TangemSdk.FirmwareVersion?, rhs: TangemSdk.FirmwareVersion) -> Swift.Bool
+  public static func >= (lhs: FirmwareVersion?, rhs: FirmwareVersion) -> Swift.Bool
   #endif
 }
-extension TangemSdk.FirmwareVersion {
-  public static let multiwalletAvailable: TangemSdk.FirmwareVersion
-  public static let blsAvailable: TangemSdk.FirmwareVersion
-  public static let isPasscodeStatusAvailable: TangemSdk.FirmwareVersion
-  public static let isAccessCodeStatusAvailable: TangemSdk.FirmwareVersion
-  public static let isDefaultPinsOptional: TangemSdk.FirmwareVersion
-  public static let filesAvailable: TangemSdk.FirmwareVersion
-  public static let hdWalletAvailable: TangemSdk.FirmwareVersion
-  public static let createWalletResponseAvailable: TangemSdk.FirmwareVersion
-  public static let backupAvailable: TangemSdk.FirmwareVersion
-  public static let walletOwnershipConfirmationAvailable: TangemSdk.FirmwareVersion
-  public static let keysImportAvailable: TangemSdk.FirmwareVersion
+extension FirmwareVersion {
+  public static let multiwalletAvailable: FirmwareVersion
+  public static let blsAvailable: FirmwareVersion
+  public static let isPasscodeStatusAvailable: FirmwareVersion
+  public static let isAccessCodeStatusAvailable: FirmwareVersion
+  public static let isDefaultPinsOptional: FirmwareVersion
+  public static let filesAvailable: FirmwareVersion
+  public static let hdWalletAvailable: FirmwareVersion
+  public static let createWalletResponseAvailable: FirmwareVersion
+  public static let backupAvailable: FirmwareVersion
+  public static let walletOwnershipConfirmationAvailable: FirmwareVersion
+  public static let keysImportAvailable: FirmwareVersion
   public static let visaRange: Swift.ClosedRange<Swift.Double>
-  public static let ed25519Slip0010Available: TangemSdk.FirmwareVersion
+  public static let ed25519Slip0010Available: FirmwareVersion
 }
-extension TangemSdk.FirmwareVersion {
-  public enum FirmwareType : Swift.String, Swift.CaseIterable, TangemSdk.JSONStringConvertible {
+extension FirmwareVersion {
+  public enum FirmwareType : Swift.String, Swift.CaseIterable, JSONStringConvertible {
     case sdk
     case release
     case special
     #if compiler(>=5.3) && $NonescapableTypes
     public init?(rawValue: Swift.String)
     #endif
-    public typealias AllCases = [TangemSdk.FirmwareVersion.FirmwareType]
+    public typealias AllCases = [FirmwareVersion.FirmwareType]
     public typealias RawValue = Swift.String
-    nonisolated public static var allCases: [TangemSdk.FirmwareVersion.FirmwareType] {
+    nonisolated public static var allCases: [FirmwareVersion.FirmwareType] {
       get
     }
     public var rawValue: Swift.String {
@@ -1010,7 +1009,7 @@ extension TangemSdk.FirmwareVersion {
     }
   }
 }
-public struct GenerateOTPResponse : TangemSdk.JSONStringConvertible {
+public struct GenerateOTPResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let rootOTP: Foundation.Data
   public let rootOTPCounter: Swift.Int
@@ -1020,35 +1019,35 @@ public struct GenerateOTPResponse : TangemSdk.JSONStringConvertible {
 public class GenerateOTPCommand {
   public init()
   @objc deinit
-  public typealias Response = TangemSdk.GenerateOTPResponse
+  public typealias Response = GenerateOTPResponse
 }
 @_hasMissingDesignatedInitializers public class OnlineAttestationCache {
   @objc deinit
 }
-public struct AttestWalletKeyResponse : TangemSdk.JSONStringConvertible {
+public struct AttestWalletKeyResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let salt: Foundation.Data
   public let walletSignature: Foundation.Data
   public let challenge: Foundation.Data
   public let cardSignature: Foundation.Data?
   public let publicKeySalt: Foundation.Data?
-  public let walletStatus: TangemSdk.Card.Wallet.Status?
+  public let walletStatus: Card.Wallet.Status?
   public func encode(to encoder: any Swift.Encoder) throws
 }
 final public class AttestWalletKeyTask {
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(walletPublicKey: Foundation.Data, derivationPath: TangemSdk.DerivationPath? = nil, challenge: Foundation.Data? = nil, confirmationMode: TangemSdk.AttestWalletKeyTask.ConfirmationMode = .dynamic)
+  public init(walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil, challenge: Foundation.Data? = nil, confirmationMode: AttestWalletKeyTask.ConfirmationMode = .dynamic)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.AttestWalletKeyResponse>)
-  public typealias Response = TangemSdk.AttestWalletKeyResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<AttestWalletKeyResponse>)
+  public typealias Response = AttestWalletKeyResponse
 }
-extension TangemSdk.AttestWalletKeyTask {
+extension AttestWalletKeyTask {
   public enum ConfirmationMode {
     case none
     case `static`
     case dynamic
-    public static func == (a: TangemSdk.AttestWalletKeyTask.ConfirmationMode, b: TangemSdk.AttestWalletKeyTask.ConfirmationMode) -> Swift.Bool
+    public static func == (a: AttestWalletKeyTask.ConfirmationMode, b: AttestWalletKeyTask.ConfirmationMode) -> Swift.Bool
     public func hash(into hasher: inout Swift.Hasher)
     public var hashValue: Swift.Int {
       get
@@ -1057,18 +1056,18 @@ extension TangemSdk.AttestWalletKeyTask {
 }
 public struct DerivationPath : Swift.Equatable, Swift.Hashable {
   public let rawPath: Swift.String
-  public let nodes: [TangemSdk.DerivationNode]
+  public let nodes: [DerivationNode]
   public init()
   public init(rawPath: Swift.String) throws
-  public init(nodes: [TangemSdk.DerivationNode])
-  public func extendedPath(with node: TangemSdk.DerivationNode) -> TangemSdk.DerivationPath
-  public static func == (a: TangemSdk.DerivationPath, b: TangemSdk.DerivationPath) -> Swift.Bool
+  public init(nodes: [DerivationNode])
+  public func extendedPath(with node: DerivationNode) -> DerivationPath
+  public static func == (a: DerivationPath, b: DerivationPath) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
   }
 }
-extension TangemSdk.DerivationPath : Swift.Codable {
+extension DerivationPath : Swift.Codable {
   public init(from decoder: any Swift.Decoder) throws
   public func encode(to encoder: any Swift.Encoder) throws
 }
@@ -1076,26 +1075,26 @@ final public class ChangeFileSettingsCommand {
   final public var requiresPasscode: Swift.Bool {
     get
   }
-  public init(fileIndex: Swift.Int, newPermissions: TangemSdk.FileVisibility)
-  public typealias Response = TangemSdk.SuccessResponse
+  public init(fileIndex: Swift.Int, newPermissions: FileVisibility)
+  public typealias Response = SuccessResponse
   @objc deinit
 }
-public struct SuccessResponse : TangemSdk.JSONStringConvertible {
+public struct SuccessResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public init(cardId: Swift.String)
   public func encode(to encoder: any Swift.Encoder) throws
 }
 public struct CardArtworksProviderFactory {
-  public init(networkService: TangemSdk.NetworkService)
-  public func makeArtworksProvider(for card: TangemSdk.Card) -> any TangemSdk.CardArtworksProvider
-  public func makeArtworksProvider(cardId: Swift.String, cardPublicKey: Foundation.Data, issuerPublicKey: Foundation.Data, firmwareVersionType: TangemSdk.FirmwareVersion.FirmwareType) -> any TangemSdk.CardArtworksProvider
+  public init(networkService: NetworkService)
+  public func makeArtworksProvider(for card: Card) -> any CardArtworksProvider
+  public func makeArtworksProvider(cardId: Swift.String, cardPublicKey: Foundation.Data, issuerPublicKey: Foundation.Data, firmwareVersionType: FirmwareVersion.FirmwareType) -> any CardArtworksProvider
 }
-extension TangemSdk.BIP39 {
+extension BIP39 {
   public enum Wordlist : Swift.CaseIterable {
     case en
-    public static func == (a: TangemSdk.BIP39.Wordlist, b: TangemSdk.BIP39.Wordlist) -> Swift.Bool
-    public typealias AllCases = [TangemSdk.BIP39.Wordlist]
-    nonisolated public static var allCases: [TangemSdk.BIP39.Wordlist] {
+    public static func == (a: BIP39.Wordlist, b: BIP39.Wordlist) -> Swift.Bool
+    public typealias AllCases = [BIP39.Wordlist]
+    nonisolated public static var allCases: [BIP39.Wordlist] {
       get
     }
     public func hash(into hasher: inout Swift.Hasher)
@@ -1104,7 +1103,7 @@ extension TangemSdk.BIP39 {
     }
   }
 }
-extension TangemSdk.BIP39.Wordlist {
+extension BIP39.Wordlist {
   public var words: [Swift.String] {
     get
   }
@@ -1117,8 +1116,8 @@ public struct RIPEMD160 {
 final public class PurgeWalletCommand {
   public init(publicKey: Foundation.Data)
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  public typealias Response = TangemSdk.SuccessResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
 }
 public class AccessCodeRepository {
   public init()
@@ -1128,7 +1127,7 @@ public class AccessCodeRepository {
   public func deleteAccessCode(for cardIds: [Swift.String]) throws
   public func clear()
 }
-public struct ReadIssuerDataResponse : TangemSdk.JSONStringConvertible {
+public struct ReadIssuerDataResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let issuerData: Foundation.Data
   public let issuerDataSignature: Foundation.Data
@@ -1141,11 +1140,11 @@ final public class ReadIssuerDataCommand {
   public init(issuerPublicKey: Foundation.Data? = nil)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ReadIssuerDataResponse>)
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<ReadIssuerDataResponse>)
   @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  public typealias Response = TangemSdk.ReadIssuerDataResponse
+  public typealias Response = ReadIssuerDataResponse
 }
-extension TangemSdk.Card {
+extension Card {
   public struct Settings : Swift.Codable {
     public let securityDelay: Swift.Int
     public let maxWalletsCount: Swift.Int
@@ -1159,7 +1158,7 @@ extension TangemSdk.Card {
       get
     }
     public let isLinkedTerminalEnabled: Swift.Bool
-    public let supportedEncryptionModes: [TangemSdk.EncryptionMode]
+    public let supportedEncryptionModes: [EncryptionMode]
     public let isFilesAllowed: Swift.Bool
     public let isHDWalletAllowed: Swift.Bool
     public let isBackupAllowed: Swift.Bool
@@ -1169,18 +1168,18 @@ extension TangemSdk.Card {
   }
 }
 public struct Tlv : Swift.Equatable {
-  public let tag: TangemSdk.TlvTag
-  public let tagRaw: TangemSdk.Byte
+  public let tag: TlvTag
+  public let tagRaw: Byte
   public let value: Foundation.Data
-  public init(_ tag: TangemSdk.TlvTag, value: Foundation.Data)
-  public init(tagRaw: TangemSdk.Byte, value: Foundation.Data)
+  public init(_ tag: TlvTag, value: Foundation.Data)
+  public init(tagRaw: Byte, value: Foundation.Data)
   public func serialize() -> Foundation.Data
   #if compiler(>=5.3) && $NonescapableTypes
-  public static func deserialize(_ data: Foundation.Data) -> [TangemSdk.Tlv]?
+  public static func deserialize(_ data: Foundation.Data) -> [Tlv]?
   #endif
-  public static func == (a: TangemSdk.Tlv, b: TangemSdk.Tlv) -> Swift.Bool
+  public static func == (a: Tlv, b: Tlv) -> Swift.Bool
 }
-extension TangemSdk.Tlv : Swift.CustomStringConvertible {
+extension Tlv : Swift.CustomStringConvertible {
   public var description: Swift.String {
     get
   }
@@ -1192,17 +1191,17 @@ public struct OnlineAttestationResponse : Swift.Codable {
   public init(from decoder: any Swift.Decoder) throws
 }
 public struct SessionEnvironment {
-  public var card: TangemSdk.Card? {
+  public var card: Card? {
     get
   }
-  public var walletData: TangemSdk.WalletData? {
+  public var walletData: WalletData? {
     get
   }
-  public var config: TangemSdk.Config {
+  public var config: Config {
     get
   }
 }
-public struct AttestCardKeyResponse : TangemSdk.JSONStringConvertible {
+public struct AttestCardKeyResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let salt: Foundation.Data
   public let cardSignature: Foundation.Data
@@ -1212,17 +1211,17 @@ public struct AttestCardKeyResponse : TangemSdk.JSONStringConvertible {
   public func encode(to encoder: any Swift.Encoder) throws
 }
 public class AttestCardKeyCommand {
-  public var preflightReadMode: TangemSdk.PreflightReadMode {
+  public var preflightReadMode: PreflightReadMode {
     get
   }
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(mode: TangemSdk.AttestCardKeyCommand.Mode = .default, challenge: Foundation.Data? = nil)
+  public init(mode: AttestCardKeyCommand.Mode = .default, challenge: Foundation.Data? = nil)
   #endif
   @objc deinit
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.AttestCardKeyResponse>)
-  public typealias Response = TangemSdk.AttestCardKeyResponse
+  public func run(in session: CardSession, completion: @escaping CompletionResult<AttestCardKeyResponse>)
+  public typealias Response = AttestCardKeyResponse
 }
-extension TangemSdk.AttestCardKeyCommand {
+extension AttestCardKeyCommand {
   public enum Mode : Swift.String {
     case `default`
     case full
@@ -1235,112 +1234,112 @@ extension TangemSdk.AttestCardKeyCommand {
     }
   }
 }
-extension TangemSdk.AttestCardKeyResponse {
+extension AttestCardKeyResponse {
   public enum Constants {
   }
 }
-public struct DerivedKeys : TangemSdk.JSONStringConvertible {
-  public var keys: [TangemSdk.DerivationPath : TangemSdk.ExtendedPublicKey] {
+public struct DerivedKeys : JSONStringConvertible {
+  public var keys: [DerivationPath : ExtendedPublicKey] {
     get
   }
-  public init(keys: [TangemSdk.DerivationPath : TangemSdk.ExtendedPublicKey])
+  public init(keys: [DerivationPath : ExtendedPublicKey])
   #if compiler(>=5.3) && $NonescapableTypes
-  public subscript(path: TangemSdk.DerivationPath) -> TangemSdk.ExtendedPublicKey? {
+  public subscript(path: DerivationPath) -> ExtendedPublicKey? {
     get
     set(newValue)
   }
   #endif
 }
-extension TangemSdk.DerivedKeys : Swift.Codable {
+extension DerivedKeys : Swift.Codable {
   public init(from decoder: any Swift.Decoder) throws
   public func encode(to encoder: any Swift.Encoder) throws
 }
-extension TangemSdk.DerivedKeys : Swift.ExpressibleByDictionaryLiteral {
-  public init(dictionaryLiteral elements: (TangemSdk.DerivationPath, TangemSdk.ExtendedPublicKey)...)
-  public typealias Key = TangemSdk.DerivationPath
-  public typealias Value = TangemSdk.ExtendedPublicKey
+extension DerivedKeys : Swift.ExpressibleByDictionaryLiteral {
+  public init(dictionaryLiteral elements: (DerivationPath, ExtendedPublicKey)...)
+  public typealias Key = DerivationPath
+  public typealias Value = ExtendedPublicKey
 }
 public enum WIF {
-  public static func encodeToWIFCompressed(_ privateKey: Foundation.Data, networkType: TangemSdk.NetworkType) -> Swift.String
+  public static func encodeToWIFCompressed(_ privateKey: Foundation.Data, networkType: NetworkType) -> Swift.String
   #if compiler(>=5.3) && $NonescapableTypes
   public static func decodeWIFCompressed(_ string: Swift.String) -> Foundation.Data?
   #endif
 }
-public class DeriveMultipleWalletPublicKeysTask : TangemSdk.CardSessionRunnable {
-  public typealias Response = [Foundation.Data : TangemSdk.DerivedKeys]
-  public init(_ derivations: [Foundation.Data : [TangemSdk.DerivationPath]])
+public class DeriveMultipleWalletPublicKeysTask : CardSessionRunnable {
+  public typealias Response = [Foundation.Data : DerivedKeys]
+  public init(_ derivations: [Foundation.Data : [DerivationPath]])
   @objc deinit
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.DeriveMultipleWalletPublicKeysTask.Response>)
+  public func run(in session: CardSession, completion: @escaping CompletionResult<DeriveMultipleWalletPublicKeysTask.Response>)
 }
 extension LocalAuthentication.LAContext {
   public static var `default`: LocalAuthentication.LAContext {
     get
   }
 }
-public struct GetEntropyResponse : TangemSdk.JSONStringConvertible {
+public struct GetEntropyResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let data: Foundation.Data
   public func encode(to encoder: any Swift.Encoder) throws
 }
 public class GetEntropyCommand {
-  public var preflightReadMode: TangemSdk.PreflightReadMode {
+  public var preflightReadMode: PreflightReadMode {
     get
   }
   public init()
   @objc deinit
-  public typealias Response = TangemSdk.GetEntropyResponse
+  public typealias Response = GetEntropyResponse
 }
 extension Swift.Error {
-  public func toTangemSdkError() -> TangemSdk.TangemSdkError
+  public func toTangemSdkError() -> TangemSdkError
 }
 public struct WalletDataDeserializer {
   public init()
   #if compiler(>=5.3) && $NonescapableTypes
-  public func deserialize(decoder: TangemSdk.TlvDecoder) throws -> TangemSdk.WalletData?
+  public func deserialize(decoder: TlvDecoder) throws -> WalletData?
   #endif
 }
 public struct ResponseApdu {
   public var sw: Swift.UInt16 {
     get
   }
-  public var statusWord: TangemSdk.StatusWord {
+  public var statusWord: StatusWord {
     get
   }
-  public init(_ data: Foundation.Data, _ sw1: TangemSdk.Byte, _ sw2: TangemSdk.Byte)
+  public init(_ data: Foundation.Data, _ sw1: Byte, _ sw2: Byte)
   #if compiler(>=5.3) && $NonescapableTypes
-  public func getTlvData(encryptionKey: Foundation.Data? = nil) -> [TangemSdk.Tlv]?
+  public func getTlvData(encryptionKey: Foundation.Data? = nil) -> [Tlv]?
   #endif
 }
-extension TangemSdk.ResponseApdu : Swift.CustomStringConvertible {
+extension ResponseApdu : Swift.CustomStringConvertible {
   public var description: Swift.String {
     get
   }
 }
 public struct Mnemonic {
   public let mnemonicComponents: [Swift.String]
-  public let wordlist: TangemSdk.BIP39.Wordlist
+  public let wordlist: BIP39.Wordlist
   public var mnemonic: Swift.String {
     get
   }
-  public init(with entropy: TangemSdk.EntropyLength = .bits128, wordList: TangemSdk.BIP39.Wordlist = .en) throws
-  public init(entropyData: Foundation.Data, wordList: TangemSdk.BIP39.Wordlist = .en) throws
+  public init(with entropy: EntropyLength = .bits128, wordList: BIP39.Wordlist = .en) throws
+  public init(entropyData: Foundation.Data, wordList: BIP39.Wordlist = .en) throws
   public init(with mnemonic: Swift.String) throws
   public func generateSeed(with passphrase: Swift.String = "") throws -> Foundation.Data
   public func getEntropy() throws -> Foundation.Data
 }
-public struct ReadWalletsListResponse : TangemSdk.JSONStringConvertible {
+public struct ReadWalletsListResponse : JSONStringConvertible {
   public let cardId: Swift.String
-  public let wallets: [TangemSdk.Card.Wallet]
+  public let wallets: [Card.Wallet]
   public func encode(to encoder: any Swift.Encoder) throws
 }
 public class ReadWalletsListCommand {
-  public var preflightReadMode: TangemSdk.PreflightReadMode {
+  public var preflightReadMode: PreflightReadMode {
     get
   }
   public init()
   @objc deinit
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ReadWalletsListResponse>)
-  public typealias Response = TangemSdk.ReadWalletsListResponse
+  public func run(in session: CardSession, completion: @escaping CompletionResult<ReadWalletsListResponse>)
+  public typealias Response = ReadWalletsListResponse
 }
 public struct SecureStorage {
   public init()
@@ -1350,56 +1349,56 @@ public struct SecureStorage {
   public func store(_ object: Foundation.Data, forKey account: Swift.String, overwrite: Swift.Bool = true) throws
   public func delete(_ account: Swift.String) throws
 }
-final public class SetUserCodeRecoveryAllowedTask : TangemSdk.CardSessionRunnable {
-  final public var preflightReadMode: TangemSdk.PreflightReadMode {
+final public class SetUserCodeRecoveryAllowedTask : CardSessionRunnable {
+  final public var preflightReadMode: PreflightReadMode {
     get
   }
   public init(isAllowed: Swift.Bool)
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  public typealias Response = TangemSdk.SuccessResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
 }
 public protocol HexConvertible {
   #if compiler(>=5.3) && $NonescapableTypes
   init?(hexData: Foundation.Data)
   #endif
 }
-extension TangemSdk.HexConvertible where Self : Swift.FixedWidthInteger {
+extension HexConvertible where Self : Swift.FixedWidthInteger {
   #if compiler(>=5.3) && $NonescapableTypes
   public init?(hexData: Foundation.Data)
   #endif
 }
-extension Swift.Int : TangemSdk.HexConvertible {
+extension Swift.Int : HexConvertible {
 }
-extension Swift.UInt64 : TangemSdk.HexConvertible {
+extension Swift.UInt64 : HexConvertible {
 }
-extension Swift.Int32 : TangemSdk.HexConvertible {
+extension Swift.Int32 : HexConvertible {
 }
-public typealias CompletionResult<T> = (Swift.Result<T, TangemSdk.TangemSdkError>) -> Swift.Void
-public struct Manufacturer : Swift.Codable, TangemSdk.JSONStringConvertible {
+public typealias CompletionResult<T> = (Swift.Result<T, TangemSdkError>) -> Swift.Void
+public struct Manufacturer : Swift.Codable, JSONStringConvertible {
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-extension Swift.Array where Element == TangemSdk.Tlv {
+extension Swift.Array where Element == Tlv {
   public func serialize() -> Foundation.Data
   #if compiler(>=5.3) && $NonescapableTypes
-  public func item(for tag: TangemSdk.TlvTag) -> Element?
+  public func item(for tag: TlvTag) -> Element?
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
-  public func value(for tag: TangemSdk.TlvTag) -> Foundation.Data?
+  public func value(for tag: TlvTag) -> Foundation.Data?
   #endif
-  public func contains(tag: TangemSdk.TlvTag) -> Swift.Bool
-  public func items(for tag: TangemSdk.TlvTag) -> [Element]
+  public func contains(tag: TlvTag) -> Swift.Bool
+  public func items(for tag: TlvTag) -> [Element]
 }
 public struct FileHashHelper {
   #if compiler(>=5.3) && $NonescapableTypes
-  public static func prepareHash(for cardId: Swift.String, fileData: Foundation.Data, fileCounter: Swift.Int, fileName: Swift.String? = nil, privateKey: Foundation.Data? = nil) throws -> TangemSdk.FileHashData
+  public static func prepareHash(for cardId: Swift.String, fileData: Foundation.Data, fileCounter: Swift.Int, fileName: Swift.String? = nil, privateKey: Foundation.Data? = nil) throws -> FileHashData
   #endif
 }
 final public class TlvEncoder {
   public init()
   #if compiler(>=5.3) && $NonescapableTypes
-  final public func encode<T>(_ tag: TangemSdk.TlvTag, value: T?) throws -> TangemSdk.Tlv
+  final public func encode<T>(_ tag: TlvTag, value: T?) throws -> Tlv
   #endif
   @objc deinit
 }
@@ -1412,14 +1411,14 @@ final public class WriteIssuerDataCommand {
   public init(issuerData: Foundation.Data, issuerDataSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, issuerPublicKey: Foundation.Data? = nil)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
   @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  public typealias Response = TangemSdk.SuccessResponse
+  public typealias Response = SuccessResponse
 }
 public enum UserCodeType {
   case accessCode
   case passcode
-  public static func == (a: TangemSdk.UserCodeType, b: TangemSdk.UserCodeType) -> Swift.Bool
+  public static func == (a: UserCodeType, b: UserCodeType) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
@@ -1436,18 +1435,18 @@ public enum UserCodeType {
   public init(accessCode: Swift.String?, passcode: Swift.String?)
   #endif
   @objc deinit
-  public func prepare(_ session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<Swift.Void>)
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  public typealias Response = TangemSdk.SuccessResponse
+  public func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+  public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
 }
-extension TangemSdk.SetUserCodeCommand {
-  public static var resetAccessCodeCommand: TangemSdk.SetUserCodeCommand {
+extension SetUserCodeCommand {
+  public static var resetAccessCodeCommand: SetUserCodeCommand {
     get
   }
-  public static var resetPasscodeCommand: TangemSdk.SetUserCodeCommand {
+  public static var resetPasscodeCommand: SetUserCodeCommand {
     get
   }
-  public static var resetUserCodes: TangemSdk.SetUserCodeCommand {
+  public static var resetUserCodes: SetUserCodeCommand {
     get
   }
 }
@@ -1460,12 +1459,12 @@ public class TlvBuilder {
   public init()
   #if compiler(>=5.3) && $NonescapableTypes
   @discardableResult
-  public func append<T>(_ tag: TangemSdk.TlvTag, value: T?) throws -> TangemSdk.TlvBuilder
+  public func append<T>(_ tag: TlvTag, value: T?) throws -> TlvBuilder
   #endif
   public func serialize() -> Foundation.Data
   @objc deinit
 }
-public struct ReadFileChecksumResponse : TangemSdk.JSONStringConvertible {
+public struct ReadFileChecksumResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let checksum: Foundation.Data
   public let fileIndex: Swift.Int?
@@ -1478,12 +1477,12 @@ final public class ReadFileChecksumCommand {
   }
   public init(fileName: Swift.String)
   public init(fileIndex: Swift.Int)
-  public typealias Response = TangemSdk.ReadFileChecksumResponse
+  public typealias Response = ReadFileChecksumResponse
   @objc deinit
 }
 public struct FileSettings : Swift.Codable {
   public let isPermanent: Swift.Bool
-  public let visibility: TangemSdk.FileVisibility
+  public let visibility: FileVisibility
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
@@ -1498,7 +1497,7 @@ public enum FileVisibility : Swift.String, Swift.Codable {
     get
   }
 }
-extension Swift.Array where Element == TangemSdk.Card.Wallet {
+extension Swift.Array where Element == Card.Wallet {
   #if compiler(>=5.3) && $NonescapableTypes
   public subscript(publicKey: Foundation.Data) -> Element? {
     get
@@ -1506,25 +1505,25 @@ extension Swift.Array where Element == TangemSdk.Card.Wallet {
   }
   #endif
 }
-public struct Attestation : TangemSdk.JSONStringConvertible, Swift.Equatable {
-  public var cardKeyAttestation: TangemSdk.Attestation.Status {
+public struct Attestation : JSONStringConvertible, Swift.Equatable {
+  public var cardKeyAttestation: Attestation.Status {
     get
   }
-  public var walletKeysAttestation: TangemSdk.Attestation.Status {
+  public var walletKeysAttestation: Attestation.Status {
     get
   }
-  public var firmwareAttestation: TangemSdk.Attestation.Status {
+  public var firmwareAttestation: Attestation.Status {
     get
   }
-  public var cardUniquenessAttestation: TangemSdk.Attestation.Status {
+  public var cardUniquenessAttestation: Attestation.Status {
     get
   }
-  public var status: TangemSdk.Attestation.Status {
+  public var status: Attestation.Status {
     get
   }
-  public static func == (a: TangemSdk.Attestation, b: TangemSdk.Attestation) -> Swift.Bool
+  public static func == (a: Attestation, b: Attestation) -> Swift.Bool
 }
-extension TangemSdk.Attestation {
+extension Attestation {
   public enum Status : Swift.String {
     case failed, warning, skipped, verifiedOffline, verified
     #if compiler(>=5.3) && $NonescapableTypes
@@ -1536,17 +1535,17 @@ extension TangemSdk.Attestation {
     }
   }
 }
-extension TangemSdk.Attestation {
-  public static var empty: TangemSdk.Attestation {
+extension Attestation {
+  public static var empty: Attestation {
     get
   }
 }
-extension TangemSdk.Attestation.Status {
+extension Attestation.Status {
   #if compiler(>=5.3) && $NonescapableTypes
   public init?(intRepresentation: Swift.Int)
   #endif
 }
-extension TangemSdk.Attestation : Swift.Decodable {
+extension Attestation : Swift.Decodable {
   public init(from decoder: any Swift.Decoder) throws
   public func encode(to encoder: any Swift.Encoder) throws
 }
@@ -1579,28 +1578,28 @@ public enum StatusWord : Swift.UInt16 {
     get
   }
 }
-public struct Card : Swift.Codable, TangemSdk.JSONStringConvertible {
+public struct Card : Swift.Codable, JSONStringConvertible {
   public let cardId: Swift.String
   public let batchId: Swift.String
   public let cardPublicKey: Foundation.Data
-  public let firmwareVersion: TangemSdk.FirmwareVersion
-  public let manufacturer: TangemSdk.Card.Manufacturer
-  public let issuer: TangemSdk.Card.Issuer
-  public var settings: TangemSdk.Card.Settings
-  public var userSettings: TangemSdk.Card.UserSettings {
+  public let firmwareVersion: FirmwareVersion
+  public let manufacturer: Card.Manufacturer
+  public let issuer: Card.Issuer
+  public var settings: Card.Settings
+  public var userSettings: Card.UserSettings {
     get
   }
-  public let linkedTerminalStatus: TangemSdk.Card.LinkedTerminalStatus
+  public let linkedTerminalStatus: Card.LinkedTerminalStatus
   public var isAccessCodeSet: Swift.Bool
   public var isPasscodeSet: Swift.Bool?
-  public let supportedCurves: [TangemSdk.EllipticCurve]
-  public var backupStatus: TangemSdk.Card.BackupStatus?
-  public var wallets: [TangemSdk.Card.Wallet]
-  public var attestation: TangemSdk.Attestation
+  public let supportedCurves: [EllipticCurve]
+  public var backupStatus: Card.BackupStatus?
+  public var wallets: [Card.Wallet]
+  public var attestation: Attestation
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-extension TangemSdk.Card {
+extension Card {
   public struct Manufacturer : Swift.Codable {
     public let name: Swift.String
     public let manufactureDate: Foundation.Date
@@ -1644,16 +1643,16 @@ extension TangemSdk.Card {
     }
     public init(from decoder: any Swift.Decoder) throws
     public func encode(to encoder: any Swift.Encoder) throws
-    public static func == (a: TangemSdk.Card.BackupStatus, b: TangemSdk.Card.BackupStatus) -> Swift.Bool
+    public static func == (a: Card.BackupStatus, b: Card.BackupStatus) -> Swift.Bool
   }
 }
-final public class ChangeFileSettingsTask : TangemSdk.CardSessionRunnable {
-  public init(changes: [Swift.Int : TangemSdk.FileVisibility])
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  public typealias Response = TangemSdk.SuccessResponse
+final public class ChangeFileSettingsTask : CardSessionRunnable {
+  public init(changes: [Swift.Int : FileVisibility])
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
   @objc deinit
 }
-public struct ReadUserDataResponse : TangemSdk.JSONStringConvertible {
+public struct ReadUserDataResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let userData: Foundation.Data
   public let userProtectedData: Foundation.Data
@@ -1665,13 +1664,13 @@ public struct ReadUserDataResponse : TangemSdk.JSONStringConvertible {
 final public class ReadUserDataCommand {
   public init()
   @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  public typealias Response = TangemSdk.ReadUserDataResponse
+  public typealias Response = ReadUserDataResponse
   @objc deinit
 }
 public struct Secp256k1Key {
   public init(with data: Foundation.Data) throws
-  public init(with signature: TangemSdk.Secp256k1Signature.Extended, hash: Foundation.Data) throws
-  public init(with signature: TangemSdk.Secp256k1Signature.Extended, message: Foundation.Data) throws
+  public init(with signature: Secp256k1Signature.Extended, hash: Foundation.Data) throws
+  public init(with signature: Secp256k1Signature.Extended, message: Foundation.Data) throws
   public func compress() throws -> Foundation.Data
   public func decompress() throws -> Foundation.Data
 }
@@ -1679,31 +1678,31 @@ final public class ResetBackupCommand {
   final public var requiresPasscode: Swift.Bool {
     get
   }
-  final public var preflightReadMode: TangemSdk.PreflightReadMode {
+  final public var preflightReadMode: PreflightReadMode {
     get
   }
   public init()
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  public typealias Response = TangemSdk.SuccessResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
 }
-final public class AttestationTask : TangemSdk.CardSessionRunnable {
+final public class AttestationTask : CardSessionRunnable {
   final public var shouldKeepSessionOpened: Swift.Bool
-  public init(mode: TangemSdk.AttestationTask.Mode, networkService: TangemSdk.NetworkService)
+  public init(mode: AttestationTask.Mode, networkService: NetworkService)
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.Attestation>)
-  public typealias Response = TangemSdk.Attestation
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<Attestation>)
+  public typealias Response = Attestation
 }
-extension TangemSdk.AttestationTask {
+extension AttestationTask {
   public enum Mode : Swift.String, Swift.CaseIterable, Swift.Comparable {
     case offline, normal, full
-    public static func < (lhs: TangemSdk.AttestationTask.Mode, rhs: TangemSdk.AttestationTask.Mode) -> Swift.Bool
+    public static func < (lhs: AttestationTask.Mode, rhs: AttestationTask.Mode) -> Swift.Bool
     #if compiler(>=5.3) && $NonescapableTypes
     public init?(rawValue: Swift.String)
     #endif
-    public typealias AllCases = [TangemSdk.AttestationTask.Mode]
+    public typealias AllCases = [AttestationTask.Mode]
     public typealias RawValue = Swift.String
-    nonisolated public static var allCases: [TangemSdk.AttestationTask.Mode] {
+    nonisolated public static var allCases: [AttestationTask.Mode] {
       get
     }
     public var rawValue: Swift.String {
@@ -1711,19 +1710,19 @@ extension TangemSdk.AttestationTask {
     }
   }
 }
-public struct SignHashResponse : TangemSdk.JSONStringConvertible {
+public struct SignHashResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public let signature: Foundation.Data
   public let totalSignedHashes: Swift.Int?
   public func encode(to encoder: any Swift.Encoder) throws
 }
-final public class SignHashCommand : TangemSdk.CardSessionRunnable {
+final public class SignHashCommand : CardSessionRunnable {
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(hash: Foundation.Data, walletPublicKey: Foundation.Data, derivationPath: TangemSdk.DerivationPath? = nil)
+  public init(hash: Foundation.Data, walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SignHashResponse>)
-  public typealias Response = TangemSdk.SignHashResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SignHashResponse>)
+  public typealias Response = SignHashResponse
 }
 public enum DerivationNode : Swift.Equatable, Swift.Hashable {
   case hardened(Swift.UInt32)
@@ -1737,23 +1736,23 @@ public enum DerivationNode : Swift.Equatable, Swift.Hashable {
   public var isHardened: Swift.Bool {
     get
   }
-  public static func fromIndex(_ index: Swift.UInt32) -> TangemSdk.DerivationNode
-  public static func == (a: TangemSdk.DerivationNode, b: TangemSdk.DerivationNode) -> Swift.Bool
+  public static func fromIndex(_ index: Swift.UInt32) -> DerivationNode
+  public static func == (a: DerivationNode, b: DerivationNode) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
   }
 }
-extension TangemSdk.DerivationNode {
+extension DerivationNode {
   public var rawIndex: Swift.UInt32 {
     get
   }
-  public func withRawIndex(_ rawIndex: Swift.UInt32) -> TangemSdk.DerivationNode
+  public func withRawIndex(_ rawIndex: Swift.UInt32) -> DerivationNode
 }
 public struct OnlineAttestationServiceFactory {
-  public init(networkService: TangemSdk.NetworkService)
+  public init(networkService: NetworkService)
 }
-public enum Instruction : TangemSdk.Byte {
+public enum Instruction : Byte {
   case unknown
   case read
   case attestCardKey
@@ -1788,10 +1787,10 @@ public enum Instruction : TangemSdk.Byte {
   case setUserSettings
   case finalizeReadBackupData
   #if compiler(>=5.3) && $NonescapableTypes
-  public init?(rawValue: TangemSdk.Byte)
+  public init?(rawValue: Byte)
   #endif
-  public typealias RawValue = TangemSdk.Byte
-  public var rawValue: TangemSdk.Byte {
+  public typealias RawValue = Byte
+  public var rawValue: Byte {
     get
   }
 }
@@ -1804,37 +1803,37 @@ public enum Instruction : TangemSdk.Byte {
 public protocol JSONStringConvertible : Swift.Encodable {
   var json: Swift.String { get }
 }
-extension TangemSdk.JSONStringConvertible {
+extension JSONStringConvertible {
   public var json: Swift.String {
     get
   }
   public var testJson: Swift.String {
     get
   }
-  public func eraseToAnyResponse() -> TangemSdk.AnyJSONRPCResponse
+  public func eraseToAnyResponse() -> AnyJSONRPCResponse
 }
-public struct Acquirer : Swift.Codable, TangemSdk.JSONStringConvertible {
+public struct Acquirer : Swift.Codable, JSONStringConvertible {
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-public class ReadFilesTask : TangemSdk.CardSessionRunnable {
+public class ReadFilesTask : CardSessionRunnable {
   public var shouldReadPrivateFiles: Swift.Bool
   #if compiler(>=5.3) && $NonescapableTypes
   public init(fileName: Swift.String? = nil, walletPublicKey: Foundation.Data? = nil)
   #endif
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<[TangemSdk.File]>)
-  public typealias Response = [TangemSdk.File]
+  public func run(in session: CardSession, completion: @escaping CompletionResult<[File]>)
+  public typealias Response = [File]
   @objc deinit
 }
-public struct File : TangemSdk.JSONStringConvertible {
+public struct File : JSONStringConvertible {
   public let name: Swift.String?
   public let data: Foundation.Data
   public let index: Swift.Int
-  public let settings: TangemSdk.FileSettings
+  public let settings: FileSettings
   public let counter: Swift.Int?
   public let signature: Foundation.Data?
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(data: Foundation.Data, index: Swift.Int, settings: TangemSdk.FileSettings, name: Swift.String? = nil, counter: Swift.Int? = nil, signature: Foundation.Data? = nil)
+  public init(data: Foundation.Data, index: Swift.Int, settings: FileSettings, name: Swift.String? = nil, counter: Swift.Int? = nil, signature: Foundation.Data? = nil)
   #endif
   public func encode(to encoder: any Swift.Encoder) throws
 }
@@ -1852,8 +1851,8 @@ public struct NamedFile {
   public func serialize() throws -> Foundation.Data
 }
 public enum FileToWrite : Swift.Decodable {
-  case byUser(data: Foundation.Data, fileName: Swift.String?, fileVisibility: TangemSdk.FileVisibility?, walletPublicKey: Foundation.Data?)
-  case byFileOwner(data: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, counter: Swift.Int, fileName: Swift.String?, fileVisibility: TangemSdk.FileVisibility?, walletPublicKey: Foundation.Data?)
+  case byUser(data: Foundation.Data, fileName: Swift.String?, fileVisibility: FileVisibility?, walletPublicKey: Foundation.Data?)
+  case byFileOwner(data: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, counter: Swift.Int, fileName: Swift.String?, fileVisibility: FileVisibility?, walletPublicKey: Foundation.Data?)
   public init(from decoder: any Swift.Decoder) throws
 }
 public enum SecureEnclaveError : Swift.Error {
@@ -1864,27 +1863,27 @@ public enum SecureEnclaveError : Swift.Error {
   case encryptionFailed(underlyingError: any Swift.Error)
   case decryptionFailed(underlyingError: any Swift.Error)
 }
-public struct WriteFileResponse : TangemSdk.JSONStringConvertible {
+public struct WriteFileResponse : JSONStringConvertible {
   public func encode(to encoder: any Swift.Encoder) throws
 }
 final public class WriteFileCommand {
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(data: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, counter: Swift.Int, fileVisibility: TangemSdk.FileVisibility? = nil, walletPublicKey: Foundation.Data? = nil)
+  public init(data: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, counter: Swift.Int, fileVisibility: FileVisibility? = nil, walletPublicKey: Foundation.Data? = nil)
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(data: Foundation.Data, fileVisibility: TangemSdk.FileVisibility? = nil, walletPublicKey: Foundation.Data? = nil)
+  public init(data: Foundation.Data, fileVisibility: FileVisibility? = nil, walletPublicKey: Foundation.Data? = nil)
   #endif
-  convenience public init(_ file: TangemSdk.FileToWrite)
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.WriteFileResponse>)
-  public typealias Response = TangemSdk.WriteFileResponse
+  convenience public init(_ file: FileToWrite)
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<WriteFileResponse>)
+  public typealias Response = WriteFileResponse
   @objc deinit
 }
 public enum CryptoUtils {
   public static func generateRandomBytes(count: Swift.Int) throws -> Foundation.Data
-  public static func verify(curve: TangemSdk.EllipticCurve, publicKey: Foundation.Data, message: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
-  public static func isPrivateKeyValid(_ privateKey: Foundation.Data, curve: TangemSdk.EllipticCurve) throws -> Swift.Bool
-  public static func makePublicKey(from privateKey: Foundation.Data, curve: TangemSdk.EllipticCurve) throws -> Foundation.Data
-  public static func verify(curve: TangemSdk.EllipticCurve, publicKey: Foundation.Data, hash: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
+  public static func verify(curve: EllipticCurve, publicKey: Foundation.Data, message: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
+  public static func isPrivateKeyValid(_ privateKey: Foundation.Data, curve: EllipticCurve) throws -> Swift.Bool
+  public static func makePublicKey(from privateKey: Foundation.Data, curve: EllipticCurve) throws -> Foundation.Data
+  public static func verify(curve: EllipticCurve, publicKey: Foundation.Data, hash: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
   @available(iOS 16.0, *)
   public static func verifySecp256r1Signature(publicKey: Foundation.Data, hash: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
   public static func crypt(operation: Swift.Int, algorithm: Swift.Int, options: Swift.Int, key: Foundation.Data, dataIn: Foundation.Data) throws -> Foundation.Data
@@ -2042,25 +2041,25 @@ public enum TangemSdkError : Swift.Error, Foundation.LocalizedError, Swift.Encod
   public var isUserCancelled: Swift.Bool {
     get
   }
-  public static func parse(_ error: any Swift.Error) -> TangemSdk.TangemSdkError
+  public static func parse(_ error: any Swift.Error) -> TangemSdkError
   public func encode(to encoder: any Swift.Encoder) throws
 }
-public class DeriveWalletPublicKeyTask : TangemSdk.CardSessionRunnable {
-  public init(walletPublicKey: Foundation.Data, derivationPath: TangemSdk.DerivationPath)
+public class DeriveWalletPublicKeyTask : CardSessionRunnable {
+  public init(walletPublicKey: Foundation.Data, derivationPath: DerivationPath)
   @objc deinit
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ExtendedPublicKey>)
-  public typealias Response = TangemSdk.ExtendedPublicKey
+  public func run(in session: CardSession, completion: @escaping CompletionResult<ExtendedPublicKey>)
+  public typealias Response = ExtendedPublicKey
 }
-public struct DepersonalizeResponse : TangemSdk.JSONStringConvertible {
+public struct DepersonalizeResponse : JSONStringConvertible {
   public func encode(to encoder: any Swift.Encoder) throws
 }
 public class DepersonalizeCommand {
-  public var preflightReadMode: TangemSdk.PreflightReadMode {
+  public var preflightReadMode: PreflightReadMode {
     get
   }
   public init()
-  public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.DepersonalizeResponse>)
-  public typealias Response = TangemSdk.DepersonalizeResponse
+  public func run(in session: CardSession, completion: @escaping CompletionResult<DepersonalizeResponse>)
+  public typealias Response = DepersonalizeResponse
   @objc deinit
 }
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
@@ -2075,13 +2074,13 @@ final public class WriteUserDataCommand {
   convenience public init(userProtectedData: Foundation.Data, userProtectedCounter: Swift.Int?)
   #endif
   @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  public typealias Response = TangemSdk.SuccessResponse
+  public typealias Response = SuccessResponse
   @objc deinit
 }
 public struct KeyPair : Swift.Equatable, Swift.Codable {
   public let privateKey: Foundation.Data
   public let publicKey: Foundation.Data
-  public static func == (a: TangemSdk.KeyPair, b: TangemSdk.KeyPair) -> Swift.Bool
+  public static func == (a: KeyPair, b: KeyPair) -> Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
@@ -2094,7 +2093,7 @@ public struct KeyPair : Swift.Equatable, Swift.Codable {
   }
   @objc deinit
 }
-public struct ExtendedPublicKey : Swift.Equatable, Swift.Hashable, TangemSdk.JSONStringConvertible {
+public struct ExtendedPublicKey : Swift.Equatable, Swift.Hashable, JSONStringConvertible {
   public let publicKey: Foundation.Data
   public let chainCode: Foundation.Data
   public let depth: Swift.Int
@@ -2102,52 +2101,52 @@ public struct ExtendedPublicKey : Swift.Equatable, Swift.Hashable, TangemSdk.JSO
   public let childNumber: Swift.UInt32
   public init(publicKey: Foundation.Data, chainCode: Foundation.Data, depth: Swift.Int, parentFingerprint: Foundation.Data, childNumber: Swift.UInt32) throws
   public init(publicKey: Foundation.Data, chainCode: Foundation.Data)
-  public func derivePublicKey(node: TangemSdk.DerivationNode) throws -> TangemSdk.ExtendedPublicKey
-  public func derivePublicKey(path derivationPath: TangemSdk.DerivationPath) throws -> TangemSdk.ExtendedPublicKey
-  public static func == (a: TangemSdk.ExtendedPublicKey, b: TangemSdk.ExtendedPublicKey) -> Swift.Bool
+  public func derivePublicKey(node: DerivationNode) throws -> ExtendedPublicKey
+  public func derivePublicKey(path derivationPath: DerivationPath) throws -> ExtendedPublicKey
+  public static func == (a: ExtendedPublicKey, b: ExtendedPublicKey) -> Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
   }
 }
-extension TangemSdk.ExtendedPublicKey : TangemSdk.ExtendedKeySerializable {
-  public init(from extendedKeyString: Swift.String, networkType: TangemSdk.NetworkType) throws
-  public func serialize(for networkType: TangemSdk.NetworkType) throws -> Swift.String
+extension ExtendedPublicKey : ExtendedKeySerializable {
+  public init(from extendedKeyString: Swift.String, networkType: NetworkType) throws
+  public func serialize(for networkType: NetworkType) throws -> Swift.String
 }
-extension TangemSdk.ExtendedPublicKey : Swift.Decodable {
+extension ExtendedPublicKey : Swift.Decodable {
   public init(from decoder: any Swift.Decoder) throws
 }
-extension TangemSdk.TangemSdk {
+extension TangemSdk {
   #if compiler(>=5.3) && $NonescapableTypes
-  final public func startSessionPublisher<T>(with runnable: T, cardId: Swift.String?, initialMessage: TangemSdk.Message? = nil, accessCode: Swift.String? = nil) -> Combine.AnyPublisher<T.Response, TangemSdk.TangemSdkError> where T : TangemSdk.CardSessionRunnable
+  final public func startSessionPublisher<T>(with runnable: T, cardId: Swift.String?, initialMessage: Message? = nil, accessCode: Swift.String? = nil) -> Combine.AnyPublisher<T.Response, TangemSdkError> where T : CardSessionRunnable
   #endif
   #if compiler(>=5.3) && $NonescapableTypes
-  final public func startSessionPublisher<T>(with runnable: T, filter: TangemSdk.SessionFilter?, initialMessage: TangemSdk.Message? = nil, accessCode: Swift.String? = nil) -> Combine.AnyPublisher<T.Response, TangemSdk.TangemSdkError> where T : TangemSdk.CardSessionRunnable
+  final public func startSessionPublisher<T>(with runnable: T, filter: SessionFilter?, initialMessage: Message? = nil, accessCode: Swift.String? = nil) -> Combine.AnyPublisher<T.Response, TangemSdkError> where T : CardSessionRunnable
   #endif
 }
 @_hasMissingDesignatedInitializers public class TangemSdkStyle : Foundation.ObservableObject {
-  public var colors: TangemSdk.TangemSdkStyle.Colors
-  public var textSizes: TangemSdk.TangemSdkStyle.TextSizes
+  public var colors: TangemSdkStyle.Colors
+  public var textSizes: TangemSdkStyle.TextSizes
   public var indicatorWidth: Swift.Float
-  public var scanTagImage: TangemSdk.TangemSdkStyle.ScanTagImage
-  public static var `default`: TangemSdk.TangemSdkStyle
+  public var scanTagImage: TangemSdkStyle.ScanTagImage
+  public static var `default`: TangemSdkStyle
   public typealias ObjectWillChangePublisher = Combine.ObservableObjectPublisher
   @objc deinit
 }
-extension TangemSdk.TangemSdkStyle {
+extension TangemSdkStyle {
   public struct Colors {
     public var tint: SwiftUICore.Color
     public var tintUIColor: UIKit.UIColor
     public var errorTint: SwiftUICore.Color
-    public var buttonColors: TangemSdk.TangemSdkStyle.ButtonColors
-    public var secondaryButtonColors: TangemSdk.TangemSdkStyle.ButtonColors
+    public var buttonColors: TangemSdkStyle.ButtonColors
+    public var secondaryButtonColors: TangemSdkStyle.ButtonColors
     public var indicatorBackground: SwiftUICore.Color
     public var phoneBackground: SwiftUICore.Color
     public var phoneStroke: SwiftUICore.Color
     public var cardColor: SwiftUICore.Color
     public var starsColor: SwiftUICore.Color
-    public static var `default`: TangemSdk.TangemSdkStyle.Colors
+    public static var `default`: TangemSdkStyle.Colors
   }
   public struct ButtonColors {
     public var foregroundColor: SwiftUICore.Color
@@ -2156,13 +2155,13 @@ extension TangemSdk.TangemSdkStyle {
     public var disabledBackgroundColor: SwiftUICore.Color
   }
 }
-extension TangemSdk.TangemSdkStyle {
+extension TangemSdkStyle {
   public struct TextSizes {
     public var indicatorLabel: CoreFoundation.CGFloat
-    public static var `default`: TangemSdk.TangemSdkStyle.TextSizes
+    public static var `default`: TangemSdkStyle.TextSizes
   }
 }
-extension TangemSdk.TangemSdkStyle {
+extension TangemSdkStyle {
   public enum ScanTagImage {
     case genericCard
     case genericRing
@@ -2170,7 +2169,7 @@ extension TangemSdk.TangemSdkStyle {
   }
 }
 @_hasMissingDesignatedInitializers public class Log {
-  public static var config: TangemSdk.Log.Config {
+  public static var config: Log.Config {
     get
     set
   }
@@ -2184,10 +2183,10 @@ extension TangemSdk.TangemSdkStyle {
   public static func debug<T>(_ message: T)
   public static func network<T>(_ message: T)
   public static func view<T>(_ message: T)
-  public static func filter(_ level: TangemSdk.Log.Level) -> Swift.Bool
+  public static func filter(_ level: Log.Level) -> Swift.Bool
   @objc deinit
 }
-extension TangemSdk.Log {
+extension Log {
   public enum Level {
     case command
     case tlv
@@ -2205,19 +2204,19 @@ extension TangemSdk.Log {
     public var prefix: Swift.String {
       get
     }
-    public static func == (a: TangemSdk.Log.Level, b: TangemSdk.Log.Level) -> Swift.Bool
+    public static func == (a: Log.Level, b: Log.Level) -> Swift.Bool
     public func hash(into hasher: inout Swift.Hasher)
     public var hashValue: Swift.Int {
       get
     }
   }
 }
-extension TangemSdk.Log {
+extension Log {
   public enum Config {
     case release
     case debug
     case verbose
-    case custom(logLevel: [TangemSdk.Log.Level], loggers: [any TangemSdk.TangemSdkLogger] = [ConsoleLogger()])
+    case custom(logLevel: [Log.Level], loggers: [any TangemSdkLogger] = [ConsoleLogger()])
   }
 }
 public enum TlvValueType : Swift.String {
@@ -2246,7 +2245,7 @@ public enum TlvValueType : Swift.String {
     get
   }
 }
-public enum TlvTag : TangemSdk.Byte {
+public enum TlvTag : Byte {
   case unknown
   case cardId
   case pin
@@ -2357,30 +2356,30 @@ public enum TlvTag : TangemSdk.Byte {
   case backupCardPublicKey
   case proof
   #if compiler(>=5.3) && $NonescapableTypes
-  public init?(rawValue: TangemSdk.Byte)
+  public init?(rawValue: Byte)
   #endif
-  public typealias RawValue = TangemSdk.Byte
-  public var rawValue: TangemSdk.Byte {
+  public typealias RawValue = Byte
+  public var rawValue: Byte {
     get
   }
 }
-final public class ScanTask : TangemSdk.CardSessionRunnable {
+final public class ScanTask : CardSessionRunnable {
   final public var shouldAskForAccessCode: Swift.Bool {
     get
   }
-  public init(networkService: TangemSdk.NetworkService)
+  public init(networkService: NetworkService)
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.Card>)
-  public typealias Response = TangemSdk.Card
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<Card>)
+  public typealias Response = Card
 }
 public struct SecureEnclaveService {
   public init()
 }
-extension TangemSdk.SecureEnclaveService {
+extension SecureEnclaveService {
   public func sign(data: Foundation.Data, keyTag: Swift.String) throws -> Foundation.Data
   public func verify(signature: Foundation.Data, message: Foundation.Data, keyTag: Swift.String) throws -> Swift.Bool
 }
-extension TangemSdk.SecureEnclaveService {
+extension SecureEnclaveService {
   public func encryptData(_ data: Foundation.Data, keyTag: Swift.String) throws -> Foundation.Data
   public func decryptData(_ data: Foundation.Data, keyTag: Swift.String) throws -> Foundation.Data
 }
@@ -2402,22 +2401,22 @@ public enum PreflightReadMode : Swift.Decodable, Swift.Equatable {
   case readCardOnly
   case fullCardRead
   public init(from decoder: any Swift.Decoder) throws
-  public static func == (a: TangemSdk.PreflightReadMode, b: TangemSdk.PreflightReadMode) -> Swift.Bool
+  public static func == (a: PreflightReadMode, b: PreflightReadMode) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
   }
 }
-public struct CheckUserCodesResponse : TangemSdk.JSONStringConvertible {
+public struct CheckUserCodesResponse : JSONStringConvertible {
   public let isAccessCodeSet: Swift.Bool
   public let isPasscodeSet: Swift.Bool
   public func encode(to encoder: any Swift.Encoder) throws
 }
-final public class CheckUserCodesCommand : TangemSdk.CardSessionRunnable {
+final public class CheckUserCodesCommand : CardSessionRunnable {
   public init()
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.CheckUserCodesResponse>)
-  public typealias Response = TangemSdk.CheckUserCodesResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<CheckUserCodesResponse>)
+  public typealias Response = CheckUserCodesResponse
 }
 public struct Config {
   public init()
@@ -2425,18 +2424,18 @@ public struct Config {
   public var linkedTerminal: Swift.Bool?
   public var issuerPublicKey: Foundation.Data?
   public var handleErrors: Swift.Bool
-  public var cardIdDisplayFormat: TangemSdk.CardIdDisplayFormat
-  public var productType: TangemSdk.ProductType
-  public var logConfig: TangemSdk.Log.Config
-  public var attestationMode: TangemSdk.AttestationTask.Mode
-  public var filter: TangemSdk.CardFilter
-  public var style: TangemSdk.TangemSdkStyle
+  public var cardIdDisplayFormat: CardIdDisplayFormat
+  public var productType: ProductType
+  public var logConfig: Log.Config
+  public var attestationMode: AttestationTask.Mode
+  public var filter: CardFilter
+  public var style: TangemSdkStyle
   public var canonizeSecp256k1Signatures: Swift.Bool
-  public var defaultDerivationPaths: [TangemSdk.EllipticCurve : [TangemSdk.DerivationPath]]
-  public var accessCodeRequestPolicy: TangemSdk.AccessCodeRequestPolicy
+  public var defaultDerivationPaths: [EllipticCurve : [DerivationPath]]
+  public var accessCodeRequestPolicy: AccessCodeRequestPolicy
   public var biometricsLocalizedReason: Swift.String
   public static var useDevApi: Swift.Bool
-  public mutating func setupForProduct(_ product: TangemSdk.ProductType)
+  public mutating func setupForProduct(_ product: ProductType)
 }
 public enum CardIdDisplayFormat {
   case none
@@ -2452,9 +2451,9 @@ public enum AccessCodeRequestPolicy : Swift.String, Swift.CaseIterable {
   #if compiler(>=5.3) && $NonescapableTypes
   public init?(rawValue: Swift.String)
   #endif
-  public typealias AllCases = [TangemSdk.AccessCodeRequestPolicy]
+  public typealias AllCases = [AccessCodeRequestPolicy]
   public typealias RawValue = Swift.String
-  nonisolated public static var allCases: [TangemSdk.AccessCodeRequestPolicy] {
+  nonisolated public static var allCases: [AccessCodeRequestPolicy] {
     get
   }
   public var rawValue: Swift.String {
@@ -2465,7 +2464,7 @@ public enum ProductType {
   case any
   case card
   case ring
-  public static func == (a: TangemSdk.ProductType, b: TangemSdk.ProductType) -> Swift.Bool
+  public static func == (a: ProductType, b: ProductType) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
@@ -2473,7 +2472,115 @@ public enum ProductType {
 }
 public enum SessionFilter {
   case cardId(Swift.String)
-  case custom(any TangemSdk.PreflightReadFilter)
+  case custom(any PreflightReadFilter)
+}
+final public class TangemSdk {
+  final public var config: Config
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(cardReader: (any CardReader)? = nil, viewDelegate: (any SessionViewDelegate)? = nil, config: Config = Config())
+  #endif
+  @objc deinit
+  final public func initializeJSONRPC(networkService: NetworkService)
+  final public func registerJSONRPCTask(_ object: any JSONRPCHandler) -> Swift.Bool
+}
+extension TangemSdk {
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func scanCard(initialMessage: Message? = nil, networkService: NetworkService, completion: @escaping CompletionResult<Card>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func attestCardKey(attestationMode: AttestCardKeyCommand.Mode = .default, challenge: Foundation.Data? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<AttestCardKeyResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func sign(hash: Foundation.Data, walletPublicKey: Foundation.Data, cardId: Swift.String? = nil, derivationPath: DerivationPath? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SignHashResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func sign(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, cardId: Swift.String? = nil, derivationPath: DerivationPath? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SignHashesResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func createWallet(curve: EllipticCurve, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<CreateWalletResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func importWallet(curve: EllipticCurve, cardId: Swift.String, mnemonic: Swift.String, passphrase: Swift.String = "", initialMessage: Message? = nil, completion: @escaping CompletionResult<CreateWalletResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func purgeWallet(walletPublicKey: Foundation.Data, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func setAccessCode(_ accessCode: Swift.String? = nil, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func setPasscode(_ passcode: Swift.String? = nil, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func resetUserCodes(cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func setUserCodeRecoveryAllowed(_ isAllowed: Swift.Bool, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func deriveWalletPublicKey(cardId: Swift.String, walletPublicKey: Foundation.Data, derivationPath: DerivationPath, initialMessage: Message? = nil, completion: @escaping CompletionResult<ExtendedPublicKey>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func deriveWalletPublicKeys(cardId: Swift.String, walletPublicKey: Foundation.Data, derivationPaths: [DerivationPath], initialMessage: Message? = nil, completion: @escaping CompletionResult<DerivedKeys>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func readFiles(readPrivateFiles: Swift.Bool = false, fileName: Swift.String? = nil, walletPublicKey: Foundation.Data? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<[File]>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func changeFileSettings(changes: [Swift.Int : FileVisibility], cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func writeFiles(files: [FileToWrite], cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<WriteFilesResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func deleteFiles(indices: [Swift.Int]?, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func prepareHashes(cardId: Swift.String, fileData: Foundation.Data, fileCounter: Swift.Int, fileName: Swift.String? = nil, privateKey: Foundation.Data? = nil) throws -> FileHashData
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func readIssuerData(cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<ReadIssuerDataResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeIssuerData(issuerData: Foundation.Data, issuerDataSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func readIssuerExtraData(cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<ReadIssuerExtraDataResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeIssuerExtraData(issuerData: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func readUserData(cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<ReadUserDataResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeUserData(userData: Foundation.Data, userCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeUserProtectedData(userProtectedData: Foundation.Data, userProtectedCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+}
+extension TangemSdk {
+  final public func startSession<T>(with runnable: T, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession<T>(with runnable: T, filter: SessionFilter?, initialMessage: Message? = nil, accessCode: Swift.String? = nil, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession<T>(with runnable: T, cardId: Swift.String? = nil, initialMessage: Message? = nil, accessCode: Swift.String? = nil, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession(cardId: Swift.String? = nil, initialMessage: Message? = nil, accessCode: Swift.String? = nil, callback: @escaping (CardSession, TangemSdkError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession(with jsonRequest: Swift.String, cardId: Swift.String? = nil, initialMessage: Swift.String? = nil, accessCode: Swift.String? = nil, completion: @escaping (Swift.String) -> Swift.Void)
+  #endif
 }
 public struct BIP39 {
   public init()
@@ -2483,20 +2590,20 @@ final public class Secp256k1Utils {
   public init()
   @objc deinit
   final public func sign(_ data: Foundation.Data, with key: Foundation.Data) throws -> Foundation.Data
-  final public func generateKeyPair() throws -> TangemSdk.KeyPair
+  final public func generateKeyPair() throws -> KeyPair
   final public func serializeDer(_ signature: Foundation.Data) throws -> Foundation.Data
   final public func sum(compressedPubKey1: Foundation.Data, compressedPubKey2: Foundation.Data) throws -> Foundation.Data
   final public func normalizeSignature(_ signature: Foundation.Data) throws -> Foundation.Data
 }
 public struct CardFilter {
-  public var allowedCardTypes: [TangemSdk.FirmwareVersion.FirmwareType]
-  public var cardIdFilter: TangemSdk.CardFilter.CardIdFilter?
-  public var batchIdFilter: TangemSdk.CardFilter.ItemFilter?
-  public var issuerFilter: TangemSdk.CardFilter.ItemFilter?
-  public var maxFirmwareVersion: TangemSdk.FirmwareVersion?
+  public var allowedCardTypes: [FirmwareVersion.FirmwareType]
+  public var cardIdFilter: CardFilter.CardIdFilter?
+  public var batchIdFilter: CardFilter.ItemFilter?
+  public var issuerFilter: CardFilter.ItemFilter?
+  public var maxFirmwareVersion: FirmwareVersion?
   public var localizedDescription: Swift.String?
-  public static var `default`: TangemSdk.CardFilter
-  public func verifyCard(_ card: TangemSdk.Card) throws
+  public static var `default`: CardFilter
+  public func verifyCard(_ card: Card) throws
 }
 public struct CardIdRange {
   public let start: Swift.UInt64
@@ -2506,27 +2613,27 @@ public struct CardIdRange {
   #endif
   public func contains(_ cardId: Swift.String) -> Swift.Bool
 }
-extension TangemSdk.CardFilter {
+extension CardFilter {
   public enum ItemFilter {
     case allow(_: Swift.Set<Swift.String>)
     case deny(_: Swift.Set<Swift.String>)
   }
   public enum CardIdFilter {
-    case allow(_: Swift.Set<Swift.String>, ranges: [TangemSdk.CardIdRange] = [])
-    case deny(_: Swift.Set<Swift.String>, ranges: [TangemSdk.CardIdRange] = [])
+    case allow(_: Swift.Set<Swift.String>, ranges: [CardIdRange] = [])
+    case deny(_: Swift.Set<Swift.String>, ranges: [CardIdRange] = [])
   }
 }
-extension Swift.Array where Element == TangemSdk.CardIdRange {
+extension Swift.Array where Element == CardIdRange {
   public func contains(_ cardId: Swift.String) -> Swift.Bool
 }
 final public class StartPrimaryCardLinkingCommand {
   public init()
   @objc deinit
-  public typealias Response = TangemSdk.PrimaryCard
+  public typealias Response = PrimaryCard
 }
 public struct BIP32 {
   public init()
-  public func makeMasterKey(from seed: Foundation.Data, curve: TangemSdk.EllipticCurve) throws -> TangemSdk.ExtendedPrivateKey
+  public func makeMasterKey(from seed: Foundation.Data, curve: EllipticCurve) throws -> ExtendedPrivateKey
 }
 public enum ExtendedKeySerializationError : Swift.String, Swift.Error, Foundation.LocalizedError {
   case wrongLength
@@ -2574,63 +2681,63 @@ extension Swift.Array where Element == Swift.UInt8 {
   public func getDoubleSha256() -> Foundation.Data
 }
 public protocol PreflightReadFilter {
-  func onCardRead(_ card: TangemSdk.Card, environment: TangemSdk.SessionEnvironment) throws
-  func onFullCardRead(_ card: TangemSdk.Card, environment: TangemSdk.SessionEnvironment) throws
+  func onCardRead(_ card: Card, environment: SessionEnvironment) throws
+  func onFullCardRead(_ card: Card, environment: SessionEnvironment) throws
 }
 public protocol CardArtworksProvider {
-  func loadArtworks() async throws -> TangemSdk.Artworks
+  func loadArtworks() async throws -> Artworks
 }
 public struct Artworks {
   public let large: Foundation.Data
   public let small: Foundation.Data?
 }
-final public class DeleteFilesTask : TangemSdk.CardSessionRunnable {
+final public class DeleteFilesTask : CardSessionRunnable {
   #if compiler(>=5.3) && $NonescapableTypes
   public init(indices: [Swift.Int]?)
   #endif
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  public typealias Response = TangemSdk.SuccessResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
   @objc deinit
 }
 public protocol ExtendedKeySerializable {
-  init(from extendedKeyString: Swift.String, networkType: TangemSdk.NetworkType) throws
-  func serialize(for networkType: TangemSdk.NetworkType) throws -> Swift.String
+  init(from extendedKeyString: Swift.String, networkType: NetworkType) throws
+  func serialize(for networkType: NetworkType) throws -> Swift.String
 }
 public struct SLIP23 {
   public init()
-  public func makeIkarusMasterKey(entropy: Foundation.Data, passphrase: Swift.String) throws -> TangemSdk.ExtendedPrivateKey
+  public func makeIkarusMasterKey(entropy: Foundation.Data, passphrase: Swift.String) throws -> ExtendedPrivateKey
 }
 public enum NetworkType {
   case mainnet
   case testnet
-  public static func == (a: TangemSdk.NetworkType, b: TangemSdk.NetworkType) -> Swift.Bool
+  public static func == (a: NetworkType, b: NetworkType) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
     get
   }
 }
-public typealias SignHashesResponse = TangemSdk.SignResponse
-final public class SignHashesCommand : TangemSdk.CardSessionRunnable {
+public typealias SignHashesResponse = SignResponse
+final public class SignHashesCommand : CardSessionRunnable {
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, derivationPath: TangemSdk.DerivationPath? = nil)
+  public init(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SignHashesResponse>)
-  public typealias Response = TangemSdk.SignHashesResponse
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SignHashesResponse>)
+  public typealias Response = SignHashesResponse
 }
-public enum IssuerExtraDataMode : TangemSdk.Byte {
+public enum IssuerExtraDataMode : Byte {
   case readOrStartWrite
   case writePart
   case finalizeWrite
   #if compiler(>=5.3) && $NonescapableTypes
-  public init?(rawValue: TangemSdk.Byte)
+  public init?(rawValue: Byte)
   #endif
-  public typealias RawValue = TangemSdk.Byte
-  public var rawValue: TangemSdk.Byte {
+  public typealias RawValue = Byte
+  public var rawValue: Byte {
     get
   }
 }
-public struct ReadIssuerExtraDataResponse : TangemSdk.JSONStringConvertible {
+public struct ReadIssuerExtraDataResponse : JSONStringConvertible {
   public let cardId: Swift.String
   public var size: Swift.Int?
   public var issuerData: Foundation.Data
@@ -2647,226 +2754,116 @@ final public class ReadIssuerExtraDataCommand {
   public init(issuerPublicKey: Foundation.Data? = nil)
   #endif
   @objc deinit
-  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ReadIssuerExtraDataResponse>)
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<ReadIssuerExtraDataResponse>)
   @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  public typealias Response = TangemSdk.ReadIssuerExtraDataResponse
+  public typealias Response = ReadIssuerExtraDataResponse
 }
-extension TangemSdk.DeleteFileCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.EncryptionMode : Swift.RawRepresentable {}
-extension TangemSdk.EncryptionMode : Swift.Encodable {}
-extension TangemSdk.EncryptionMode : Swift.Decodable {}
-extension TangemSdk.EncryptionMode : Swift.Equatable {}
-extension TangemSdk.EncryptionMode : Swift.Hashable {}
+extension DeleteFileCommand : CardSessionRunnable {}
+extension EncryptionMode : Swift.RawRepresentable {}
+extension EncryptionMode : Swift.Encodable {}
+extension EncryptionMode : Swift.Decodable {}
+extension EncryptionMode : Swift.Equatable {}
+extension EncryptionMode : Swift.Hashable {}
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
-extension TangemSdk.WriteIssuerExtraDataCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.PersonalizeCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.ReadCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.BIP44.Chain : Swift.Equatable {}
-extension TangemSdk.BIP44.Chain : Swift.Hashable {}
-extension TangemSdk.EntropyLength : Swift.Equatable {}
-extension TangemSdk.EntropyLength : Swift.Hashable {}
-extension TangemSdk.EntropyLength : Swift.RawRepresentable {}
-extension TangemSdk.JSONRPCError.Code : Swift.Equatable {}
-extension TangemSdk.JSONRPCError.Code : Swift.Hashable {}
-extension TangemSdk.JSONRPCError.Code : Swift.RawRepresentable {}
-extension TangemSdk.CardReaderViewEvent : Swift.Hashable {}
-extension TangemSdk.EllipticCurve : Swift.RawRepresentable {}
-extension TangemSdk.EllipticCurve : Swift.Encodable {}
-extension TangemSdk.EllipticCurve : Swift.Decodable {}
-extension TangemSdk.EllipticCurve : Swift.Equatable {}
-extension TangemSdk.EllipticCurve : Swift.Hashable {}
-extension TangemSdk.ResetPinService.State : Swift.Hashable {}
-extension TangemSdk.Card.Wallet.Status : Swift.Equatable {}
-extension TangemSdk.Card.Wallet.Status : Swift.Hashable {}
-extension TangemSdk.Card.Wallet.Status : Swift.RawRepresentable {}
-extension TangemSdk.FirmwareVersion.FirmwareType : Swift.RawRepresentable {}
-extension TangemSdk.FirmwareVersion.FirmwareType : Swift.Decodable {}
-extension TangemSdk.FirmwareVersion.FirmwareType : Swift.Equatable {}
-extension TangemSdk.FirmwareVersion.FirmwareType : Swift.Hashable {}
-extension TangemSdk.GenerateOTPCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.AttestWalletKeyTask : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.AttestWalletKeyTask.ConfirmationMode : Swift.Equatable {}
-extension TangemSdk.AttestWalletKeyTask.ConfirmationMode : Swift.Hashable {}
-extension TangemSdk.ChangeFileSettingsCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.BIP39.Wordlist : Swift.Equatable {}
-extension TangemSdk.BIP39.Wordlist : Swift.Hashable {}
-extension TangemSdk.PurgeWalletCommand : TangemSdk.CardSessionRunnable {}
+extension WriteIssuerExtraDataCommand : CardSessionRunnable {}
+extension PersonalizeCommand : CardSessionRunnable {}
+extension ReadCommand : CardSessionRunnable {}
+extension BIP44.Chain : Swift.Equatable {}
+extension BIP44.Chain : Swift.Hashable {}
+extension EntropyLength : Swift.Equatable {}
+extension EntropyLength : Swift.Hashable {}
+extension EntropyLength : Swift.RawRepresentable {}
+extension JSONRPCError.Code : Swift.Equatable {}
+extension JSONRPCError.Code : Swift.Hashable {}
+extension JSONRPCError.Code : Swift.RawRepresentable {}
+extension CardReaderViewEvent : Swift.Hashable {}
+extension EllipticCurve : Swift.RawRepresentable {}
+extension EllipticCurve : Swift.Encodable {}
+extension EllipticCurve : Swift.Decodable {}
+extension EllipticCurve : Swift.Equatable {}
+extension EllipticCurve : Swift.Hashable {}
+extension ResetPinService.State : Swift.Hashable {}
+extension Card.Wallet.Status : Swift.Equatable {}
+extension Card.Wallet.Status : Swift.Hashable {}
+extension Card.Wallet.Status : Swift.RawRepresentable {}
+extension FirmwareVersion.FirmwareType : Swift.RawRepresentable {}
+extension FirmwareVersion.FirmwareType : Swift.Decodable {}
+extension FirmwareVersion.FirmwareType : Swift.Equatable {}
+extension FirmwareVersion.FirmwareType : Swift.Hashable {}
+extension GenerateOTPCommand : CardSessionRunnable {}
+extension AttestWalletKeyTask : CardSessionRunnable {}
+extension AttestWalletKeyTask.ConfirmationMode : Swift.Equatable {}
+extension AttestWalletKeyTask.ConfirmationMode : Swift.Hashable {}
+extension ChangeFileSettingsCommand : CardSessionRunnable {}
+extension BIP39.Wordlist : Swift.Equatable {}
+extension BIP39.Wordlist : Swift.Hashable {}
+extension PurgeWalletCommand : CardSessionRunnable {}
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
-extension TangemSdk.ReadIssuerDataCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.AttestCardKeyCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.AttestCardKeyCommand.Mode : Swift.RawRepresentable {}
-extension TangemSdk.AttestCardKeyCommand.Mode : Swift.Encodable {}
-extension TangemSdk.AttestCardKeyCommand.Mode : Swift.Decodable {}
-extension TangemSdk.AttestCardKeyCommand.Mode : Swift.Equatable {}
-extension TangemSdk.AttestCardKeyCommand.Mode : Swift.Hashable {}
-extension TangemSdk.NetworkType : Swift.Equatable {}
-extension TangemSdk.NetworkType : Swift.Hashable {}
-extension TangemSdk.GetEntropyCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.ReadWalletsListCommand : TangemSdk.CardSessionRunnable {}
+extension ReadIssuerDataCommand : CardSessionRunnable {}
+extension AttestCardKeyCommand : CardSessionRunnable {}
+extension AttestCardKeyCommand.Mode : Swift.RawRepresentable {}
+extension AttestCardKeyCommand.Mode : Swift.Encodable {}
+extension AttestCardKeyCommand.Mode : Swift.Decodable {}
+extension AttestCardKeyCommand.Mode : Swift.Equatable {}
+extension AttestCardKeyCommand.Mode : Swift.Hashable {}
+extension NetworkType : Swift.Equatable {}
+extension NetworkType : Swift.Hashable {}
+extension GetEntropyCommand : CardSessionRunnable {}
+extension ReadWalletsListCommand : CardSessionRunnable {}
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
-extension TangemSdk.WriteIssuerDataCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.UserCodeType : Swift.Equatable {}
-extension TangemSdk.UserCodeType : Swift.Hashable {}
-extension TangemSdk.SetUserCodeCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.ReadFileChecksumCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.FileVisibility : Swift.Equatable {}
-extension TangemSdk.FileVisibility : Swift.Hashable {}
-extension TangemSdk.FileVisibility : Swift.RawRepresentable {}
-extension TangemSdk.Attestation.Status : Swift.RawRepresentable {}
-extension TangemSdk.Attestation.Status : Swift.Encodable {}
-extension TangemSdk.Attestation.Status : Swift.Decodable {}
-extension TangemSdk.Attestation.Status : Swift.Equatable {}
-extension TangemSdk.Attestation.Status : Swift.Hashable {}
-extension TangemSdk.StatusWord : Swift.Equatable {}
-extension TangemSdk.StatusWord : Swift.Hashable {}
-extension TangemSdk.StatusWord : Swift.RawRepresentable {}
-extension TangemSdk.Card.LinkedTerminalStatus : Swift.Equatable {}
-extension TangemSdk.Card.LinkedTerminalStatus : Swift.Hashable {}
-extension TangemSdk.Card.LinkedTerminalStatus : Swift.RawRepresentable {}
+extension WriteIssuerDataCommand : CardSessionRunnable {}
+extension UserCodeType : Swift.Equatable {}
+extension UserCodeType : Swift.Hashable {}
+extension SetUserCodeCommand : CardSessionRunnable {}
+extension ReadFileChecksumCommand : CardSessionRunnable {}
+extension FileVisibility : Swift.Equatable {}
+extension FileVisibility : Swift.Hashable {}
+extension FileVisibility : Swift.RawRepresentable {}
+extension Attestation.Status : Swift.RawRepresentable {}
+extension Attestation.Status : Swift.Encodable {}
+extension Attestation.Status : Swift.Decodable {}
+extension Attestation.Status : Swift.Equatable {}
+extension Attestation.Status : Swift.Hashable {}
+extension StatusWord : Swift.Equatable {}
+extension StatusWord : Swift.Hashable {}
+extension StatusWord : Swift.RawRepresentable {}
+extension Card.LinkedTerminalStatus : Swift.Equatable {}
+extension Card.LinkedTerminalStatus : Swift.Hashable {}
+extension Card.LinkedTerminalStatus : Swift.RawRepresentable {}
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
-extension TangemSdk.ReadUserDataCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.ResetBackupCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.AttestationTask.Mode : Swift.RawRepresentable {}
-extension TangemSdk.AttestationTask.Mode : Swift.Encodable {}
-extension TangemSdk.AttestationTask.Mode : Swift.Decodable {}
-extension TangemSdk.AttestationTask.Mode : Swift.Hashable {}
-extension TangemSdk.Instruction : Swift.Equatable {}
-extension TangemSdk.Instruction : Swift.Hashable {}
-extension TangemSdk.Instruction : Swift.RawRepresentable {}
-extension TangemSdk.WriteFileCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.DepersonalizeCommand : TangemSdk.CardSessionRunnable {}
+extension ReadUserDataCommand : CardSessionRunnable {}
+extension ResetBackupCommand : CardSessionRunnable {}
+extension AttestationTask.Mode : Swift.RawRepresentable {}
+extension AttestationTask.Mode : Swift.Encodable {}
+extension AttestationTask.Mode : Swift.Decodable {}
+extension AttestationTask.Mode : Swift.Hashable {}
+extension Instruction : Swift.Equatable {}
+extension Instruction : Swift.Hashable {}
+extension Instruction : Swift.RawRepresentable {}
+extension WriteFileCommand : CardSessionRunnable {}
+extension DepersonalizeCommand : CardSessionRunnable {}
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
-extension TangemSdk.WriteUserDataCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.Log.Level : Swift.Equatable {}
-extension TangemSdk.Log.Level : Swift.Hashable {}
-extension TangemSdk.TlvValueType : Swift.Equatable {}
-extension TangemSdk.TlvValueType : Swift.Hashable {}
-extension TangemSdk.TlvValueType : Swift.RawRepresentable {}
-extension TangemSdk.TlvTag : Swift.Equatable {}
-extension TangemSdk.TlvTag : Swift.Hashable {}
-extension TangemSdk.TlvTag : Swift.RawRepresentable {}
-extension TangemSdk.PreflightReadMode : Swift.Hashable {}
-extension TangemSdk.AccessCodeRequestPolicy : Swift.Equatable {}
-extension TangemSdk.AccessCodeRequestPolicy : Swift.Hashable {}
-extension TangemSdk.AccessCodeRequestPolicy : Swift.RawRepresentable {}
-extension TangemSdk.ProductType : Swift.Equatable {}
-extension TangemSdk.ProductType : Swift.Hashable {}
-extension TangemSdk.StartPrimaryCardLinkingCommand : TangemSdk.CardSessionRunnable {}
-extension TangemSdk.ExtendedKeySerializationError : Swift.Equatable {}
-extension TangemSdk.ExtendedKeySerializationError : Swift.Hashable {}
-extension TangemSdk.ExtendedKeySerializationError : Swift.RawRepresentable {}
-extension TangemSdk.IssuerExtraDataMode : Swift.Equatable {}
-extension TangemSdk.IssuerExtraDataMode : Swift.Hashable {}
-extension TangemSdk.IssuerExtraDataMode : Swift.RawRepresentable {}
+extension WriteUserDataCommand : CardSessionRunnable {}
+extension Log.Level : Swift.Equatable {}
+extension Log.Level : Swift.Hashable {}
+extension TlvValueType : Swift.Equatable {}
+extension TlvValueType : Swift.Hashable {}
+extension TlvValueType : Swift.RawRepresentable {}
+extension TlvTag : Swift.Equatable {}
+extension TlvTag : Swift.Hashable {}
+extension TlvTag : Swift.RawRepresentable {}
+extension PreflightReadMode : Swift.Hashable {}
+extension AccessCodeRequestPolicy : Swift.Equatable {}
+extension AccessCodeRequestPolicy : Swift.Hashable {}
+extension AccessCodeRequestPolicy : Swift.RawRepresentable {}
+extension ProductType : Swift.Equatable {}
+extension ProductType : Swift.Hashable {}
+extension StartPrimaryCardLinkingCommand : CardSessionRunnable {}
+extension ExtendedKeySerializationError : Swift.Equatable {}
+extension ExtendedKeySerializationError : Swift.Hashable {}
+extension ExtendedKeySerializationError : Swift.RawRepresentable {}
+extension IssuerExtraDataMode : Swift.Equatable {}
+extension IssuerExtraDataMode : Swift.Hashable {}
+extension IssuerExtraDataMode : Swift.RawRepresentable {}
 @available(iOS, deprecated: 100000.0, message: "Use files instead")
-extension TangemSdk.ReadIssuerExtraDataCommand : TangemSdk.CardSessionRunnable {}
-
-final public class TangemSdk {
-  final public var config: TangemSdk.Config
-  #if compiler(>=5.3) && $NonescapableTypes
-  public init(cardReader: (any TangemSdk.CardReader)? = nil, viewDelegate: (any TangemSdk.SessionViewDelegate)? = nil, config: TangemSdk.Config = Config())
-  #endif
-  @objc deinit
-  final public func initializeJSONRPC(networkService: TangemSdk.NetworkService)
-  final public func registerJSONRPCTask(_ object: any TangemSdk.JSONRPCHandler) -> Swift.Bool
-}
-extension TangemSdk.TangemSdk {
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func scanCard(initialMessage: TangemSdk.Message? = nil, networkService: TangemSdk.NetworkService, completion: @escaping TangemSdk.CompletionResult<TangemSdk.Card>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func attestCardKey(attestationMode: TangemSdk.AttestCardKeyCommand.Mode = .default, challenge: Foundation.Data? = nil, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.AttestCardKeyResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func sign(hash: Foundation.Data, walletPublicKey: Foundation.Data, cardId: Swift.String? = nil, derivationPath: TangemSdk.DerivationPath? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SignHashResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func sign(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, cardId: Swift.String? = nil, derivationPath: TangemSdk.DerivationPath? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SignHashesResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func createWallet(curve: TangemSdk.EllipticCurve, cardId: Swift.String, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.CreateWalletResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func importWallet(curve: TangemSdk.EllipticCurve, cardId: Swift.String, mnemonic: Swift.String, passphrase: Swift.String = "", initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.CreateWalletResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func purgeWallet(walletPublicKey: Foundation.Data, cardId: Swift.String, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func setAccessCode(_ accessCode: Swift.String? = nil, cardId: Swift.String, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func setPasscode(_ passcode: Swift.String? = nil, cardId: Swift.String, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func resetUserCodes(cardId: Swift.String, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func setUserCodeRecoveryAllowed(_ isAllowed: Swift.Bool, cardId: Swift.String, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func deriveWalletPublicKey(cardId: Swift.String, walletPublicKey: Foundation.Data, derivationPath: TangemSdk.DerivationPath, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ExtendedPublicKey>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func deriveWalletPublicKeys(cardId: Swift.String, walletPublicKey: Foundation.Data, derivationPaths: [TangemSdk.DerivationPath], initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.DerivedKeys>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func readFiles(readPrivateFiles: Swift.Bool = false, fileName: Swift.String? = nil, walletPublicKey: Foundation.Data? = nil, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<[TangemSdk.File]>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func changeFileSettings(changes: [Swift.Int : TangemSdk.FileVisibility], cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func writeFiles(files: [TangemSdk.FileToWrite], cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.WriteFilesResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func deleteFiles(indices: [Swift.Int]?, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func prepareHashes(cardId: Swift.String, fileData: Foundation.Data, fileCounter: Swift.Int, fileName: Swift.String? = nil, privateKey: Foundation.Data? = nil) throws -> TangemSdk.FileHashData
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func readIssuerData(cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ReadIssuerDataResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func writeIssuerData(issuerData: Foundation.Data, issuerDataSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func readIssuerExtraData(cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ReadIssuerExtraDataResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func writeIssuerExtraData(issuerData: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func readUserData(cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.ReadUserDataResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func writeUserData(userData: Foundation.Data, userCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @available(iOS, deprecated: 100000.0, message: "Use files instead")
-  final public func writeUserProtectedData(userProtectedData: Foundation.Data, userProtectedCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SuccessResponse>)
-  #endif
-}
-extension TangemSdk.TangemSdk {
-  final public func startSession<T>(with runnable: T, completion: @escaping TangemSdk.CompletionResult<T.Response>) where T : TangemSdk.CardSessionRunnable
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func startSession<T>(with runnable: T, filter: TangemSdk.SessionFilter?, initialMessage: TangemSdk.Message? = nil, accessCode: Swift.String? = nil, completion: @escaping TangemSdk.CompletionResult<T.Response>) where T : TangemSdk.CardSessionRunnable
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func startSession<T>(with runnable: T, cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, accessCode: Swift.String? = nil, completion: @escaping TangemSdk.CompletionResult<T.Response>) where T : TangemSdk.CardSessionRunnable
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func startSession(cardId: Swift.String? = nil, initialMessage: TangemSdk.Message? = nil, accessCode: Swift.String? = nil, callback: @escaping (TangemSdk.CardSession, TangemSdk.TangemSdkError?) -> Swift.Void)
-  #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  final public func startSession(with jsonRequest: Swift.String, cardId: Swift.String? = nil, initialMessage: Swift.String? = nil, accessCode: Swift.String? = nil, completion: @escaping (Swift.String) -> Swift.Void)
-  #endif
-}
-
+extension ReadIssuerExtraDataCommand : CardSessionRunnable {}

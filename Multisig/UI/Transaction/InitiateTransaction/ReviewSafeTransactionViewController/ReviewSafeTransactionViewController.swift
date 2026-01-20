@@ -95,21 +95,103 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     func didConfirm() {
-        // Dual-signature flow: auto-pick local, then card.
-        let localKeys = DualSignatureKeySelector.localOwnerKeys(for: safe)
-        guard let localKey = localKeys.first else {
-            App.shared.snackbar.show(message: "No se encuentra la llave local")
-            return
-        }
-
         guard let transaction = transactionWithFee(),
-              let safeTxHash = transaction.safeTxHash?.description else {
+              let safeTxHash = transaction.safeTxHash?.description,
+              let safeTxHashData = Data(exactlyHex: safeTxHash),
+              let chainId = safe.chain?.id else {
             preconditionFailure("Unexpected Error")
         }
 
         startConfirm()
 
-        signAndPropose(transaction: transaction, localKey: localKey, safeTxHash: safeTxHash)
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] didConfirm() called - safeTxHash: \(safeTxHash), chainId: \(chainId)")
+        #endif
+
+        // Check if transaction already exists with confirmations
+        currentDataTask = gatewayService.asyncTransactionDetails(safeTxHash: safeTxHashData, chainId: chainId) { [weak self] result in
+            guard let self = self else { return }
+            
+            #if DEBUG
+            switch result {
+            case .success(let existingTx):
+                let confirmationsCount: Int
+                if let multisigInfo = existingTx.multisigInfo {
+                    confirmationsCount = multisigInfo.confirmations.count
+                } else {
+                    confirmationsCount = 0
+                }
+                let txStatus = existingTx.txStatus.rawValue
+                let hasMultisigInfo = existingTx.multisigInfo != nil
+                
+                LogService.shared.debug("[DualSignatureFlow] Transaction details fetched successfully")
+                LogService.shared.debug("[DualSignatureFlow] - txStatus: \(txStatus)")
+                LogService.shared.debug("[DualSignatureFlow] - hasMultisigInfo: \(hasMultisigInfo)")
+                LogService.shared.debug("[DualSignatureFlow] - confirmations count: \(confirmationsCount)")
+                
+                if let multisigInfo = existingTx.multisigInfo {
+                    let confirmations = multisigInfo.confirmations
+                    LogService.shared.debug("[DualSignatureFlow] - confirmation addresses: \(confirmations.map { $0.signer.value.address })")
+                }
+                
+                // Check available signer keys
+                if let signers = existingTx.multisigInfo?.signerKeys() {
+                    LogService.shared.debug("[DualSignatureFlow] - available signer keys count: \(signers.count)")
+                    for (index, signer) in signers.enumerated() {
+                        LogService.shared.debug("[DualSignatureFlow] - signer[\(index)]: type=\(signer.keyType.rawValue), address=\(signer.address.checksummed), name=\(signer.displayName)")
+                    }
+                    
+                    // Check specifically for Tangem cards
+                    let tangemKeys = signers.filter { $0.keyType == .tangem || $0.keyType == .tangem0 }
+                    LogService.shared.debug("[DualSignatureFlow] - Tangem card keys available: \(tangemKeys.count)")
+                    for (index, tangemKey) in tangemKeys.enumerated() {
+                        LogService.shared.debug("[DualSignatureFlow] - Tangem[\(index)]: address=\(tangemKey.address.checksummed), name=\(tangemKey.displayName)")
+                    }
+                } else {
+                    LogService.shared.debug("[DualSignatureFlow] - signerKeys() returned nil")
+                }
+                
+                // Check all owner keys (not just remaining signers)
+                if let allOwnerKeys = try? KeyInfo.owners(safe: self.safe) {
+                    let tangemOwnerKeys = allOwnerKeys.filter { $0.keyType == .tangem || $0.keyType == .tangem0 }
+                    LogService.shared.debug("[DualSignatureFlow] - Total Tangem owner keys in Safe: \(tangemOwnerKeys.count)")
+                    for (index, tangemKey) in tangemOwnerKeys.enumerated() {
+                        LogService.shared.debug("[DualSignatureFlow] - Owner Tangem[\(index)]: address=\(tangemKey.address.checksummed), name=\(tangemKey.displayName)")
+                    }
+                }
+                
+            case .failure(let error):
+                LogService.shared.debug("[DualSignatureFlow] Transaction details fetch failed: \(error.localizedDescription)")
+                if let nsError = error as NSError? {
+                    LogService.shared.debug("[DualSignatureFlow] - Error code: \(nsError.code), domain: \(nsError.domain)")
+                }
+            }
+            #endif
+            
+            switch result {
+            case .success(let existingTx):
+                // Transaction exists - check if it has confirmations
+                if let confirmations = existingTx.multisigInfo?.confirmations, !confirmations.isEmpty {
+                    #if DEBUG
+                    LogService.shared.debug("[DualSignatureFlow] ✅ Transaction has confirmations - using STANDARD confirmation flow")
+                    #endif
+                    // Use standard flow for existing transaction with confirmations
+                    self.confirmExistingTransaction(existingTx: existingTx, safeTxHash: safeTxHash)
+                } else {
+                    #if DEBUG
+                    LogService.shared.debug("[DualSignatureFlow] ⚠️ Transaction exists but NO confirmations - using DUAL SIGNATURE flow")
+                    #endif
+                    // Transaction exists but no confirmations - use dual signature flow
+                    self.proceedWithDualSignatureFlow(transaction: transaction, safeTxHash: safeTxHash)
+                }
+            case .failure:
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] ⚠️ Transaction fetch failed - using DUAL SIGNATURE flow")
+                #endif
+                // Transaction doesn't exist - use dual signature flow
+                self.proceedWithDualSignatureFlow(transaction: transaction, safeTxHash: safeTxHash)
+            }
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -268,6 +350,34 @@ class ReviewSafeTransactionViewController: UIViewController {
 
     // MARK: - Dual signature orchestration
 
+    private func proceedWithDualSignatureFlow(transaction: Transaction, safeTxHash: String) {
+        // Dual-signature flow: auto-pick local, then card.
+        let localKeys = DualSignatureKeySelector.localOwnerKeys(for: safe)
+        
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] ⚠️ proceedWithDualSignatureFlow() called - this should NOT happen for pending transactions!")
+        
+        // Log available keys
+        let cardKeys = DualSignatureKeySelector.cardOwnerKeys(for: safe)
+        LogService.shared.debug("[DualSignatureFlow] - Local keys available: \(localKeys.count)")
+        LogService.shared.debug("[DualSignatureFlow] - Card keys available: \(cardKeys.count)")
+        for (index, cardKey) in cardKeys.enumerated() {
+            LogService.shared.debug("[DualSignatureFlow] - Card[\(index)]: type=\(cardKey.keyType.rawValue), address=\(cardKey.address.checksummed), name=\(cardKey.displayName)")
+        }
+        #endif
+        
+        guard let localKey = localKeys.first else {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] ❌ No local key found - showing error message")
+            #endif
+            endConfirm()
+            App.shared.snackbar.show(message: "No se encuentra la llave local")
+            return
+        }
+
+        signAndPropose(transaction: transaction, localKey: localKey, safeTxHash: safeTxHash)
+    }
+
     private func signAndPropose(transaction: Transaction, localKey: KeyInfo, safeTxHash: String) {
         Wallet.shared.sign(transaction, keyInfo: localKey) { [unowned self] result in
             do {
@@ -415,6 +525,222 @@ class ReviewSafeTransactionViewController: UIViewController {
         }
     }
 
+    // MARK: - Standard confirmation flow for existing transactions
+
+    private func confirmExistingTransaction(existingTx: SCGModels.TransactionDetails, safeTxHash: String) {
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] confirmExistingTransaction() called")
+        #endif
+        
+        guard let signers = existingTx.multisigInfo?.signerKeys() else {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] ❌ signerKeys() returned nil")
+            #endif
+            endConfirm()
+            App.shared.snackbar.show(message: "No remaining signers available")
+            return
+        }
+
+        guard !signers.isEmpty else {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] ❌ signerKeys() returned empty array")
+            #endif
+            endConfirm()
+            App.shared.snackbar.show(message: "No remaining signers available")
+            return
+        }
+
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] ✅ Found \(signers.count) available signers - showing ChooseOwnerKeyViewController")
+        #endif
+
+        let descriptionText = "You are about to confirm this transaction. This happens off-chain. Please select which owner key to use."
+        let vc = ChooseOwnerKeyViewController(
+            owners: { signers },
+            chainID: safe.chain!.id,
+            header: .text(description: descriptionText)
+        ) { [weak self] keyInfo in
+            // dismiss presented ChooseOwnerKeyViewController right after receiving the completion
+            self?.dismiss(animated: true) {
+                guard let keyInfo = keyInfo else {
+                    #if DEBUG
+                    LogService.shared.debug("[DualSignatureFlow] User cancelled key selection")
+                    #endif
+                    self?.endConfirm()
+                    return
+                }
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] User selected key: type=\(keyInfo.keyType.rawValue), address=\(keyInfo.address.checksummed), name=\(keyInfo.displayName)")
+                #endif
+                self?.signExistingTransaction(keyInfo: keyInfo, existingTx: existingTx, safeTxHash: safeTxHash)
+            }
+        }
+
+        let navigationController = UINavigationController(rootViewController: vc)
+        presentModal(navigationController)
+    }
+
+    private func signExistingTransaction(keyInfo: KeyInfo, existingTx: SCGModels.TransactionDetails, safeTxHash: String) {
+        guard var transaction = Transaction(tx: existingTx),
+              let safeAddress = try? Address(from: safe.address!),
+              let chainId = safe.chain?.id else {
+            endConfirm()
+            App.shared.snackbar.show(error: GSError.error(description: "Failed to prepare transaction for signing"))
+            return
+        }
+
+        transaction.safe = AddressString(safeAddress)
+        transaction.safeVersion = safe.contractVersion != nil ? Version(safe.contractVersion!) : nil
+        transaction.chainId = chainId
+
+        switch keyInfo.keyType {
+        case .deviceImported, .deviceGenerated, .web3AuthApple, .web3AuthGoogle:
+            Wallet.shared.sign(transaction, keyInfo: keyInfo) { [unowned self] result in
+                do {
+                    let signature = try result.get()
+                    confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature.hexadecimal, keyInfo: keyInfo)
+                } catch {
+                    endConfirm()
+                    App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction", error: error))
+                }
+            }
+
+        case .walletConnect:
+            let signVC = SignatureRequestToWalletViewController(transaction, keyInfo: keyInfo, chain: safe.chain!)
+            signVC.onSuccess = { [weak self] signature in
+                self?.confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
+            }
+            let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
+            presentModal(vc)
+
+        case .ledgerNanoX:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let vc = LedgerSignerViewController(request: request)
+
+            presentModal(vc)
+            Tracker.trackEvent(.reviewExecutionLedger)
+
+            var didSign = false
+
+            vc.completion = { [weak self] signature in
+                didSign = true
+                self?.confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
+            }
+
+            vc.onClose = { [weak self] in
+                if !didSign {
+                    self?.endConfirm()
+                }
+            }
+
+        case .tangem, .tangem0:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let tangemService: TangemSigningService = keyInfo.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
+
+            presentModal(vc)
+            Tracker.trackEvent(.reviewExecutionTangem)
+
+            var didSignTangem = false
+
+            vc.completion = { [weak self] signature in
+                didSignTangem = true
+                self?.confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
+            }
+
+            vc.onClose = { [weak self] in
+                if !didSignTangem {
+                    self?.endConfirm()
+                }
+            }
+
+        case .burner:
+            let request = SignRequest(title: "Confirm Transaction",
+                                      tracking: ["action": "confirm"],
+                                      signer: keyInfo,
+                                      hexToSign: safeTxHash)
+            let vc = BurnerSignerViewController(request: request)
+
+            presentModal(vc)
+            Tracker.trackEvent(.reviewExecutionBurner)
+
+            var didSignBurner = false
+
+            vc.completion = { [weak self] signature in
+                didSignBurner = true
+                self?.confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
+            }
+
+            vc.onClose = { [weak self] in
+                if !didSignBurner {
+                    self?.endConfirm()
+                }
+            }
+
+        case .keystone:
+            let signInfo = KeystoneSignInfo(
+                signData: transaction.safeTxHash.hash.toHexString(),
+                chain: safe.chain,
+                keyInfo: keyInfo,
+                signType: .personalMessage
+            )
+            let signCompletion = { [unowned self] (success: Bool) in
+                if !success {
+                    endConfirm()
+                    App.shared.snackbar.show(error: GSError.KeystoneSignFailed())
+                }
+                keystoneSignFlow = nil
+            }
+            guard let signFlow = KeystoneSignFlow(signInfo: signInfo, completion: signCompletion) else {
+                endConfirm()
+                App.shared.snackbar.show(error: GSError.KeystoneStartSignFailed())
+                return
+            }
+            
+            keystoneSignFlow = signFlow
+            keystoneSignFlow.signCompletion = { [weak self] unmarshaledSignature in
+                self?.confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: unmarshaledSignature.safeSignature, keyInfo: keyInfo)
+            }
+            present(flow: keystoneSignFlow)
+        }
+    }
+
+    private func confirmExistingTransactionWithSignature(safeTxHash: String, signature: String, keyInfo: KeyInfo) {
+        currentDataTask = gatewayService.asyncConfirm(safeTxHash: safeTxHash,
+                                                      signature: signature,
+                                                      chainId: safe.chain!.id!) { [weak self] result in
+            guard let self = self else { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
+                DispatchQueue.main.async {
+                    switch result {
+                    case .failure(let error):
+                        self.endConfirm()
+                        if (error as NSError).code == URLError.cancelled.rawValue &&
+                            (error as NSError).domain == NSURLErrorDomain {
+                            return
+                        }
+                        App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction", error: error))
+                    case .success(let confirmedTx):
+                        NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
+                        self.endConfirm()
+                        App.shared.snackbar.show(message: "Confirmation successfully submitted")
+                        Tracker.trackEvent(
+                            .userTransactionConfirmed,
+                            parameters: TrackingEvent.keyTypeParameters(keyInfo, parameters: ["source": "review_screen"])
+                        )
+                        self.onSuccess(transaction: confirmedTx)
+                    }
+                }
+            }
+        }
+    }
+
     func presentModal(_ vc: UIViewController) {
         present(vc, animated: true) {
             TooltipSource.hideAll()
@@ -552,7 +878,95 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     func onSuccess(transaction: SCGModels.TransactionDetails) {
+        // Check if transaction is ready to execute
+        if isReadyToExecute(transaction: transaction) {
+            // Navigate to execution screen
+            navigateToExecution(transaction: transaction)
+        } else {
+            // Show success message and dismiss
+            showConfirmationSuccess(transaction: transaction)
+        }
+    }
+    
+    private func isReadyToExecute(transaction: SCGModels.TransactionDetails) -> Bool {
+        guard transaction.txStatus == .awaitingExecution,
+              let multisigInfo = transaction.multisigInfo,
+              transaction.ecdsaConfirmations.count >= multisigInfo.confirmationsRequired,
+              !executionKeys().isEmpty else {
+            return false
+        }
+        return true
+    }
+    
+    private func executionKeys() -> [KeyInfo] {
+        guard let safe = safe, let chain = safe.chain else {
+            return []
+        }
         
+        guard let allKeys = try? KeyInfo.all(), !allKeys.isEmpty else {
+            return []
+        }
+        
+        let validKeys = allKeys.filter { keyInfo in
+            // if it's a wallet connect key which chain doesn't match then do not use it
+            if keyInfo.keyType == .walletConnect,
+               let chainId = keyInfo.walletConnections?.first?.chainId,
+               // when chainId is 0 then it is 'any' chain
+               chainId != 0 && String(chainId) != chain.id {
+                return false
+            }
+            // else use the key
+            return true
+        }
+        .filter {
+            // filter out ledger until it is supported
+            $0.keyType != .ledgerNanoX
+        }
+        
+        return validKeys
+    }
+    
+    private func navigateToExecution(transaction: SCGModels.TransactionDetails) {
+        guard let safe = safe,
+              let chain = safe.chain else {
+            return
+        }
+        
+        let reviewVC = ReviewExecutionViewController(
+            safe: safe,
+            chain: chain,
+            transaction: transaction
+        ) { [weak self] in
+            self?.dismiss(animated: true, completion: nil)
+        } onSuccess: { [weak self] in
+            self?.dismiss(animated: true, completion: nil)
+        }
+        
+        let navigationController = UINavigationController(rootViewController: reviewVC)
+        present(navigationController, animated: true)
+    }
+    
+    private func showConfirmationSuccess(transaction: SCGModels.TransactionDetails) {
+        let successVC = SuccessViewController(
+            titleText: "Your confirmation is submitted!",
+            bodyText: "The transaction needs more confirmations before it can be executed.",
+            primaryAction: "View details",
+            secondaryAction: "Done"
+        )
+        successVC.onDone = { [weak self] isPrimaryAction in
+            guard let self = self else { return }
+            self.dismiss(animated: true) {
+                if isPrimaryAction {
+                    NotificationCenter.default.post(
+                        name: .initiateTxNotificationReceived,
+                        object: self,
+                        userInfo: ["transactionDetails": transaction]
+                    )
+                }
+            }
+        }
+        
+        show(successVC, sender: self)
     }
 }
 

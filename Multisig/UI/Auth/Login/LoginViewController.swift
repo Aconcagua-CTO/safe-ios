@@ -8,6 +8,7 @@
 
 import UIKit
 import Combine
+import AuthenticationServices
 
 /**
  * Login screen ViewController
@@ -23,6 +24,8 @@ class LoginViewController: UIViewController {
     @IBOutlet private weak var passwordTextField: GNOTextField!
     @IBOutlet private weak var forgotPasswordButton: UIButton!
     @IBOutlet private weak var loginButton: UIButton!
+    private var appleSignInButton: ASAuthorizationAppleIDButton?
+    private var contactRequiredPresented = false
     @IBOutlet private weak var registerLinkButton: UIButton!
     @IBOutlet private weak var progressIndicator: UIActivityIndicatorView!
     
@@ -32,6 +35,17 @@ class LoginViewController: UIViewController {
     private var viewModel = LoginViewModel()
     private var cancellables = Set<AnyCancellable>()
     private var keyboardBehavior: KeyboardAvoidingBehavior!
+    private var didLogLayoutOnce = false
+    private var appleButtonTopToLoginConstraint: NSLayoutConstraint?
+    private var appleButtonTopToSubtitleConstraint: NSLayoutConstraint?
+    private var progressIndicatorCenterXToLoginConstraint: NSLayoutConstraint?
+    private var progressIndicatorCenterYToLoginConstraint: NSLayoutConstraint?
+    private var progressIndicatorCenterXToAppleConstraint: NSLayoutConstraint?
+    private var progressIndicatorCenterYToAppleConstraint: NSLayoutConstraint?
+    
+    private var shouldShowEmailPasswordLogin: Bool {
+        App.configuration.app.showEmailPasswordLogin
+    }
     
     convenience init() {
         self.init(nibName: nil, bundle: nil)
@@ -40,19 +54,61 @@ class LoginViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         AuthLogger.info("LoginViewController view created")
+        NSLog("[AUTH][LoginVC] viewDidLoad()")
         
         // Create UI programmatically if XIB not available
         if scrollView == nil {
+            AuthLogger.info("LoginViewController using programmatic UI (scrollView outlet is nil)")
+            NSLog("[AUTH][LoginVC] using programmatic UI (scrollView=nil)")
             setupUIProgrammatically()
         } else {
+            AuthLogger.info("LoginViewController using XIB UI (scrollView outlet is non-nil)")
+            NSLog("[AUTH][LoginVC] using XIB UI (scrollView!=nil)")
             setupUI()
         }
         
+        configureLoginOptions()
+        
         observeAuthState()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        guard !didLogLayoutOnce else { return }
+        didLogLayoutOnce = true
+
+        let appleFrame = appleSignInButton?.frame ?? .zero
+        let registerFrame = registerLinkButton?.frame ?? .zero
+        let loginFrame = loginButton?.frame ?? .zero
+        AuthLogger.debug("Layout frames - login=\(loginFrame), apple=\(appleFrame), register=\(registerFrame)")
+        NSLog("[AUTH][LoginVC] frames login=%@ apple=%@ register=%@",
+              NSCoder.string(for: loginFrame),
+              NSCoder.string(for: appleFrame),
+              NSCoder.string(for: registerFrame))
+
+        if let apple = appleSignInButton {
+            AuthLogger.debug("Apple button - enabled=\(apple.isEnabled) hidden=\(apple.isHidden) alpha=\(apple.alpha) userInteraction=\(apple.isUserInteractionEnabled)")
+            NSLog("[AUTH][LoginVC] apple enabled=%d hidden=%d alpha=%.2f userInteraction=%d",
+                  apple.isEnabled ? 1 : 0,
+                  apple.isHidden ? 1 : 0,
+                  apple.alpha,
+                  apple.isUserInteractionEnabled ? 1 : 0)
+            // Also log which view currently wins hit-testing over the center of the Apple button.
+            let center = CGPoint(x: appleFrame.midX, y: appleFrame.midY)
+            let globalCenter = apple.superview?.convert(center, to: view) ?? center
+            let hit = view.hitTest(globalCenter, with: nil)
+            AuthLogger.debug("HitTest at Apple center -> \(String(describing: hit))")
+            NSLog("[AUTH][LoginVC] hitTest at Apple center -> %@", String(describing: hit))
+        } else {
+            AuthLogger.warning("Apple button is nil after layout")
+            NSLog("[AUTH][LoginVC] apple button is nil after layout")
+        }
     }
     
     private func setupUIProgrammatically() {
         view.backgroundColor = .backgroundPrimary
+        AuthLogger.debug("setupUIProgrammatically() start")
+        NSLog("[AUTH][LoginVC] setupUIProgrammatically() start")
         
         // Create scroll view
         let scrollView = UIScrollView()
@@ -130,6 +186,24 @@ class LoginViewController: UIViewController {
         loginButton.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(loginButton)
         self.loginButton = loginButton
+
+        // Create Apple Sign In button
+        let appleButton = ASAuthorizationAppleIDButton(type: .signIn, style: .black)
+        appleButton.translatesAutoresizingMaskIntoConstraints = false
+        appleButton.addTarget(self, action: #selector(appleSignInTapped), for: .touchUpInside)
+        appleButton.addTarget(self, action: #selector(appleSignInTapped), for: .primaryActionTriggered)
+        appleButton.addTarget(self, action: #selector(appleSignInTouchDown), for: .touchDown)
+        appleButton.isUserInteractionEnabled = true
+        appleButton.isExclusiveTouch = true
+        appleButton.accessibilityIdentifier = "login_apple_sign_in_button"
+        // Gesture recognizer as an extra safety net in case UIControl events aren't firing.
+        let tapGR = UITapGestureRecognizer(target: self, action: #selector(appleSignInGestureFired(_:)))
+        tapGR.cancelsTouchesInView = false
+        appleButton.addGestureRecognizer(tapGR)
+        contentView.addSubview(appleButton)
+        self.appleSignInButton = appleButton
+        AuthLogger.debug("Apple Sign In button added to view hierarchy")
+        NSLog("[AUTH][LoginVC] Apple Sign In button added")
         
         // Create register link button
         let registerLinkButton = UIButton(type: .system)
@@ -148,6 +222,14 @@ class LoginViewController: UIViewController {
         self.progressIndicator = progressIndicator
         
         // Setup constraints
+        appleButtonTopToLoginConstraint = appleButton.topAnchor.constraint(equalTo: loginButton.bottomAnchor, constant: 16)
+        appleButtonTopToSubtitleConstraint = appleButton.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 32)
+        
+        progressIndicatorCenterXToLoginConstraint = progressIndicator.centerXAnchor.constraint(equalTo: loginButton.centerXAnchor)
+        progressIndicatorCenterYToLoginConstraint = progressIndicator.centerYAnchor.constraint(equalTo: loginButton.centerYAnchor)
+        progressIndicatorCenterXToAppleConstraint = progressIndicator.centerXAnchor.constraint(equalTo: appleButton.centerXAnchor)
+        progressIndicatorCenterYToAppleConstraint = progressIndicator.centerYAnchor.constraint(equalTo: appleButton.centerYAnchor)
+        
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -189,15 +271,22 @@ class LoginViewController: UIViewController {
             loginButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
             loginButton.heightAnchor.constraint(equalToConstant: 50),
             
-            progressIndicator.centerXAnchor.constraint(equalTo: loginButton.centerXAnchor),
-            progressIndicator.centerYAnchor.constraint(equalTo: loginButton.centerYAnchor),
+            progressIndicatorCenterXToLoginConstraint!,
+            progressIndicatorCenterYToLoginConstraint!,
+
+            appleButtonTopToLoginConstraint!,
+            appleButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            appleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            appleButton.heightAnchor.constraint(equalToConstant: 50),
             
-            registerLinkButton.topAnchor.constraint(equalTo: loginButton.bottomAnchor, constant: 16),
+            registerLinkButton.topAnchor.constraint(equalTo: appleButton.bottomAnchor, constant: 16),
             registerLinkButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             registerLinkButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -32)
         ])
         
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
+        AuthLogger.debug("setupUIProgrammatically() done")
+        NSLog("[AUTH][LoginVC] setupUIProgrammatically() done")
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -257,6 +346,41 @@ class LoginViewController: UIViewController {
         logoImageView.image = UIImage(named: "ico-safe") ?? UIImage(systemName: "lock.shield")
         logoImageView.contentMode = .scaleAspectFit
     }
+
+    private func configureLoginOptions() {
+        let showEmailPassword = shouldShowEmailPasswordLogin
+        
+        let emailPasswordViews: [UIView] = [
+            emailTextField,
+            passwordTextField,
+            forgotPasswordButton,
+            loginButton,
+            registerLinkButton
+        ]
+        
+        emailPasswordViews.forEach {
+            $0.isHidden = !showEmailPassword
+            $0.isUserInteractionEnabled = showEmailPassword
+        }
+        
+        if let appleTopLogin = appleButtonTopToLoginConstraint,
+           let appleTopSubtitle = appleButtonTopToSubtitleConstraint {
+            appleTopLogin.isActive = showEmailPassword
+            appleTopSubtitle.isActive = !showEmailPassword
+        }
+        
+        if let centerXLogin = progressIndicatorCenterXToLoginConstraint,
+           let centerYLogin = progressIndicatorCenterYToLoginConstraint,
+           let centerXApple = progressIndicatorCenterXToAppleConstraint,
+           let centerYApple = progressIndicatorCenterYToAppleConstraint {
+            centerXLogin.isActive = showEmailPassword
+            centerYLogin.isActive = showEmailPassword
+            centerXApple.isActive = !showEmailPassword
+            centerYApple.isActive = !showEmailPassword
+        }
+        
+        view.setNeedsLayout()
+    }
     
     private func observeAuthState() {
         viewModel.$authState
@@ -283,8 +407,14 @@ class LoginViewController: UIViewController {
             AuthLogger.info("Login successful, re-checking app flow")
             // Re-check the app flow to ensure proper routing (terms, security, etc.)
             if let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate {
+                sceneDelegate.forceAssetsOnNextMainContent = true
                 sceneDelegate.onAppUpdateCompletion()
             }
+            
+        case .contactRequired(let message):
+            setLoading(false)
+            AuthLogger.warning("Login requires contact: \(message)")
+            presentContactRequired(message: message)
             
         case .error(let message, let exception):
             setLoading(false)
@@ -304,6 +434,14 @@ class LoginViewController: UIViewController {
             viewModel.resetState()
         }
     }
+
+    private func presentContactRequired(message: String) {
+        guard !contactRequiredPresented else { return }
+        contactRequiredPresented = true
+        let contactVC = ContactRequiredViewController(message: message)
+        contactVC.modalPresentationStyle = .fullScreen
+        present(contactVC, animated: true, completion: nil)
+    }
     
     private func setLoading(_ loading: Bool) {
         progressIndicator.isHidden = !loading
@@ -314,6 +452,7 @@ class LoginViewController: UIViewController {
         }
         
         loginButton.isEnabled = !loading
+        appleSignInButton?.isEnabled = !loading
         emailTextField.textField.isEnabled = !loading
         passwordTextField.textField.isEnabled = !loading
     }
@@ -328,10 +467,45 @@ class LoginViewController: UIViewController {
     
     @objc private func loginButtonTapped() {
         AuthLogger.info("Login button clicked")
+        NSLog("[AUTH][LoginVC] loginButtonTapped()")
         let email = emailTextField.text ?? ""
         let password = passwordTextField.text ?? ""
         AuthLogger.debug("Login attempt for email: \(email)")
         viewModel.signIn(email: email, password: password)
+    }
+
+    @objc private func appleSignInTapped() {
+        AuthLogger.info("Apple Sign In button clicked")
+        NSLog("[AUTH][LoginVC] appleSignInTapped()")
+
+        let anchor: ASPresentationAnchor
+        if let w = view.window {
+            anchor = w
+            AuthLogger.debug("Apple sign-in anchor from view.window")
+            NSLog("[AUTH][LoginVC] Apple anchor=view.window")
+        } else if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene,
+                  let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+            anchor = keyWindow
+            AuthLogger.warning("Apple sign-in anchor fell back to keyWindow (view.window was nil)")
+            NSLog("[AUTH][LoginVC] Apple anchor=keyWindow fallback (view.window=nil)")
+        } else {
+            AuthLogger.error("Apple Sign In attempted but no presentation anchor could be resolved")
+            NSLog("[AUTH][LoginVC] Apple anchor ERROR - none available")
+            return
+        }
+
+        viewModel.signInWithApple(presentationAnchor: anchor)
+    }
+
+    @objc private func appleSignInTouchDown() {
+        AuthLogger.info("Apple Sign In touchDown")
+        NSLog("[AUTH][LoginVC] appleSignInTouchDown()")
+    }
+
+    @objc private func appleSignInGestureFired(_ gr: UITapGestureRecognizer) {
+        AuthLogger.info("Apple Sign In gesture fired (state=\(gr.state.rawValue))")
+        NSLog("[AUTH][LoginVC] appleSignInGestureFired state=%ld", gr.state.rawValue)
+        // Do not call appleSignInTapped() here to avoid double-triggering; this is purely diagnostic.
     }
     
     @objc private func forgotPasswordTapped() {

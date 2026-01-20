@@ -67,6 +67,24 @@ final class MultiVaultTransferAssetsAggregatorTests: XCTestCase {
         XCTAssertEqual(asset.token.symbol, "USDC")
         XCTAssertTrue(asset.token.fiatBalance.contains("3"), "Fiat should sum across safes")
     }
+
+    func testExcludesZeroBalanceItems() {
+        let safe = makeSafe(chainId: "137", chainName: "Polygon", addressSuffix: "e5")
+
+        let zeroSummary = SafeBalanceSummary(
+            fiatTotal: "0",
+            items: [makeBalance(symbol: "ZERO", addressSuffix: "03", amount: UInt256(0), decimals: 18, fiat: "0")]
+        )
+
+        let assets = MultiVaultTransferAssetsAggregator.aggregate(
+            [
+                (safeObjectID: safe.objectID, chainId: "137", summary: zeroSummary)
+            ],
+            fiatCode: "USD"
+        )
+
+        XCTAssertEqual(assets.count, 0)
+    }
     
     // MARK: - Helpers
     

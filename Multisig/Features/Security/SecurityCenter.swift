@@ -49,6 +49,23 @@ class SecurityCenter {
         try dataStore.unlock(derivedPassword: derivedPasscode)
     }
 
+    /// Unlocks the data store using a pre-derived password (PBKDF2 output).
+    /// Use this to avoid deriving the key on the main thread during app unlock.
+    func unlockDataStore(derivedPassword: String?) throws {
+        try dataStore.unlock(derivedPassword: derivedPassword)
+    }
+
+    /// Verifies the data-store passcode using a pre-derived password (PBKDF2 output).
+    /// Does not change the lock state.
+    func isDataStorePasscodeCorrect(derivedPassword: String?) -> Bool {
+        do {
+            try dataStore.authenticate(password: derivedPassword)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     func lockDataStore() {
         dataStore.lock()
     }
@@ -337,19 +354,66 @@ class SecurityCenter {
     }
 
     func shouldShowPasscode(for accessScope: [ProtectionClass] = [.data, .sensitive]) -> Bool {
-        return AppSettings.securityLockEnabled &&
+        #if DEBUG
+        LogService.shared.debug("[SecurityCenter] shouldShowPasscode called - accessScope: \(accessScope)")
+        #endif
+        
+        let result = AppSettings.securityLockEnabled &&
         (
             accessScope.contains(.sensitive) && AppSettings.passcodeOptions.contains(.useForConfirmation) && [LockMethod.passcode, .passcodeAndUserPresence].contains(AppSettings.securityLockMethod) ||
-            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin) && [LockMethod.passcode].contains(AppSettings.securityLockMethod)
+            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin) && [LockMethod.passcode, .passcodeAndUserPresence].contains(AppSettings.securityLockMethod)
         )
+        
+        #if DEBUG
+        LogService.shared.debug("[SecurityCenter] shouldShowPasscode = \(result) (lockMethod: \(AppSettings.securityLockMethod.rawValue), passcodeOptions: \(AppSettings.passcodeOptions.rawValue))")
+        #endif
+        
+        return result
     }
 
     func shouldShowFaceID(for accessScope: [ProtectionClass] = [.data, .sensitive]) -> Bool {
-        return AppSettings.securityLockEnabled &&
-        (
-            accessScope.contains(.sensitive) && AppSettings.passcodeOptions.contains(.useForConfirmation) && [LockMethod.userPresence].contains(AppSettings.securityLockMethod) ||
-            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin) && [LockMethod.userPresence].contains(AppSettings.securityLockMethod)
+        #if DEBUG
+        LogService.shared.debug("[SecurityCenter] shouldShowFaceID called - accessScope: \(accessScope)")
+        LogService.shared.debug("[SecurityCenter] securityLockEnabled: \(AppSettings.securityLockEnabled)")
+        #endif
+        
+        guard AppSettings.securityLockEnabled else {
+            #if DEBUG
+            LogService.shared.debug("[SecurityCenter] shouldShowFaceID = false (lock not enabled)")
+            #endif
+            return false
+        }
+        
+        // Check if biometry is available
+        let biometryAvailable = App.shared.auth.isBiometryAuthenticationPossible
+        #if DEBUG
+        LogService.shared.debug("[SecurityCenter] biometryAvailable: \(biometryAvailable)")
+        #endif
+        
+        // Show Face ID if lock method requires user presence AND biometry is available
+        let lockMethodRequiresUserPresence = AppSettings.securityLockMethod.isUserPresenceRequired()
+        #if DEBUG
+        LogService.shared.debug("[SecurityCenter] lockMethod: \(AppSettings.securityLockMethod.rawValue), requiresUserPresence: \(lockMethodRequiresUserPresence)")
+        #endif
+        
+        guard lockMethodRequiresUserPresence && biometryAvailable else {
+            #if DEBUG
+            LogService.shared.debug("[SecurityCenter] shouldShowFaceID = false (biometry not available or not required)")
+            #endif
+            return false
+        }
+        
+        let result = (
+            accessScope.contains(.sensitive) && AppSettings.passcodeOptions.contains(.useForConfirmation) ||
+            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin)
         )
+        
+        #if DEBUG
+        LogService.shared.debug("[SecurityCenter] passcodeOptions: \(AppSettings.passcodeOptions.rawValue)")
+        LogService.shared.debug("[SecurityCenter] shouldShowFaceID = \(result)")
+        #endif
+        
+        return result
     }
 
     private func requestPassword(for accessScope: [ProtectionClass], task: @escaping (_ plaintextPasscode: String?) -> Void) {

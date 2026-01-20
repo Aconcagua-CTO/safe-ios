@@ -83,6 +83,8 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
     }
 
     override func onSuccess(transaction: SCGModels.TransactionDetails) {
+        createBackendTransactionRequestIfPossible()
+
         let token = tokenBalance.symbol
 
         let title = "Your transaction is queued!"
@@ -105,6 +107,40 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         }
 
         show(successVC, sender: self)
+    }
+
+    private func createBackendTransactionRequestIfPossible() {
+        // Non-blocking: the Safe on-chain transaction has already been created/queued.
+        guard let safe else { return }
+
+        let decimalString = TokenFormatter().string(from: amount,
+                                                    decimalSeparator: ".",
+                                                    thousandSeparator: "")
+        let dec = Decimal(string: decimalString) ?? 0
+        let doubleAmount = (dec as NSDecimalNumber).doubleValue
+
+        let payload = CreateTransactionRequestBody(
+            transactionType: .send,
+            currency: tokenBalance.symbol,
+            amount: max(0, doubleAmount),
+            requestStatus: .requested,
+            destinationAddress: recipient.checksummed,
+            notes: "safeChainId=\(safe.chain?.id ?? "nil"); tokenAddress=\(tokenBalance.address)"
+        )
+
+        let service = TransactionRequestsService(authRepository: App.shared.authRepository, logger: LogService.shared)
+        service.createTransactionRequestForCurrentSession(
+            vaultEvmAddress: safe.addressValue.checksummed,
+            chainId: safe.chain?.id,
+            payload: payload
+        ) { result in
+            switch result {
+            case .success:
+                LogService.shared.info("[TransactionRequests][send] created")
+            case .failure(let error):
+                LogService.shared.error("[TransactionRequests][send] create FAILED", error: error)
+            }
+        }
     }
 
     override func createSections() {

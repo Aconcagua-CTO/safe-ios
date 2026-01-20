@@ -484,15 +484,48 @@ final class TangemService {
     }
 
     func resetCardToFactory(cardId: String? = nil) async throws -> Card {
-        // This would require implementing the full factory reset flow
-        // For now, throw an error indicating this feature needs implementation
-        throw TangemServiceError.sdkError(.cardError)
+        do {
+            let runnable = TangemFactoryResetTask()
+            let initialMessage = Message(
+                header: nil,
+                body: "Safe Wallet\n\nHold your Tangem card near the top of your iPhone to factory reset it."
+            )
+            return try await perform("factory reset card") { sdk, completion in
+                sdk.startSession(with: runnable, cardId: cardId, initialMessage: initialMessage, accessCode: nil, completion: completion)
+            }
+        } catch let error as TangemSdkError {
+            throw mapSdkError(error)
+        } catch {
+            throw TangemServiceError.underlying(error)
+        }
     }
 
     func activateCard(accessCode: String? = nil) async throws -> ActivatedCardInfo {
-        // This would require implementing the full activation flow
-        // For now, throw an error indicating this feature needs implementation
-        throw TangemServiceError.sdkError(.cardError)
+        do {
+            let runnable = TangemActivationTask(curve: .secp256k1, accessCode: accessCode)
+            let initialMessage = Message(
+                header: nil,
+                body: "Safe Wallet\n\nHold your Tangem card near the top of your iPhone to activate it."
+            )
+
+            let result: TangemActivationTask.Result = try await perform("activate card") { sdk, completion in
+                sdk.startSession(with: runnable, cardId: nil, initialMessage: initialMessage, accessCode: nil, completion: completion)
+            }
+
+            let wallet = makeWallet(from: result.wallet)
+            let ethAddress = try ethereumAddress(for: wallet)
+
+            return ActivatedCardInfo(
+                cardId: result.card.cardId,
+                wallet: wallet,
+                ethereumAddress: ethAddress,
+                accessCodeSet: result.accessCodeSet
+            )
+        } catch let error as TangemSdkError {
+            throw mapSdkError(error)
+        } catch {
+            throw TangemServiceError.underlying(error)
+        }
     }
 
     func deriveWalletPublicKey(cardId: String,
@@ -559,6 +592,15 @@ final class TangemService {
         guard NFCTagReaderSession.readingAvailable else {
             throw TangemServiceError.nfcUnavailable
         }
+    }
+
+    private func mapSdkError(_ error: TangemSdkError) -> TangemServiceError {
+        // TangemSdkError is a LocalizedError with a `code`/case behind it.
+        // We special-case user cancellation so UI can show the actionable message.
+        if error.localizedDescription.lowercased().contains("cancel") {
+            return .userCancelled
+        }
+        return .sdkError(error)
     }
 }
 

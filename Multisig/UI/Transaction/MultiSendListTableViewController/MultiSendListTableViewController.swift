@@ -15,12 +15,14 @@ class MultiSendListTableViewController: UITableViewController {
     var transactions: [MultiSendTx] = []
     var addressInfoIndex: AddressInfoIndex?
     var chain: Chain!
+    var safe: Safe?
 
-    convenience init(transactions: [MultiSendTx], addressInfoIndex: AddressInfoIndex?, chain: Chain) {
+    convenience init(transactions: [MultiSendTx], addressInfoIndex: AddressInfoIndex?, chain: Chain, safe: Safe? = nil) {
         self.init()
         self.transactions = transactions
         self.addressInfoIndex = addressInfoIndex
         self.chain = chain
+        self.safe = safe
     }
 
     override func viewDidLoad() {
@@ -88,6 +90,7 @@ class MultiSendListTableViewController: UITableViewController {
             tx: tx,
             addressInfoIndex: addressInfoIndex,
             chain: chain,
+            safe: safe,
             placeholderTitle: "Action #\(indexPath.row + 1)")
         let vc = RibbonViewController(rootViewController: root)
         show(vc, sender: self)

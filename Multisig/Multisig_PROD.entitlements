@@ -18,7 +18,7 @@
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.manuelrm.bovedapp.prod.mainnet</string>
+		<string>group.com.boveda.bovedapp.prod</string>
 	</array>
 </dict>
 </plist>

@@ -263,21 +263,24 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
     func apply(rawItems: [TokenBalance],
                displayItems: [TokenBalance]? = nil,
                totalFiat: String? = nil,
-               transferSelectableAssets: [TransferSelectableAsset]? = nil) {
-        NotificationCenter.default.post(
-            name: .balanceUpdated,
-            object: self,
-            userInfo: {
-                var info: [AnyHashable: Any] = [
-                    "balances": rawItems,
-                    "total": totalFiat ?? TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode)
-                ]
-                if let transferSelectableAssets {
-                    info["transferSelectableAssets"] = transferSelectableAssets
-                }
-                return info
-            }()
-        )
+               transferSelectableAssets: [TransferSelectableAsset]? = nil,
+               postBalanceUpdated: Bool = true) {
+        if postBalanceUpdated {
+            NotificationCenter.default.post(
+                name: .balanceUpdated,
+                object: self,
+                userInfo: {
+                    var info: [AnyHashable: Any] = [
+                        "balances": rawItems,
+                        "total": totalFiat ?? TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode)
+                    ]
+                    if let transferSelectableAssets {
+                        info["transferSelectableAssets"] = transferSelectableAssets
+                    }
+                    return info
+                }()
+            )
+        }
         let display = displayItems ?? rawItems
         sections = makeSections(items: display)
 
@@ -1007,10 +1010,10 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
             (id: "otros", title: "Otros")
         ]
 
-        #if DEBUG
-        // Only show blackToken in debug builds.
-        order.append((id: "blacktoken", title: "blackToken"))
-        #endif
+        if App.configuration.services.environment.isDevelopment {
+            // Only show blackToken in development builds (Debug + Release).
+            order.append((id: "blacktoken", title: "blackToken"))
+        }
 
         return order
     }

@@ -187,7 +187,7 @@ class AdvancedTransactionDetailsViewController: UITableViewController {
                 guard let `self` = self else { return }
                 let root = MultiSendListTableViewController(transactions: multiSendDataDecoded.0,
                                                             addressInfoIndex: multiSendDataDecoded.1,
-                                                             chain: self.chain)
+                                                            chain: self.chain)
                  let vc = RibbonViewController(rootViewController: root)
                 self.show(vc, sender: self)
              }

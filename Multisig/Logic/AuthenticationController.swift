@@ -181,6 +181,10 @@ class AuthenticationController {
     }
 
     func activateBiometrics(lockMethod: LockMethod? = nil, completion: @escaping (Result<Void, Error>) -> Void) {
+        #if DEBUG
+        LogService.shared.debug("[AuthController] Activating biometrics - lockMethod parameter: \(lockMethod?.rawValue ?? -1)")
+        #endif
+        
         evaluate(policy: .deviceOwnerAuthenticationWithBiometrics,
                  reason: "Enable login with biometrics",
                  showsFallback: false,
@@ -189,9 +193,16 @@ class AuthenticationController {
             switch result {
             case .success:
                 if AppConfiguration.FeatureToggles.securityCenter {
-                    AppSettings.securityLockMethod = lockMethod == nil ? .userPresence : lockMethod!
+                    let newLockMethod = lockMethod == nil ? .userPresence : lockMethod!
+                    AppSettings.securityLockMethod = newLockMethod
+                    #if DEBUG
+                    LogService.shared.debug("[AuthController] Biometrics activated - SecurityCenter mode, lockMethod set to: \(newLockMethod.rawValue)")
+                    #endif
                 } else {
                     AppSettings.passcodeOptions.insert(.useBiometry)
+                    #if DEBUG
+                    LogService.shared.debug("[AuthController] Biometrics activated - Legacy mode, passcodeOptions: \(AppSettings.passcodeOptions.rawValue)")
+                    #endif
                 }
 
                 NotificationCenter.default.post(name: .biometricsActivated, object: nil)
@@ -199,6 +210,9 @@ class AuthenticationController {
                 completion(.success(()))
 
             case .failure(let error):
+                #if DEBUG
+                LogService.shared.debug("[AuthController] Biometrics activation failed: \(error.localizedDescription)")
+                #endif
                 completion(.failure(error))
             }
         }

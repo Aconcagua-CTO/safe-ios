@@ -101,6 +101,14 @@ struct ApiConfig {
         }
         return url
     }()
+
+    /// Transaction requests API URL (served by Aconcagua-API `transactionRequests` cloud function).
+    static let transactionRequestsApiURL: URL = {
+        guard let url = URL(string: "\(firebaseBaseURL)transactionRequests/") else {
+            fatalError("Invalid transactionRequests API URL")
+        }
+        return url
+    }()
     
     // API Version header
     static let appVersion = "1"

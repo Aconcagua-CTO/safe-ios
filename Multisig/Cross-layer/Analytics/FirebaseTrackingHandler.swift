@@ -95,6 +95,8 @@ final class FirebaseTrackingHandler: TrackingHandler {
         
         Analytics.setAnalyticsCollectionEnabled(value)
         Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(value)
+        Crashlytics.crashlytics().setCustomValue(value, forKey: "tracking_enabled")
+        CrashlyticsConfigurator.updateUserIdentity(trackingEnabled: value)
     }
 
     /// Verifies that the name is correct.

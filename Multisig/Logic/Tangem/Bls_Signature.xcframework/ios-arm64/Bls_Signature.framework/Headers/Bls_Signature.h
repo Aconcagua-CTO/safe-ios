@@ -2,7 +2,7 @@
 //  Bls_Signature.h
 //  Bls-Signature
 //
-//  Created by [REDACTED_AUTHOR]
+//  Created by skibinalexander on 26.07.2023.
 //
 
 #import <Foundation/Foundation.h>

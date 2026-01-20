@@ -44,5 +44,16 @@ protocol AuthRepository {
     ///   - forceRefresh: Force token refresh
     ///   - completion: Completion handler with Result containing token string or Error
     func getIdToken(forceRefresh: Bool, completion: @escaping (Result<String, Error>) -> Void)
+
+    /// Sign in with Apple (Firebase Auth `apple.com` provider).
+    /// - Parameters:
+    ///   - idTokenString: Apple identity token as UTF-8 string
+    ///   - rawNonce: Original (unhashed) nonce used in the Apple authorization request
+    ///   - completion: Completion handler with Result containing Firebase User or Error
+    func signInWithApple(idTokenString: String, rawNonce: String, completion: @escaping (Result<User, Error>) -> Void)
+
+    /// Link Apple to the currently signed-in Firebase user.
+    /// This keeps the same `uid` but adds `apple.com` as an auth provider.
+    func linkAppleToCurrentUser(idTokenString: String, rawNonce: String, completion: @escaping (Result<User, Error>) -> Void)
 }
 

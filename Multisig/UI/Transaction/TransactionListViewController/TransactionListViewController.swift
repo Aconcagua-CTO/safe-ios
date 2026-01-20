@@ -15,8 +15,15 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
 
     private var loadFirstPageDataTask: URLSessionTask?
     private var loadNextPageDataTask: URLSessionTask?
+    private var loadFirstPageDataTasks: [URLSessionTask] = []
+    private var loadNextPageDataTasks: [URLSessionTask] = []
 
     private var model = FlatTransactionsListViewModel()
+    private var mergedTransactions: [SCGModels.TransactionSummaryItemTransaction] = []
+    private var nextPageByChainId: [String: String] = [:]
+    private var safeByChainId: [String: Safe] = [:]
+    private var chainByTransactionId: [String: Chain] = [:]
+    private var isLoadingNextPages: Bool = false
 
     internal var safe: Safe!
 
@@ -27,6 +34,14 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
     internal var dateFormatter: DateFormatter! = DateFormatter()
 
     internal var timeFormatter: DateFormatter! = DateFormatter()
+
+    enum TransactionListStyle {
+        case history
+        case queue
+    }
+
+    var transactionListStyle: TransactionListStyle { .history }
+    var usesMultiSafeTransactions: Bool { false }
 
     override var isEmpty: Bool {
         model.isEmpty
@@ -66,6 +81,13 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 name: notification,
                 object: nil)
         }
+        
+        notificationCenter.addObserver(
+            self,
+            selector: #selector(lazyReloadData),
+            name: .transactionNamesUpdated,
+            object: nil
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -79,35 +101,60 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         super.reloadData()
         loadFirstPageDataTask?.cancel()
         loadNextPageDataTask?.cancel()
+        loadFirstPageDataTasks.forEach { $0.cancel() }
+        loadNextPageDataTasks.forEach { $0.cancel() }
+        loadFirstPageDataTasks = []
+        loadNextPageDataTasks = []
         pageLoadingState = .idle
+        isLoadingNextPages = false
+        nextPageByChainId = [:]
+        safeByChainId = [:]
+        chainByTransactionId = [:]
+        mergedTransactions = []
 
-        loadFirstPageDataTask = asyncTransactionList { [weak self] result in
-            guard let `self` = self else { return }
-            switch result {
-            case .failure(let error):
-                DispatchQueue.main.async { [weak self] in
-                    guard let `self` = self else { return }
-                    // ignore cancellation error due to cancelling the
-                    // currently running task. Otherwise user will see
-                    // meaningless message.
-                    if (error as NSError).code == URLError.cancelled.rawValue &&
-                        (error as NSError).domain == NSURLErrorDomain {
-                        return
+        safe = (try? Safe.getSelected())
+        guard let selectedSafe = safe else {
+            return
+        }
+
+        let safesToLoad: [Safe] = {
+            guard usesMultiSafeTransactions, let address = selectedSafe.address else {
+                return [selectedSafe]
+            }
+            return (try? Safe.getAll(matchingAddress: address)) ?? [selectedSafe]
+        }()
+
+        if usesMultiSafeTransactions, safesToLoad.count > 1 {
+            loadFirstPages(for: safesToLoad)
+        } else {
+            loadFirstPageDataTask = asyncTransactionList(for: selectedSafe) { [weak self] result in
+                guard let `self` = self else { return }
+                switch result {
+                case .failure(let error):
+                    DispatchQueue.main.async { [weak self] in
+                        guard let `self` = self else { return }
+                        // ignore cancellation error due to cancelling the
+                        // currently running task. Otherwise user will see
+                        // meaningless message.
+                        if (error as NSError).code == URLError.cancelled.rawValue &&
+                            (error as NSError).domain == NSURLErrorDomain {
+                            return
+                        }
+                        self.onError(GSError.error(description: "Failed to load transactions", error: error))
                     }
-                    self.onError(GSError.error(description: "Failed to load transactions", error: error))
-                }
-            case .success(let page):
-                var model = FlatTransactionsListViewModel(page.results)
-                model.next = page.next
+                case .success(let page):
+                    var model = FlatTransactionsListViewModel(page.results)
+                    model.next = page.next
 
-                DispatchQueue.main.async { [weak self] in
-                    guard let `self` = self else { return }
+                    DispatchQueue.main.async { [weak self] in
+                        guard let `self` = self else { return }
 
-                    let transformer = TransactionDataTransformer(safe: self.safe, chain: self.safe.chain!)
-                    model.items = transformer.transformed(list: model.items)
+                        let transformer = TransactionDataTransformer(safe: selectedSafe, chain: selectedSafe.chain!)
+                        model.items = transformer.transformed(list: model.items)
 
-                    self.model = model
-                    self.onSuccess()
+                        self.model = model
+                        self.onSuccess()
+                    }
                 }
             }
         }
@@ -116,6 +163,11 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
     func asyncTransactionList(completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void) -> URLSessionTask? {
         // Should be overrided in subclass
         nil
+    }
+
+    func asyncTransactionList(for safe: Safe, completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void) -> URLSessionTask? {
+        self.safe = safe
+        return asyncTransactionList(completion: completion)
     }
 
     func asyncTransactionList(pageUri: String, completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void) throws -> URLSessionTask? {
@@ -149,7 +201,83 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         }
     }
 
+    private func loadFirstPages(for safes: [Safe]) {
+        let group = DispatchGroup()
+        let syncQueue = DispatchQueue(label: "io.gnosis.multisig.transactions.merge")
+
+        var collectedTransactions: [SCGModels.TransactionSummaryItemTransaction] = []
+        var nextByChainId: [String: String] = [:]
+        var chainMapping: [String: Chain] = [:]
+        var firstError: Error?
+
+        loadFirstPageDataTasks = []
+        safeByChainId = [:]
+
+        for safe in safes {
+            guard let chain = safe.chain, let chainId = chain.id else { continue }
+            safeByChainId[chainId] = safe
+            group.enter()
+            let task = asyncTransactionList(for: safe) { [weak self] result in
+                guard let self = self else {
+                    group.leave()
+                    return
+                }
+                syncQueue.async {
+                    switch result {
+                    case .failure(let error):
+                        if (error as NSError).code == URLError.cancelled.rawValue &&
+                            (error as NSError).domain == NSURLErrorDomain {
+                            group.leave()
+                            return
+                        }
+                        if firstError == nil {
+                            firstError = error
+                        }
+                    case .success(let page):
+                        let transformed: [SCGModels.TransactionSummaryItem] = DispatchQueue.main.sync {
+                            let transformer = TransactionDataTransformer(safe: safe, chain: chain)
+                            return transformer.transformed(list: page.results)
+                        }
+                        let transactions = self.transactionItems(from: transformed)
+                        collectedTransactions.append(contentsOf: transactions)
+                        self.storeChainMapping(&chainMapping, for: transactions, chain: chain)
+                        if let next = page.next {
+                            nextByChainId[chainId] = next
+                        } else {
+                            nextByChainId.removeValue(forKey: chainId)
+                        }
+                    }
+                    group.leave()
+                }
+            }
+            if let task = task {
+                loadFirstPageDataTasks.append(task)
+            } else {
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.loadFirstPageDataTasks = []
+            self.nextPageByChainId = nextByChainId
+            self.mergedTransactions = collectedTransactions
+            self.chainByTransactionId = chainMapping
+            self.rebuildMergedModel()
+
+            if collectedTransactions.isEmpty, let error = firstError {
+                self.onError(GSError.error(description: "Failed to load transactions", error: error))
+                return
+            }
+            self.onSuccess()
+        }
+    }
+
     private func loadNextPage() {
+        if usesMultiSafeTransactions, !nextPageByChainId.isEmpty {
+            loadNextPagesForMulti()
+            return
+        }
         // re-entrancy: if loading already, do not cancel and restart
         guard let nextPageUri = model.next, loadNextPageDataTask == nil else { return }
 
@@ -192,6 +320,185 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             onError(GSError.error(description: "Failed to load more transactions", error: error))
             pageLoadingState = .retry
         }
+    }
+
+    private func loadNextPagesForMulti() {
+        guard !isLoadingNextPages else { return }
+        let pages = nextPageByChainId.map { (chainId, pageUri) in
+            (chainId, pageUri)
+        }
+        guard !pages.isEmpty else { return }
+
+        isLoadingNextPages = true
+        pageLoadingState = .loading
+        loadNextPageDataTasks = []
+
+        let group = DispatchGroup()
+        let syncQueue = DispatchQueue(label: "io.gnosis.multisig.transactions.next")
+        var newTransactions: [SCGModels.TransactionSummaryItemTransaction] = []
+        var chainMapping: [String: Chain] = [:]
+        var firstError: Error?
+
+        for (chainId, pageUri) in pages {
+            guard let safe = safeByChainId[chainId], let chain = safe.chain else { continue }
+            group.enter()
+            do {
+                let task = try asyncTransactionList(pageUri: pageUri) { [weak self] result in
+                    guard let self = self else {
+                        group.leave()
+                        return
+                    }
+                    syncQueue.async {
+                        switch result {
+                        case .failure(let error):
+                            if (error as NSError).code == URLError.cancelled.rawValue &&
+                                (error as NSError).domain == NSURLErrorDomain {
+                                group.leave()
+                                return
+                            }
+                            if firstError == nil {
+                                firstError = error
+                            }
+                        case .success(let page):
+                            let transformed: [SCGModels.TransactionSummaryItem] = DispatchQueue.main.sync {
+                                let transformer = TransactionDataTransformer(safe: safe, chain: chain)
+                                return transformer.transformed(list: page.results)
+                            }
+                            let transactions = self.transactionItems(from: transformed)
+                            newTransactions.append(contentsOf: transactions)
+                            self.storeChainMapping(&chainMapping, for: transactions, chain: chain)
+                            if let next = page.next {
+                                self.nextPageByChainId[chainId] = next
+                            } else {
+                                self.nextPageByChainId.removeValue(forKey: chainId)
+                            }
+                        }
+                        group.leave()
+                    }
+                }
+                if let task = task {
+                    loadNextPageDataTasks.append(task)
+                } else {
+                    group.leave()
+                }
+            } catch {
+                if firstError == nil {
+                    firstError = error
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.isLoadingNextPages = false
+            self.loadNextPageDataTasks = []
+
+            if !newTransactions.isEmpty {
+                self.mergedTransactions.append(contentsOf: newTransactions)
+                self.chainByTransactionId.merge(chainMapping) { _, new in new }
+                self.rebuildMergedModel()
+                self.onSuccess()
+            }
+
+            if let error = firstError {
+                self.onError(GSError.error(description: "Failed to load more transactions", error: error))
+                self.pageLoadingState = .retry
+            } else {
+                self.pageLoadingState = .idle
+            }
+        }
+    }
+
+    private func transactionItems(from items: [SCGModels.TransactionSummaryItem]) -> [SCGModels.TransactionSummaryItemTransaction] {
+        items.compactMap { item in
+            guard case let .transaction(tx) = item else { return nil }
+            return tx
+        }
+    }
+
+    private func storeChainMapping(_ mapping: inout [String: Chain], for transactions: [SCGModels.TransactionSummaryItemTransaction], chain: Chain) {
+        transactions.forEach { transaction in
+            mapping[transaction.transaction.id] = chain
+        }
+    }
+
+    private func rebuildMergedModel() {
+        let items = mergedDisplayItems(for: mergedTransactions)
+        var model = FlatTransactionsListViewModel(items)
+        model.next = nextPageByChainId.values.first
+        self.model = model
+    }
+
+    private func mergedDisplayItems(for transactions: [SCGModels.TransactionSummaryItemTransaction]) -> [SCGModels.TransactionSummaryItem] {
+        let sorted = transactions.sorted { lhs, rhs in
+            let leftNonce = transactionNonce(lhs)
+            let rightNonce = transactionNonce(rhs)
+            switch (leftNonce, rightNonce) {
+            case let (left?, right?):
+                if left != right {
+                    return left < right
+                }
+                return lhs.transaction.timestamp < rhs.transaction.timestamp
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            case (.none, .none):
+                return lhs.transaction.timestamp < rhs.transaction.timestamp
+            }
+        }
+        guard !sorted.isEmpty else { return [] }
+
+        switch transactionListStyle {
+        case .history:
+            let calendar = Calendar.autoupdatingCurrent
+            var items: [SCGModels.TransactionSummaryItem] = []
+            var lastDay: Date?
+            for transaction in sorted {
+                let day = calendar.startOfDay(for: transaction.transaction.timestamp)
+                if lastDay != day {
+                    lastDay = day
+                    items.append(.dateLabel(.init(timestamp: day)))
+                }
+                items.append(.transaction(transaction))
+            }
+            return items
+        case .queue:
+            let queued = sorted.filter { transaction in
+                let safeForTx = safeForTransaction(transaction.transaction)
+                return !isReplacedTransaction(tx: transaction.transaction, safe: safeForTx)
+            }
+            var items: [SCGModels.TransactionSummaryItem] = []
+            items.append(.label(.init(label: "QUEUE")))
+            items.append(contentsOf: queued.map { .transaction($0) })
+            return items
+        }
+    }
+
+    private func transactionNonce(_ item: SCGModels.TransactionSummaryItemTransaction) -> UInt256? {
+        guard let executionInfo = item.transaction.executionInfo,
+              case SCGModels.ExecutionInfo.multisig(let multisigExecutionInfo) = executionInfo else {
+            return nil
+        }
+        return multisigExecutionInfo.nonce.value
+    }
+
+    private func safeForTransaction(_ tx: SCGModels.TxSummary) -> Safe? {
+        guard let chain = chainByTransactionId[tx.id] ?? safe?.chain,
+              let chainId = chain.id else {
+            return safe
+        }
+        if let mappedSafe = safeByChainId[chainId] {
+            return mappedSafe
+        }
+        if safe?.chain?.id == chainId {
+            return safe
+        }
+        if let address = safe?.address {
+            return Safe.by(address: address, chainId: chainId)
+        }
+        return safe
     }
 
     override func onError(_ error: DetailedLocalizedError) {
@@ -237,13 +544,15 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         }
 
         guard let tx = transaction else { return }
+        let detailSafe = safeForTransaction(tx) ?? safe
         let vc: TransactionDetailsViewController
 
         switch tx.txInfo {
         case .creation(let creationInfo):
+            guard let detailSafe = detailSafe else { return }
             let detailsTx = SCGModels.TransactionDetails(
                 txId: "",
-                safeAddress: AddressString(safe.addressValue),
+                safeAddress: AddressString(detailSafe.addressValue),
                 txStatus: tx.txStatus,
                 txInfo: SCGModels.TxInfo.creation(creationInfo),
                 txData: nil,
@@ -251,16 +560,17 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 txHash: nil,
                 executedAt: tx.timestamp)
 
-            vc = TransactionDetailsViewController(transaction: detailsTx)
+            vc = TransactionDetailsViewController(transaction: detailsTx, safe: detailSafe)
         default:
-            vc = TransactionDetailsViewController(transactionID: tx.id)
+            if let detailSafe = detailSafe {
+                vc = TransactionDetailsViewController(transactionID: tx.id, safe: detailSafe)
+            } else {
+                vc = TransactionDetailsViewController(transactionID: tx.id)
+            }
         }
         let ribbon = RibbonViewController(rootViewController: vc)
         show(ribbon, sender: self)
 
-        if tableView.contentOffset == .zero {
-            setNeedsReload()
-        }
     }
 
     func cell(table: UITableView, indexPath: IndexPath) -> UITableViewCell {
@@ -293,7 +603,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
 
     func configure(cell: TransactionListTableViewCell, transaction: SCGModels.TransactionSummaryItemTransaction) {
         let tx = transaction.transaction
+        let displayChain = chainByTransactionId[tx.id] ?? safe.chain
         var title = ""
+        var titleCandidates: [String] = []
         var tag: String = ""
         var image: UIImage?
         var imageURL: URL?
@@ -328,16 +640,19 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 status = .awaitingYourConfirmation
             }
         }
+        let isReplaced = isReplacedTransaction(tx: tx, safe: safe)
 
         switch tx.txInfo {
         case .transfer(let transferInfo):
             let isOutgoing = transferInfo.direction == .outgoing
             image = isOutgoing ? UIImage(named: "ico-outgoing-tx") : UIImage(named: "ico-incomming-tx")?.withTintColor(.success)
             title = isOutgoing ? "Send" : "Receive"
-            info = formattedAmount(transferInfo: transferInfo)
+            titleCandidates = [title]
+            info = formattedAmount(transferInfo: transferInfo, chain: displayChain)
             infoColor = isOutgoing ? .labelPrimary : .baseSuccess
         case .settingsChange(let settingsChangeInfo):
             title = settingsChangeInfo.dataDecoded.method
+            titleCandidates = [title]
             image = UIImage(named: "ico-settings-tx")
         case .custom(let customInfo):
             if let safeAppInfo = tx.safeAppInfo {
@@ -345,8 +660,8 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 tag = "App"
                 imageURL = URL(string: safeAppInfo.logoUri)
                 image = UIImage(named: "ico-custom-tx")
-                
-            } else if let importedSafeName = Safe.cachedName(by: customInfo.to.value, chainId: safe.chain!.id!) {
+
+            } else if let chainId = displayChain?.id, let importedSafeName = Safe.cachedName(by: customInfo.to.value, chainId: chainId) {
                 title = importedSafeName
                 placeholderAddress = customInfo.to.value
             } else {
@@ -358,28 +673,53 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 }
                 placeholderAddress = customInfo.to.value
             }
+            // Prefer mapping by methodName when available, but fall back to current title behavior.
+            if let methodName = customInfo.methodName, !methodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                titleCandidates = [methodName, title]
+            } else {
+                titleCandidates = [title]
+            }
             info = customInfo.actionCount != nil ? "\(customInfo.actionCount!) actions" : customInfo.methodName ?? ""
         case .rejection(_):
             title = "On-chain rejection"
+            titleCandidates = [title]
             image = UIImage(named: "ico-rejection-tx")
         case .creation(_):
             image = UIImage(named: "ico-settings-tx")
             title = "Safe Account created"
+            titleCandidates = [title]
         case .swapOrder(let order):
             image = UIImage(named: "ico-custom-tx")
             title = order.swapOrderDisplayName
+            titleCandidates = [title]
         case .swapTransfer(let order):
             image = UIImage(named: "ico-custom-tx")
             title = order.swapTransferDisplayName
+            titleCandidates = [title]
         case .twapOrder(let order):
             image = UIImage(named: "ico-custom-tx")
             title = order.displayName
+            titleCandidates = [title]
         case .stake(let stake):
             image = UIImage(named: "ico-custom-tx")
             title = stake.displayName
+            titleCandidates = [title]
         case .unknown:
             image = UIImage(named: "ico-custom-tx")
             title = "Unknown operation"
+            titleCandidates = [title]
+        }
+
+        let mapped = titleCandidates.compactMap { App.shared.transactionNamesRepository.friendlyName(for: $0) }.first
+        if let mapped, !mapped.isEmpty {
+            #if DEBUG
+            // Keep this extremely low noise in Debug: only log when it changes.
+            if mapped != title {
+                let source = titleCandidates.first ?? title
+                LogService.shared.debug("[TransactionNames] mapped '\(source)' -> '\(mapped)'")
+            }
+            #endif
+            title = mapped
         }
 
         cell.set(title: title)
@@ -393,8 +733,10 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             cell.set(contractAddress: placeholderAddress)
         }
 
-        cell.set(status: status)
-        cell.set(nonce: nonce)
+        cell.set(status: status, isReplaced: isReplaced)
+        let chainPrefix = displayChain?.shortName ?? displayChain?.id
+        let nonceText = (chainPrefix != nil && !nonce.isEmpty) ? "\(chainPrefix!) \(nonce)" : nonce
+        cell.set(nonce: nonceText)
         cell.set(date: date)
         cell.set(info: info, color: infoColor)
         cell.set(conflictType: transaction.conflictType)
@@ -404,7 +746,18 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         cell.set(highlight: shouldHighlight(transaction: tx))
     }
 
-    func formattedAmount(transferInfo: SCGModels.TxInfo.Transfer) -> String {
+    private func isReplacedTransaction(tx: SCGModels.TxSummary, safe: Safe?) -> Bool {
+        guard let safeNonce = safe?.nonce else { return false }
+        guard tx.txStatus.isInQueue else { return false }
+        guard let executionInfo = tx.executionInfo,
+              case let SCGModels.ExecutionInfo.multisig(multisigExecutionInfo) = executionInfo
+        else {
+            return false
+        }
+        return safeNonce > multisigExecutionInfo.nonce.value
+    }
+
+    func formattedAmount(transferInfo: SCGModels.TxInfo.Transfer, chain: Chain?) -> String {
         let isOutgoing = transferInfo.direction == .outgoing
 
         let sign: Int256 = isOutgoing ? -1 : +1
@@ -424,9 +777,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             decimals = 0
         case .nativeCoin(let nativeCoinTransferInfo):
             value = Int256(nativeCoinTransferInfo.value.value)
-            let coin = Chain.nativeCoin!
-            decimals = UInt256(coin.decimals)
-            symbol = coin.symbol
+            let coin = chain?.nativeCurrency ?? Chain.nativeCoin
+            decimals = UInt256(coin?.decimals ?? 0)
+            symbol = coin?.symbol
         case .unknown:
             value = 0
             decimals = 0

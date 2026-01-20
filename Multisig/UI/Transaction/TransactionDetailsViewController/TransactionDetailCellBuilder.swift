@@ -21,6 +21,7 @@ class TransactionDetailCellBuilder {
 
     // needed for proper safe selection for known addresses functionality. Also used to select the block explorer url.
     private(set) var chain: Chain
+    private(set) var safe: Safe
 
     private lazy var dateFormatter: DateFormatter = {
         let d = DateFormatter()
@@ -31,10 +32,11 @@ class TransactionDetailCellBuilder {
     }()
     var result: [UITableViewCell] = []
 
-    init(vc: UIViewController, tableView: UITableView, chain: Chain) {
+    init(vc: UIViewController, tableView: UITableView, chain: Chain, safe: Safe) {
         self.vc = vc
         self.tableView = tableView
         self.chain = chain
+        self.safe = safe
 
         tableView.registerCell(DetailExpandableTextCell.self)
         tableView.registerCell(DetailConfirmationCell.self)
@@ -596,7 +598,8 @@ class TransactionDetailCellBuilder {
                     guard let `self` = self else { return }
                     let root = MultiSendListTableViewController(transactions: multiSendTxs,
                                                                 addressInfoIndex: addressInfoIndex,
-                                                                chain: self.chain)
+                                                                chain: self.chain,
+                                                                safe: self.safe)
                     let vc = RibbonViewController(rootViewController: root)
                     self.vc.show(vc, sender: self)
                 }
@@ -606,6 +609,7 @@ class TransactionDetailCellBuilder {
                     let root = ActionDetailViewController(decoded: dataDecoded,
                                                           addressInfoIndex: addressInfoIndex,
                                                           chain: self.chain,
+                                                          safe: self.safe,
                                                           data: tx.txData?.hexData)
                     let vc = RibbonViewController(rootViewController: root)
                     self.vc.show(vc, sender: self)
@@ -686,7 +690,7 @@ class TransactionDetailCellBuilder {
             icon = UIImage(named: "ico-custom-tx")
         }
 
-        status(tx.txStatus, type: type, icon: icon, iconURL: imageURL, address: nil, tag: tag)
+        status(tx.txStatus, isReplaced: isReplacedTransaction(tx), type: type, icon: icon, iconURL: imageURL, address: nil, tag: tag)
     }
 
     func buildMultisigInfo(_ tx: SCGModels.TransactionDetails) {
@@ -698,7 +702,9 @@ class TransactionDetailCellBuilder {
         confirmation(multisigInfo.confirmations.map { $0.signer.value.address },
                      required: Int(multisigInfo.confirmationsRequired),
                      status: tx.txStatus,
-                     executor: multisigInfo.executor?.value.address, isRejectionTx: tx.txInfo.isRejection)
+                     executor: multisigInfo.executor?.value.address,
+                     isRejectionTx: tx.txInfo.isRejection,
+                     isReplaced: isReplacedTransaction(tx))
 
         buildCreatedDate(multisigInfo.submittedAt)
     }
@@ -770,22 +776,23 @@ class TransactionDetailCellBuilder {
         result.append(cell)
     }
 
-    func confirmation(_ confirmations: [Address], required: Int, status: SCGModels.TxStatus, executor: Address?, isRejectionTx: Bool) {
+    func confirmation(_ confirmations: [Address], required: Int, status: SCGModels.TxStatus, executor: Address?, isRejectionTx: Bool, isReplaced: Bool) {
         let cell = newCell(DetailConfirmationCell.self)
         cell.setConfirmations(confirmations,
                               chain: chain,
                               required: required,
                               status: status,
                               executor: executor,
-                              isRejectionTx: isRejectionTx)
+                              isRejectionTx: isRejectionTx,
+                              isReplaced: isReplaced)
         result.append(cell)
     }
 
-    func status(_ status: SCGModels.TxStatus, type: String, icon: UIImage?, iconURL: URL? = nil, address: AddressString? = nil, tag: String = "") {
+    func status(_ status: SCGModels.TxStatus, isReplaced: Bool, type: String, icon: UIImage?, iconURL: URL? = nil, address: AddressString? = nil, tag: String = "") {
         let cell = newCell(DetailStatusCell.self)
         cell.setTitle(type)
 
-        cell.setStatus(status)
+        cell.setStatus(status, isReplaced: isReplaced)
         cell.set(tag: tag)
         if let imageURL = iconURL, let placeholderAddress = address {
             cell.set(contractImageUrl: imageURL, contractAddress: placeholderAddress)
@@ -798,6 +805,13 @@ class TransactionDetailCellBuilder {
         }
 
         result.append(cell)
+    }
+
+    private func isReplacedTransaction(_ tx: SCGModels.TransactionDetails) -> Bool {
+        guard let safeNonce = safe.nonce else { return false }
+        guard tx.txStatus.isInQueue else { return false }
+        guard let txNonce = tx.multisigInfo?.nonce.value else { return false }
+        return safeNonce > txNonce
     }
 
     func transfer(token: String,

@@ -281,10 +281,18 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
 
 extension DappsViewController: QRCodeScannerViewControllerDelegate {
     func scannerViewControllerDidScan(_ url: String) {
-        if (url.starts(with: "safe-wc:")) && FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
-            dismiss(animated: true) {
-                let route = NavigationRoute.connectToWeb(url)
-                CompositeNavigationRouter.shared.navigate(to: route)
+        if url.starts(with: "safe-wc:") {
+            if App.configuration.services.environment.isDevelopment,
+               FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
+            {
+                dismiss(animated: true) {
+                    let route = NavigationRoute.connectToWeb(url)
+                    CompositeNavigationRouter.shared.navigate(to: route)
+                }
+            } else {
+                // Connect-to-Web is development-only; don't allow scanning to route into it in staging/production.
+                App.shared.snackbar.show(message: "Connect to Web is only available in development builds.")
+                dismiss(animated: true, completion: nil)
             }
         } else {
             if WalletConnectManager.shared.canConnect(url: url) {

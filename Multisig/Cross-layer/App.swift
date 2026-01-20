@@ -44,6 +44,11 @@ class App {
         let service = TokenWhitelistService(authRepository: authRepository, logger: LogService.shared)
         return TokenWhitelistRepositoryImpl(service: service, authRepository: authRepository)
     }()
+    
+    lazy var transactionNamesRepository: TransactionNamesRepository = {
+        let service = TransactionNamesService(authRepository: authRepository, logger: LogService.shared)
+        return TransactionNamesRepositoryImpl(service: service, authRepository: authRepository)
+    }()
 
     // MARK: - Data Layer
 

@@ -13,9 +13,9 @@
 SERVICE_ENV = STAGING
 
 // Bundle Identifier
-_APP_BUNDLE_ID_PROD     = com.manuelrm.bovedapp.prod.mainnet.NotificationServiceExtension
-_APP_BUNDLE_ID_STAGING  = com.manuelrm.bovedapp.staging.mainnet.NotificationServiceExtension
-_APP_BUNDLE_ID_DEV      = com.manuelrm.bovedapp.dev.mainnet.NotificationServiceExtension
+_APP_BUNDLE_ID_PROD     = com.boveda.bovedapp.prod.NotificationServiceExtension
+_APP_BUNDLE_ID_STAGING  = com.boveda.bovedapp.staging.NotificationServiceExtension
+_APP_BUNDLE_ID_DEV      = com.boveda.bovedapp.dev.NotificationServiceExtension
 
 // Xcode Build Settings
 PRODUCT_BUNDLE_IDENTIFIER           = $(_APP_BUNDLE_ID_$(SERVICE_ENV):default=$(_APP_BUNDLE_ID_PROD))
@@ -23,8 +23,8 @@ PRODUCT_MODULE_NAME                 = NotificationServiceExtension
 PRODUCT_NAME                        = NotificationServiceExtension
 
 // App Groups
-_APP_GROUP_ID_PROD     = group.com.manuelrm.bovedapp.prod.mainnet
-_APP_GROUP_ID_STAGING  = group.com.manuelrm.bovedapp.staging.mainnet
-_APP_GROUP_ID_DEV      = group.com.manuelrm.bovedapp.dev.mainnet
+_APP_GROUP_ID_PROD     = group.com.boveda.bovedapp.prod
+_APP_GROUP_ID_STAGING  = group.com.boveda.bovedapp.staging
+_APP_GROUP_ID_DEV      = group.com.boveda.bovedapp.dev
 
 APP_GROUP_ID            = $(_APP_GROUP_ID_$(SERVICE_ENV):default=$(_APP_GROUP_ID_PROD))

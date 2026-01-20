@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="CDWCAppRegistryEntry" representedClassName="CDWCAppRegistryEntry" syncable="YES" codeGenerationType="class">
+        <attribute name="appStoreLink" optional="YES" attributeType="URI"/>
+        <attribute name="chains" optional="YES" attributeType="String"/>
+        <attribute name="desc" optional="YES" attributeType="String"/>
+        <attribute name="homepage" optional="YES" attributeType="URI"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="imageId" optional="YES" attributeType="String"/>
+        <attribute name="imageLargeURL" optional="YES" attributeType="URI"/>
+        <attribute name="imageMediumURL" optional="YES" attributeType="URI"/>
+        <attribute name="imageSmallURL" optional="YES" attributeType="URI"/>
+        <attribute name="linkMobileNative" optional="YES" attributeType="URI"/>
+        <attribute name="linkMobileUniversal" optional="YES" attributeType="URI"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="rank" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="role" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="shortName" optional="YES" attributeType="String"/>
+        <attribute name="versions" optional="YES" attributeType="String"/>
+        <relationship name="keys" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="KeyInfo" inverseName="wallet" inverseEntity="KeyInfo"/>
+    </entity>
+</model>

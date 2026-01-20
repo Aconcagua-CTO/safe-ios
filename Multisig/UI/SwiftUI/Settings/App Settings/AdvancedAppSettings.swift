@@ -8,6 +8,7 @@
 
 import SwiftUI
 import UIKit
+import Firebase
 import FirebaseCrashlytics
 
 struct AdvancedAppSettings: View {
@@ -26,6 +27,10 @@ struct AdvancedAppSettings: View {
             Section(header: SectionHeader("VAULTS")) {
                 ToggleVaultSourceRow()
                 ToggleMultiVaultBalancesRow()
+            }
+
+            Section(header: SectionHeader("TRANSACTIONS")) {
+                ToggleSelfHostedExecuteRow()
             }
             
             Section(header: SectionHeader("TRACKING")) {
@@ -145,6 +150,28 @@ struct AdvancedAppSettings: View {
                 .toggleStyle(SwitchToggleStyle(tint: Color.success))
                 
                 Text("When enabled, balances from all your vaults are grouped by token and shown together.")
+                    .body(.gray)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    struct ToggleSelfHostedExecuteRow: View {
+        @State
+        private var selfHostedEnabled = AppSettings.selfHostedExecuteEnabled
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $selfHostedEnabled.didSet { enabled in
+                    AppSettings.selfHostedExecuteEnabled = enabled
+                }) {
+                    Text("Self Hosted Execute").headline()
+                }
+                .frame(height: 60)
+                .toggleStyle(SwitchToggleStyle(tint: Color.success))
+
+                Text("When enabled, transaction execution is handled by Boveda backend instead of Safe gateway.")
                     .body(.gray)
                     .fixedSize(horizontal: false, vertical: true)
             }

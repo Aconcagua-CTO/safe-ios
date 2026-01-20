@@ -1,10 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "2600"
-   version = "1.7">
+   version = "1.8">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES">
+      <PostActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Copy test keys (local)"
+               scriptText = "set -euo pipefail&#10;&#10;# Quick toggle: set to 0 to disable this post-build step.&#10;TEST_KEYS_ENABLED=${TEST_KEYS_ENABLED:-1}&#10;if [[ &quot;${TEST_KEYS_ENABLED}&quot; == &quot;0&quot; ]]; then&#10;  echo &quot;[TestKeys] Disabled via TEST_KEYS_ENABLED=0&quot;&#10;  exit 0&#10;fi&#10;&#10;if [[ &quot;${CONFIGURATION}&quot; != Debug.* ]]; then&#10;  echo &quot;[TestKeys] Skipping for CONFIGURATION=${CONFIGURATION}&quot;&#10;  exit 0&#10;fi&#10;&#10;SRC=&quot;${SRCROOT}/docs/debug/safe_test_keys.local.json&quot;&#10;DST=&quot;${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/safe_test_keys.json&quot;&#10;&#10;if [[ -f &quot;${SRC}&quot; ]]; then&#10;  cp -f &quot;${SRC}&quot; &quot;${DST}&quot;&#10;  echo &quot;[TestKeys] Copied ${SRC} -&gt; ${DST}&quot;&#10;else&#10;  echo &quot;[TestKeys] No local test keys file at ${SRC} (skipping)&quot;&#10;fi&#10;"
+               shellToUse = "/bin/sh"
+               shouldProvideEnvironmentVariables = "YES">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "0A93DD522445CC8A00688050"
+                     BuildableName = "Multisig.app"
+                     BlueprintName = "Multisig"
+                     ReferencedContainer = "container:Multisig.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PostActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"

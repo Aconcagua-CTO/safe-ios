@@ -25,8 +25,8 @@ class OnboardingViewController: UIViewController {
     
     private let steps: [OnboardingStep] = [OnboardingStep(title: (text: "Get Money, Grow Money",
                                                                   highlightedText: nil),
-                                                          description: (text: "Use the most popular Ethereum-compatible networks, connect to dApps, get transaction notifications and more.",
-                                                                        highlightedText: "connect to dApps"),
+                                                          description: (text: "",
+                                                                        highlightedText: nil),
                                                           image: UIImage(named: "ico-onboarding-key")!,
                                                           trackingEvent: .screenOnboarding1)
     ]

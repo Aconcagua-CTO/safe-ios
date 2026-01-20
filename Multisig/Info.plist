@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0.10">
+<plist version="1.0">
 <dict>
 	<key>ADD_OWNERS_URL</key>
 	<string>$(ADD_OWNERS_URL)</string>
@@ -113,6 +113,8 @@
 	<string>EU</string>
 	<key>KEY_SECURITY_URL</key>
 	<string>$(KEY_SECURITY_URL)</string>
+	<key>KRAKEN_PUBLIC_BASE_URL</key>
+	<string>https://api.kraken.com/0/public</string>
 	<key>LEDGER_PAIRING_URL</key>
 	<string>$(LEDGER_PAIRING_URL)</string>
 	<key>LICENSES_URL</key>
@@ -121,8 +123,6 @@
 	<string>$(LOGGERS)</string>
 	<key>LOG_LEVEL</key>
 	<string>$(LOG_LEVEL)</string>
-	<key>KRAKEN_PUBLIC_BASE_URL</key>
-	<string>https://api.kraken.com/0/public</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>1inch</string>
@@ -194,10 +194,10 @@
 	<string>This will allow Boveda to access your Face ID to open app and sign transactions.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>The app needs access to the photo library if you need to share your screenshot with our support team.</string>
-	<key>ONRAMPING_INFO_URL</key>
-	<string>$(ONRAMPING_INFO_URL)</string>
 	<key>ONDO_APP_BASE_URL</key>
 	<string>https://app.ondo.finance</string>
+	<key>ONRAMPING_INFO_URL</key>
+	<string>$(ONRAMPING_INFO_URL)</string>
 	<key>PAY_FOR_CANCELLATION_URL</key>
 	<string>$(PAY_FOR_CANCELLATION_URL)</string>
 	<key>PRIVACY_URL</key>
@@ -210,6 +210,8 @@
 	<string>$(SAFE_DAO_URL)</string>
 	<key>SERVICE_ENV</key>
 	<string>$(SERVICE_ENV)</string>
+	<key>SHOW_EMAIL_PASSWORD_LOGIN</key>
+	<string>$(SHOW_EMAIL_PASSWORD_LOGIN)</string>
 	<key>SOCIAL_LOGIN_INFO_URL</key>
 	<string>$(SOCIAL_LOGIN_INFO_URL)</string>
 	<key>TERMS_URL</key>

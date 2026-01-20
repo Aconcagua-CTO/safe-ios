@@ -16,6 +16,7 @@ class InvertirBalancesViewController: BalancesViewController {
     private var tokenPrices: [String: Double] = [:] // Cache: token address -> unit price
     private var marketPriceTasks: [URLSessionTask] = []
     private let marketPriceService = MarketPriceService()
+    private var isMarketPriceLoadInProgress: Bool = false
 
     // Bottom-sticky search UI
     private let searchContainerView = UIView()
@@ -77,7 +78,12 @@ class InvertirBalancesViewController: BalancesViewController {
 
     override func loadTokenItems() {
         guard let safe = try? Safe.getSelected(), let chain = safe.chain else {
-            apply(items: [], totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+            // Markets screen: don't overwrite global balances UI when we don't have real balances.
+            apply(rawItems: [],
+                  displayItems: [],
+                  totalFiat: nil,
+                  transferSelectableAssets: nil,
+                  postBalanceUpdated: false)
             return
         }
 
@@ -103,14 +109,16 @@ class InvertirBalancesViewController: BalancesViewController {
             LogService.shared.debug("[InvertirMarkets] Whitelist empty locally; triggering sync (chainId=\(chainId), network=\(network ?? "nil"))")
             App.shared.tokenWhitelistRepository.syncWhitelist(force: false, network: nil) { [weak self] result in
                 guard let self else { return }
-                self.isWhitelistSyncInProgress = false
-                switch result {
-                case .success:
-                    LogService.shared.debug("[InvertirMarkets] Whitelist sync completed; reloading markets")
-                    self.reloadData()
-                case .failure(let error):
-                    LogService.shared.error("[InvertirMarkets] Whitelist sync failed: \(error.localizedDescription)")
-                    self.apply(items: [], totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+                DispatchQueue.main.async {
+                    self.isWhitelistSyncInProgress = false
+                    switch result {
+                    case .success:
+                        LogService.shared.debug("[InvertirMarkets] Whitelist sync completed; reloading markets")
+                        self.reloadData()
+                    case .failure(let error):
+                        LogService.shared.error("[InvertirMarkets] Whitelist sync failed: \(error.localizedDescription)")
+                        self.apply(items: [], totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+                    }
                 }
             }
             return
@@ -148,16 +156,18 @@ class InvertirBalancesViewController: BalancesViewController {
             LogService.shared.debug("[InvertirMarkets] Detected empty priceSource for all market entries; triggering whitelist backfill sync")
             App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { [weak self] result in
                 guard let self else { return }
-                self.isWhitelistSyncInProgress = false
-                switch result {
-                case .success:
-                    LogService.shared.debug("[InvertirMarkets] Whitelist backfill sync completed; reloading markets")
-                    self.reloadData()
-                case .failure(let error):
-                    LogService.shared.error("[InvertirMarkets] Whitelist backfill sync failed: \(error.localizedDescription)")
-                    // Continue showing tokens (without prices) even if backfill fails.
-                    self.apply(items: filteredItems(from: self.allMarketItems, term: self.searchTerm),
-                               totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+                DispatchQueue.main.async {
+                    self.isWhitelistSyncInProgress = false
+                    switch result {
+                    case .success:
+                        LogService.shared.debug("[InvertirMarkets] Whitelist backfill sync completed; reloading markets")
+                        self.reloadData()
+                    case .failure(let error):
+                        LogService.shared.error("[InvertirMarkets] Whitelist backfill sync failed: \(error.localizedDescription)")
+                        // Continue showing tokens (without prices) even if backfill fails.
+                        self.apply(items: self.filteredItems(from: self.allMarketItems, term: self.searchTerm),
+                                   totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+                    }
                 }
             }
             return
@@ -187,8 +197,27 @@ class InvertirBalancesViewController: BalancesViewController {
         LogService.shared.debug("[InvertirMarkets] final shown=\(items.count) (filteredSavings=\(entries.count - items.count)) chainId=\(chainId) network=\(network ?? "nil")")
         allMarketItems = items
         fetchPricesForMarketTokens(entries: shownEntries)
-        apply(items: filteredItems(from: items, term: searchTerm),
-              totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+
+        let filtered = filteredItems(from: items, term: searchTerm)
+        let cachedBalances = LatestBalancesCache.shared.balances
+        if cachedBalances.isEmpty {
+            // If we don't have real balances yet (e.g. user opened Invertir first),
+            // don't publish a fake "0" total that would overwrite the header.
+            apply(rawItems: [],
+                  displayItems: filtered,
+                  totalFiat: nil,
+                  transferSelectableAssets: nil,
+                  postBalanceUpdated: false)
+        } else {
+            let total = cachedBalances.reduce(0.0) { $0 + $1.fiatValue }
+            let totalFiat = TokenBalance.displayCurrency(from: String(total), code: AppSettings.selectedFiatCode)
+            // Publish real balances for header/actions, but show market rows in the table.
+            apply(rawItems: cachedBalances,
+                  displayItems: filtered,
+                  totalFiat: totalFiat,
+                  transferSelectableAssets: nil,
+                  postBalanceUpdated: true)
+        }
     }
     
     // MARK: - Price Fetching
@@ -197,22 +226,35 @@ class InvertirBalancesViewController: BalancesViewController {
         // Cancel any existing price fetch
         marketPriceTasks.forEach { $0.cancel() }
         marketPriceTasks = []
+        isMarketPriceLoadInProgress = !entries.isEmpty
 
         LogService.shared.debug("[InvertirPrices][START] entries=\(entries.count) ondoBase=\(ApiConfig.ondoAppBaseURL.absoluteString) krakenBase=\(ApiConfig.krakenPublicBaseURL.absoluteString)")
         self.logWhitelistPricingSummary(prefix: "[InvertirPrices][INPUT]", entries: entries)
 
         marketPriceTasks = marketPriceService.fetchPrices(entries: entries) { [weak self] result in
             guard let self else { return }
-            switch result {
-            case .success(let snapshot):
-                LogService.shared.debug("[InvertirPrices][DONE] Loaded market prices count=\(snapshot.pricesByAddress.count) at=\(snapshot.fetchedAt)")
-                self.tokenPrices = snapshot.pricesByAddress
-                self.logPriceBindingDiagnostics()
-                self.tableView.reloadData()
-            case .failure(let error):
-                LogService.shared.error("[InvertirPrices][FAIL] Failed to fetch market prices", error: error)
+            DispatchQueue.main.async {
+                self.isMarketPriceLoadInProgress = false
+                switch result {
+                case .success(let snapshot):
+                    LogService.shared.debug("[InvertirPrices][DONE] Loaded market prices count=\(snapshot.pricesByAddress.count) at=\(snapshot.fetchedAt)")
+                    self.tokenPrices = snapshot.pricesByAddress
+                    self.logPriceBindingDiagnostics()
+                    self.tableView.reloadData()
+                case .failure(let error):
+                    LogService.shared.error("[InvertirPrices][FAIL] Failed to fetch market prices", error: error)
+                }
+                // If the user pulled to refresh, keep the spinner until prices are ready (matches Assets behavior).
+                self.endRefreshing()
             }
         }
+    }
+
+    /// Keep pull-to-refresh active until market prices load, otherwise the UI ends refresh quickly
+    /// and then "jumps" when prices arrive (can feel like a stutter/vibration).
+    override func endRefreshing() {
+        guard !isMarketPriceLoadInProgress else { return }
+        super.endRefreshing()
     }
     
     private func logWhitelistPricingSummary(prefix: String, entries: [TokenWhitelist]) {

@@ -162,7 +162,8 @@ class WCIncomingTransactionRequestViewController: ReviewSafeTransactionViewContr
             tableCell.onCellTap = { [unowned self] _ in
                 let root = MultiSendListTableViewController(transactions: multiSendTxs,
                                                             addressInfoIndex: addressInfoIndex,
-                                                            chain: safe.chain!)
+                                                            chain: safe.chain!,
+                                                            safe: safe)
                 let vc = RibbonViewController(rootViewController: root)
                 show(vc, sender: self)
             }
@@ -172,6 +173,7 @@ class WCIncomingTransactionRequestViewController: ReviewSafeTransactionViewContr
                 let root = ActionDetailViewController(decoded: dataDecoded,
                                                       addressInfoIndex: addressInfoIndex,
                                                       chain: safe.chain!,
+                                                      safe: safe,
                                                       data: transactionPreview?.txData?.hexData)
                 let vc = RibbonViewController(rootViewController: root)
                 show(vc, sender: self)

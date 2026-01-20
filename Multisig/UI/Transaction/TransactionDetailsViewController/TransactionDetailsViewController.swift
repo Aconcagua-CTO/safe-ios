@@ -29,6 +29,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
 
     private var pendingExecution = false
     private var safe: Safe!
+    private var providedSafe: Safe?
     private var loadSafeInfoDataTask: URLSessionTask?
     private var ledgerController: LedgerController?
     private var shareButton: UIBarButtonItem!
@@ -52,6 +53,12 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         txSource = .id(transactionID)
     }
 
+    convenience init(transactionID: String, safe: Safe) {
+        self.init(namedClass: Self.superclass())
+        txSource = .id(transactionID)
+        providedSafe = safe
+    }
+
     convenience init(safeTxHash: Data) {
         self.init(namedClass: Self.superclass())
         txSource = .safeTxHash(safeTxHash)
@@ -62,14 +69,20 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         txSource = .data(transaction)
     }
 
+    convenience init(transaction: SCGModels.TransactionDetails, safe: Safe) {
+        self.init(namedClass: Self.superclass())
+        txSource = .data(transaction)
+        providedSafe = safe
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
         title = "Transaction Details"
 
-        safe = try! Safe.getSelected()!
+        safe = providedSafe ?? (try! Safe.getSelected()!)
 
-        builder = TransactionDetailCellBuilder(vc: self, tableView: tableView, chain: safe.chain!)
+        builder = TransactionDetailCellBuilder(vc: self, tableView: tableView, chain: safe.chain!, safe: safe)
 
         updateSafeInfo()
 
@@ -264,6 +277,12 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     }
 
     private var enableRejectionButton: Bool {
+        if let safeNonce = safe.nonce,
+           let txNonce = tx?.multisigInfo?.nonce.value,
+           safeNonce > txNonce {
+            return false
+        }
+
         if case let SCGModels.TransactionDetails.DetailedExecutionInfo.multisig(multisigTx)? = tx?.detailedExecutionInfo,
            !multisigTx.isRejected(),
            showsRejectButton {
@@ -280,10 +299,33 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     // MARK: - Signing, Rejection, Execution
 
     @objc private func didTapConfirm() {
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController.didTapConfirm() called")
+        if let tx = tx {
+            let confirmationsCount = tx.multisigInfo?.confirmations.count ?? 0
+            let txStatus = tx.txStatus.rawValue
+            LogService.shared.debug("[DualSignatureFlow] - txStatus: \(txStatus)")
+            LogService.shared.debug("[DualSignatureFlow] - confirmations count: \(confirmationsCount)")
+        }
+        #endif
+        
         guard let signers = tx?.multisigInfo?.signerKeys() else {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] ❌ signerKeys() returned nil in TransactionDetailsViewController")
+            #endif
             assertionFailure()
             return
         }
+        
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] - available signer keys count: \(signers.count)")
+        for (index, signer) in signers.enumerated() {
+            LogService.shared.debug("[DualSignatureFlow] - signer[\(index)]: type=\(signer.keyType.rawValue), address=\(signer.address.checksummed), name=\(signer.displayName)")
+        }
+        let tangemKeys = signers.filter { $0.keyType == .tangem || $0.keyType == .tangem0 }
+        LogService.shared.debug("[DualSignatureFlow] - Tangem card keys in signers: \(tangemKeys.count)")
+        #endif
+        
         let descriptionText = "You are about to confirm this transaction. This happens off-chain. Please select which owner key to use."
         let vc = ChooseOwnerKeyViewController(
             owners: { signers },
@@ -294,7 +336,15 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
 
             // dismiss presented ChooseOwnerKeyViewController right after receiving the completion
             self?.dismiss(animated: true) {
-                guard let keyInfo = keyInfo else { return }
+                guard let keyInfo = keyInfo else {
+                    #if DEBUG
+                    LogService.shared.debug("[DualSignatureFlow] User cancelled key selection in TransactionDetailsViewController")
+                    #endif
+                    return
+                }
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] User selected key in TransactionDetailsViewController: type=\(keyInfo.keyType.rawValue), address=\(keyInfo.address.checksummed), name=\(keyInfo.displayName)")
+                #endif
                 self?.sign(keyInfo)
             }
         }
@@ -389,6 +439,12 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                 }
             }
         case .tangem, .tangem0:
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController.sign() - Tangem card selected")
+            LogService.shared.debug("[DualSignatureFlow] - safeTxHash: \(safeTxHash)")
+            LogService.shared.debug("[DualSignatureFlow] - keyInfo: type=\(keyInfo.keyType.rawValue), address=\(keyInfo.address.checksummed), name=\(keyInfo.displayName)")
+            #endif
+            
             let request = SignRequest(title: "Confirm Transaction",
                                       tracking: ["action": "confirm"],
                                       signer: keyInfo,
@@ -403,11 +459,17 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
             var didSignTangem = false
 
             vc.completion = { [weak self] signature in
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController - Tangem signing completed")
+                #endif
                 didSignTangem = true
                 self?.confirmAndRefresh(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
             }
 
             vc.onClose = { [weak self] in
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController - Tangem signer closed, didSignTangem=\(didSignTangem)")
+                #endif
                 if didSignTangem {
                     self?.reloadData()
                 }
@@ -463,11 +525,26 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     }
 
     private func confirmAndRefresh(safeTxHash: String, signature: String, keyInfo: KeyInfo) {
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController.confirmAndRefresh() called")
+        LogService.shared.debug("[DualSignatureFlow] - safeTxHash: \(safeTxHash)")
+        LogService.shared.debug("[DualSignatureFlow] - keyInfo: type=\(keyInfo.keyType.rawValue), address=\(keyInfo.address.checksummed)")
+        #endif
+        
         super.reloadData()
         confirmDataTask = gatewayService.asyncConfirm(safeTxHash: safeTxHash,
                                                       signature: signature,
                                                       chainId: safe.chain!.id!) {
             [weak self] result in
+
+            #if DEBUG
+            switch result {
+            case .success:
+                LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController - asyncConfirm SUCCESS")
+            case .failure(let error):
+                LogService.shared.debug("[DualSignatureFlow] TransactionDetailsViewController - asyncConfirm FAILED: \(error.localizedDescription)")
+            }
+            #endif
 
             // NOTE: sometimes the data of the transaction list is not
             // updated right away, we'll give a moment for the backend

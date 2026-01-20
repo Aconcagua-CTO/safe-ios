@@ -10,6 +10,14 @@ import Foundation
 import UIKit
 
 class EnterPasscodeViewController: PasscodeViewController {
+    enum SecurityCenterBehavior {
+        /// Default behavior: only validates the passcode and returns it via completion.
+        case validateOnly
+        /// Used for the global app unlock flow: unlocks the SecurityCenter data store before returning.
+        /// This avoids running PBKDF2 + keychain work twice (validate + unlock) on the main thread.
+        case unlockDataStoreForAppUnlock
+    }
+
     enum Result {
         //TODO: Remove optional when remove the old security code
         case success(String?)
@@ -24,6 +32,9 @@ class EnterPasscodeViewController: PasscodeViewController {
     var usesBiometry: Bool = true
     var warnAfterWrongAttemptCount: Int = 5
     var wrongAttemptsCount: Int = 0
+    var securityCenterBehavior: SecurityCenterBehavior = .validateOnly
+
+    private var isProcessing = false
 
     convenience init() {
         self.init(namedClass: PasscodeViewController.self)
@@ -48,7 +59,29 @@ class EnterPasscodeViewController: PasscodeViewController {
     }
 
     private var canUseBiometry: Bool {
-        usesBiometry && App.shared.auth.isBiometryAuthenticationPossible && AppSettings.passcodeOptions.contains(.useBiometry)
+        guard usesBiometry && App.shared.auth.isBiometryAuthenticationPossible else {
+            #if DEBUG
+            LogService.shared.debug("[EnterPasscode] canUseBiometry = false (usesBiometry: \(usesBiometry), authPossible: \(App.shared.auth.isBiometryAuthenticationPossible))")
+            #endif
+            return false
+        }
+        
+        let result: Bool
+        if AppConfiguration.FeatureToggles.securityCenter {
+            // For SecurityCenter: check if lock method requires user presence
+            result = App.shared.securityCenter.lockMethod.isUserPresenceRequired()
+            #if DEBUG
+            LogService.shared.debug("[EnterPasscode] canUseBiometry (SecurityCenter) = \(result) (lockMethod: \(App.shared.securityCenter.lockMethod.rawValue))")
+            #endif
+        } else {
+            // Legacy system: check passcode options
+            result = AppSettings.passcodeOptions.contains(.useBiometry)
+            #if DEBUG
+            LogService.shared.debug("[EnterPasscode] canUseBiometry (legacy) = \(result) (passcodeOptions: \(AppSettings.passcodeOptions.rawValue))")
+            #endif
+        }
+        
+        return result
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -58,26 +91,54 @@ class EnterPasscodeViewController: PasscodeViewController {
     }
 
     fileprivate func didEnterEnoughSymbols(_ text: String) {
-        var isCorrect = false
-        do {
-            if AppConfiguration.FeatureToggles.securityCenter {
-                isCorrect = try App.shared.securityCenter.isPasscodeCorrect(plaintextPasscode: text)
-            } else {
-                isCorrect = try App.shared.auth.isPasscodeCorrect(plaintextPasscode: text)
-            }
-        } catch {
-            showIncorrectPasscodeError()
-            return
-        }
+        guard !isProcessing else { return }
+        isProcessing = true
 
-        if isCorrect {
-            passcodeCompletion(.success(text))
-        } else {
-            wrongAttemptsCount += 1
-            if wrongAttemptsCount >= warnAfterWrongAttemptCount {
-                showError("\(wrongAttemptsCount) failed password attempts. You can reset password via \"Forgot passcode?\" button below.")
+        // Prevent additional input while we validate/unlock.
+        textField.isEnabled = false
+        symbolsButton.isEnabled = false
+        biometryButton.isEnabled = false
+
+        let startedAt = CFAbsoluteTimeGetCurrent()
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+
+            if AppConfiguration.FeatureToggles.securityCenter {
+                // PBKDF2 is expensive; derive off the main thread.
+                let derived = App.shared.securityCenter.derivedKey(from: text)
+
+                switch self.securityCenterBehavior {
+                case .validateOnly:
+                    let isCorrect = App.shared.securityCenter.isDataStorePasscodeCorrect(derivedPassword: derived)
+                    DispatchQueue.main.async {
+                        self.finishProcessing(startedAt: startedAt, success: isCorrect, passcode: text)
+                    }
+                case .unlockDataStoreForAppUnlock:
+                    DispatchQueue.main.async {
+                        do {
+                            try App.shared.securityCenter.unlockDataStore(derivedPassword: derived)
+                            self.finishProcessing(startedAt: startedAt, success: true, passcode: nil)
+                        } catch {
+                            // Wrong passcode (or other keychain failure) -> allow retry.
+                            self.finishProcessing(startedAt: startedAt, success: false, passcode: nil)
+                        }
+                    }
+                }
             } else {
-                showError("Wrong passcode")
+                // Legacy passcode system (App.shared.auth)
+                let isCorrect: Bool
+                do {
+                    isCorrect = try App.shared.auth.isPasscodeCorrect(plaintextPasscode: text)
+                } catch {
+                    DispatchQueue.main.async {
+                        self.finishProcessing(startedAt: startedAt, success: false, passcode: nil)
+                    }
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.finishProcessing(startedAt: startedAt, success: isCorrect, passcode: text)
+                }
             }
         }
     }
@@ -136,9 +197,43 @@ class EnterPasscodeViewController: PasscodeViewController {
             guard let `self` = self else { return }
             switch result {
             case .success:
-                self.passcodeCompletion(.success(nil))
+                // Most SecurityCenter biometry-based unlock is handled by FaceIDUnlockViewController.
+                // Still, if we ended up here in the global unlock flow, make sure we actually
+                // unlock the data store before proceeding (fallback safety).
+                if AppConfiguration.FeatureToggles.securityCenter,
+                   self.securityCenterBehavior == .unlockDataStoreForAppUnlock {
+                    do {
+                        try App.shared.securityCenter.unlockDataStore(userPassword: nil)
+                        self.passcodeCompletion(.success(nil))
+                    } catch {
+                        self.showIncorrectPasscodeError()
+                    }
+                } else {
+                    self.passcodeCompletion(.success(nil))
+                }
             case .failure(_):
                 self.biometryButton.isHidden = !self.canUseBiometry
+            }
+        }
+    }
+
+    private func finishProcessing(startedAt: CFAbsoluteTime, success: Bool, passcode: String?) {
+        let dtMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+        LogService.shared.info("[EnterPasscode] processed in \(dtMs)ms success=\(success) securityCenter=\(AppConfiguration.FeatureToggles.securityCenter)")
+
+        isProcessing = false
+        textField.isEnabled = true
+        symbolsButton.isEnabled = true
+        biometryButton.isEnabled = true
+
+        if success {
+            passcodeCompletion(.success(passcode))
+        } else {
+            wrongAttemptsCount += 1
+            if wrongAttemptsCount >= warnAfterWrongAttemptCount {
+                showError("\(wrongAttemptsCount) failed password attempts. You can reset password via \"Forgot passcode?\" button below.")
+            } else {
+                showError("Wrong passcode")
             }
         }
     }

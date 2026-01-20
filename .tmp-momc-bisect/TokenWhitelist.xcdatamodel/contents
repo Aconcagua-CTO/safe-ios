@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="TokenWhitelist" representedClassName="TokenWhitelist" syncable="YES" codeGenerationType="manual">
+        <attribute name="id" attributeType="String"/>
+        <attribute name="tokenSymbol" optional="YES" attributeType="String"/>
+        <attribute name="tokenName" optional="YES" attributeType="String"/>
+        <attribute name="tokenType" optional="YES" attributeType="String"/>
+        <attribute name="tokenCategory" optional="YES" attributeType="String"/>
+        <attribute name="wrapLabel" optional="YES" attributeType="String"/>
+        <attribute name="network" optional="YES" attributeType="String"/>
+        <attribute name="networkAddress" optional="YES" attributeType="String"/>
+        <attribute name="decimals" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <attribute name="chainId" optional="YES" attributeType="String"/>
+        <attribute name="enabled" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="stable" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="rebasing" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="native" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="erc20" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="image" optional="YES" attributeType="String"/>
+        <attribute name="descriptionText" optional="YES" attributeType="String"/>
+        <attribute name="priceSource" optional="YES" attributeType="String"/>
+        <attribute name="priceSourceParam" optional="YES" attributeType="String"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+</model>

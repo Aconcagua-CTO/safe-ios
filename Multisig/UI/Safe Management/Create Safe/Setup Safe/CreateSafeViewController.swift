@@ -33,10 +33,16 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
     private var relayerService = App.shared.relayService
 
     fileprivate func initExecutionBuilder() {
+        let executionSafe = (try? Safe.getSelected()) ?? Safe.all.first
+        guard let executionSafe else {
+            assertionFailure("Expected a safe to initialize execution options")
+            return
+        }
         executionOptionsCellBuilder = ExecutionOptionsCellBuilder(
             vc: self,
             tableView: tableView,
-            chain: chain
+            chain: chain,
+            safe: executionSafe
         )
         executionOptionsCellBuilder.userSelectedSigner = false
         executionOptionsCellBuilder.onTapPaymentMethod = action(#selector(didTapPaymentMethod(_:)))

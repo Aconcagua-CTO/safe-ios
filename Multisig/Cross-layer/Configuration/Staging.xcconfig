@@ -13,3 +13,8 @@
 
 SERVICE_ENV = STAGING
 CODE_SIGN_ENTITLEMENTS = Multisig_STAGING.entitlements
+SHOW_EMAIL_PASSWORD_LOGIN = NO
+
+// Debug-only logging overrides for staging
+LOGGERS[config=Debug.Staging] = crashlytics, console
+LOG_LEVEL[config=Debug.Staging] = DEBUG

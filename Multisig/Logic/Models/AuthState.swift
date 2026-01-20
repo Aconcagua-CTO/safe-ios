@@ -17,6 +17,7 @@ enum AuthState {
     case idle
     case loading
     case success(user: User)
+    case contactRequired(message: String)
     case error(message: String, exception: Error? = nil)
 }
 

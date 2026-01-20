@@ -19,6 +19,9 @@
 // DEV | STAGING | PROD
 SERVICE_ENV = DEV
 
+// Login options
+SHOW_EMAIL_PASSWORD_LOGIN = NO
+
 
 // Keys
 

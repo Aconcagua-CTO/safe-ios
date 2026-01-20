@@ -49,12 +49,10 @@ struct LaunchView: View {
 
             ZStack(alignment: .centerAlignment) {
                 VStack(alignment: .center, spacing: 0) {
-                    Text("BOVEDA")
-                        .font(.custom("DMSans-Medium", size: taglineFontSize))
-                        .foregroundColor(Color.primary)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(4)
-                        .frame(maxWidth: 280)
+                    Image("launchscreen-logo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: 350, maxHeight: 110)
                         .alignmentGuide(.centerVerticalAlignment) { $0[VerticalAlignment.center] }
                         .padding(.bottom, self.textToButtonSpacing)
                 }

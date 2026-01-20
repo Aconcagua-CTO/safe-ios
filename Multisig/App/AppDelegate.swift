@@ -29,6 +29,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Tracker.append(handler: FirebaseTrackingHandler())
 
         Tracker.setTrackingEnabled(AppSettings.trackingEnabled)
+        CrashlyticsConfigurator.configureIfPossible()
 
         AppSettings.saveCurrentRunVersionNumber()
 
@@ -71,6 +72,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         SecurityCenter.setUp()
         WalletConnectManager.shared.config()
+
+        #if DEBUG
+        // Debug-only: import deterministic test keys (imported + Tangem) from bundled JSON if present.
+        // This is used for manual testing of reinstall behavior without generating new keys.
+        TestKeysBootstrapper.bootstrapIfPresent()
+        #endif
 
         return true
     }

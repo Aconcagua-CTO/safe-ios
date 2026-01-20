@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Safe" representedClassName="Safe" syncable="YES">
+        <attribute name="additionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="address" optional="YES" attributeType="String"/>
+        <attribute name="contractVersion" optional="YES" attributeType="String" defaultValueString="0.0.0"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="sessionTopics" optional="YES" attributeType="String"/>
+        <attribute name="status" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="safe" inverseEntity="Chain"/>
+        <relationship name="selection" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Selection" inverseName="safe" inverseEntity="Selection"/>
+        <relationship name="wcSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="WCSession" inverseName="safe" inverseEntity="WCSession"/>
+    </entity>
+</model>

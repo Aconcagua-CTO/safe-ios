@@ -41,6 +41,8 @@ enum MultiVaultTransferAssetsAggregator {
             }
             let chainId = input.chainId
             for item in input.summary.items {
+                // Retirar picker should only include owned assets.
+                guard item.balance.value > 0 else { continue }
                 let token = TokenBalance(item, code: fiatCode, chainId: chainId)
                 let key = "\(chainId.lowercased())|\(token.address.lowercased())"
                 let fiatValue = Double(item.fiatBalance) ?? 0
@@ -72,6 +74,7 @@ enum MultiVaultTransferAssetsAggregator {
         var result: [TransferSelectableAsset] = []
         
         for aggregate in aggregates.values {
+            guard aggregate.rawBalance > 0 else { continue }
             guard let preferred = aggregate.perSafe.sorted(by: preferredSafeSort).first else {
                 continue
             }

@@ -1,0 +1,5 @@
+framework module TangemSdk_secp256k1 [system] {
+  umbrella header "TangemSdk_secp256k1.h"
+  export *
+  module * { export * }
+}

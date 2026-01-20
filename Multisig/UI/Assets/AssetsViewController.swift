@@ -16,6 +16,7 @@ class AssetsViewController: ContainerViewController {
     @IBOutlet private weak var contentView: UIView!
     
     private var balances: [TokenBalance]?
+    private var withdrawableBalances: [TokenBalance] = []
 
     private var safe: Safe?
     private let balancesViewController: BalancesViewController
@@ -76,10 +77,12 @@ class AssetsViewController: ContainerViewController {
             object: nil)
         
         totalBalanceView.onReceivedClicked = { [weak self] in
-            let vc = SafeInfoViewController()
-            vc.modalPresentationStyle = .overFullScreen
-            vc.modalTransitionStyle = .crossDissolve
-            self?.present(vc, animated: true, completion: nil)
+            let vc = ReceiveFundsViewController()
+            let nav = ViewControllerFactory.modalWithRibbon(
+                viewController: vc,
+                storedChain: try? Safe.getSelected()?.chain
+            )
+            self?.present(nav, animated: true, completion: nil)
             Tracker.trackEvent(.assetTransferReceiveClicked)
         }
         
@@ -157,6 +160,7 @@ class AssetsViewController: ContainerViewController {
 
     private var claimTokenFlow: ClaimSafeTokenFlow!
     private var transferSelectableAssets: [TransferSelectableAsset]?
+    private var withdrawableTransferSelectableAssets: [TransferSelectableAsset] = []
 
     private var shouldShowSafeTokenBanner: Bool {
         // claim period has ended -> no need to show the banner
@@ -169,16 +173,22 @@ class AssetsViewController: ContainerViewController {
     }
 
     private func showSelectAssetsViewController() {
-        guard let balances = self.balances else { return }
-        if AppSettings.multiVaultBalancesEnabled, let transferSelectableAssets {
-            let selectAssetVC = SelectAssetViewController(transferAssets: transferSelectableAssets)
-            let vc = ViewControllerFactory.modalWithRibbon(viewController: selectAssetVC)
-            present(vc, animated: true)
-            return
+        // Retirar picker should only show owned assets (balance > 0).
+        if AppSettings.multiVaultBalancesEnabled {
+            if !withdrawableTransferSelectableAssets.isEmpty {
+                let selectAssetVC = SelectAssetViewController(transferAssets: withdrawableTransferSelectableAssets)
+                let vc = ViewControllerFactory.modalWithRibbon(viewController: selectAssetVC)
+                present(vc, animated: true)
+                return
+            }
+            // Fallback: if transfer-selectable assets aren't available, use filtered balances.
         }
-        let selectAssetVC = SelectAssetViewController(balances: balances)
+
+        guard !withdrawableBalances.isEmpty else { return }
+        let selectAssetVC = SelectAssetViewController(balances: withdrawableBalances)
         let vc = ViewControllerFactory.modalWithRibbon(viewController: selectAssetVC)
         present(vc, animated: true)
+        return
     }
     
     @objc private func balanceLoading() {
@@ -190,12 +200,26 @@ class AssetsViewController: ContainerViewController {
         let userInfo = notification.userInfo
         totalBalanceView.amount = userInfo?["total"] as? String
         self.balances = userInfo?["balances"] as? [TokenBalance]
+        // Keep a shared "latest real balances" cache updated so other screens (e.g. Invertir markets)
+        // can reuse real balances without reacting to zero-balance market lists.
+        LatestBalancesCache.shared.update(balances: self.balances ?? [], allowAllZero: true)
+        self.withdrawableBalances = (self.balances ?? []).filter { $0.balanceValue.value > 0 }
         if AppSettings.multiVaultBalancesEnabled {
             self.transferSelectableAssets = userInfo?["transferSelectableAssets"] as? [TransferSelectableAsset]
+            self.withdrawableTransferSelectableAssets = (self.transferSelectableAssets ?? []).filter { $0.token.balanceValue.value > 0 }
         } else {
             self.transferSelectableAssets = nil
+            self.withdrawableTransferSelectableAssets = []
         }
-        totalBalanceView.sendEnabled = !(balances?.isEmpty ?? true)
+        // Disable Retirar if the user has no withdrawable assets (even if backend returned 0-balance rows).
+        if AppSettings.multiVaultBalancesEnabled {
+            // In some screens (e.g. Invertir markets) we intentionally publish real balances without
+            // `transferSelectableAssets`. In that case, fall back to enabling the action if there are
+            // any non-zero balances.
+            totalBalanceView.sendEnabled = !withdrawableTransferSelectableAssets.isEmpty || !withdrawableBalances.isEmpty
+        } else {
+            totalBalanceView.sendEnabled = !withdrawableBalances.isEmpty
+        }
     }
     
     @objc private func selectedSafeUpdatedReceived(notification: Notification) {

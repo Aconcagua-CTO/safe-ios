@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Chain" representedClassName="Chain" syncable="YES" codeGenerationType="class">
+        <attribute name="blockExplorerUrlAddress" optional="YES" attributeType="String"/>
+        <attribute name="blockExplorerUrlTxHash" optional="YES" attributeType="String"/>
+        <attribute name="ensRegistryAddress" optional="YES" attributeType="String"/>
+        <attribute name="featuresCommaSeparated" optional="YES" attributeType="String"/>
+        <attribute name="gatewayUrl" optional="YES" attributeType="URI"/>
+        <attribute name="id" attributeType="String"/>
+        <attribute name="l2" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="rpcUrl" attributeType="URI"/>
+        <attribute name="rpcUrlAuthentication" attributeType="String" defaultValueString="API_KEY_PATH"/>
+        <attribute name="shortName" optional="YES" attributeType="String"/>
+        <relationship name="gasPriceSource" optional="YES" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="ChainGasPriceSource" inverseName="chain" inverseEntity="ChainGasPriceSource"/>
+        <relationship name="nativeCurrency" maxCount="1" deletionRule="Cascade" destinationEntity="ChainToken" inverseName="chain" inverseEntity="ChainToken"/>
+        <relationship name="safe" toMany="YES" deletionRule="Cascade" destinationEntity="Safe" inverseName="chain" inverseEntity="Safe"/>
+        <relationship name="theme" maxCount="1" deletionRule="Cascade" destinationEntity="ChainTheme" inverseName="chain" inverseEntity="ChainTheme"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+</model>

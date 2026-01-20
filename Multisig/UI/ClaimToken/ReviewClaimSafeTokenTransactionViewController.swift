@@ -152,7 +152,8 @@ class ReviewClaimSafeTokenTransactionViewController: ReviewSafeTransactionViewCo
                 
                 let root = MultiSendListTableViewController(transactions: multiSendTxs,
                                                             addressInfoIndex: txData.addressInfoIndex,
-                                                            chain: safe.chain!)
+                                                            chain: safe.chain!,
+                                                            safe: safe)
                 let vc = RibbonViewController(rootViewController: root)
                 show(vc, sender: self)
             }
@@ -164,6 +165,7 @@ class ReviewClaimSafeTokenTransactionViewController: ReviewSafeTransactionViewCo
                 let root = ActionDetailViewController(decoded: dataDecoded,
                                                       addressInfoIndex: txData.addressInfoIndex,
                                                       chain: safe.chain!,
+                                                      safe: safe,
                                                       data: txData.hexData)
                 let vc = RibbonViewController(rootViewController: root)
                 show(vc, sender: self)

@@ -191,6 +191,17 @@ extension Safe {
         }
     }
 
+    static func getAll(matchingAddress address: String) throws -> [Safe] {
+        let normalizedAddress = address.lowercased()
+        let safes = try getAll()
+        return safes.filter { $0.address?.lowercased() == normalizedAddress }
+    }
+
+    static func getAllMatchingSelectedAddress() throws -> [Safe] {
+        guard let selected = try getSelected(), let address = selected.address else { return [] }
+        return try getAll(matchingAddress: address)
+    }
+
     static func exists(_ address: String, chainId: String) -> Bool {
         by(address: address, chainId: chainId) != nil
     }

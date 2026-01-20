@@ -14,6 +14,7 @@ fileprivate protocol SectionItem {}
 class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
     private static let vaultListTitle = "Vault list / Lista de bóvedas"
     private static let tokenListTitle = "Token list / Lista de Tokens"
+    private static let transactionNamesTitle = "Transaction names / Nombres de transacciones"
     private var clientGatewayService: SafeClientGatewayService {
         guard let chain = try? Safe.getSelected()?.chain else {
             return App.shared.clientGatewayService
@@ -29,6 +30,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     private var sections = [SectionItems]()
     private var safe: Safe?
     private var isTokenWhitelistRefreshInProgress = false
+    private var isTransactionNamesRefreshInProgress = false
 
     // We need this to get the correct order of owners, this is needed for replace&remove owner
     //and not guaranteed by SafeInfo endpoint
@@ -63,6 +65,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         enum Advanced: SectionItem {
             case vaultList(String)
             case tokenWhitelist(String)
+            case transactionNames(String)
             case advanced(String)
             case removeSafe
         }
@@ -227,7 +230,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
 
         var advancedItems: [Section.Advanced] = [
             Section.Advanced.vaultList(Self.vaultListTitle),
-            Section.Advanced.tokenWhitelist(Self.tokenListTitle)
+            Section.Advanced.tokenWhitelist(Self.tokenListTitle),
+            Section.Advanced.transactionNames(Self.transactionNamesTitle)
         ]
 
         if safe != nil {
@@ -301,6 +305,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         case Section.Advanced.vaultList(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
         case Section.Advanced.tokenWhitelist(let name):
+            return tableView.basicCell(name: name, indexPath: indexPath)
+        case Section.Advanced.transactionNames(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
 
         case Section.Advanced.removeSafe:
@@ -409,6 +415,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             presentVaultList()
         case Section.Advanced.tokenWhitelist:
             refreshTokenWhitelist()
+        case Section.Advanced.transactionNames:
+            refreshTransactionNames()
 
         default:
             break
@@ -470,6 +478,38 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             case .failure(let error):
                 LogService.shared.error("[TokenWhitelist] Manual refresh failed: \(error.localizedDescription)")
                 SnackbarViewController.show("Failed to refresh token list: \(error.localizedDescription)", duration: 4.0)
+            }
+        }
+    }
+    
+    private func refreshTransactionNames() {
+        guard App.shared.authRepository.isAuthenticated() else {
+            LogService.shared.info("[TransactionNames] User attempted refresh without authentication")
+            SnackbarViewController.show("Please log in before refreshing transaction names.", duration: 3.0)
+            return
+        }
+
+        guard !isTransactionNamesRefreshInProgress else {
+            LogService.shared.debug("[TransactionNames] Refresh already in progress – ignoring tap")
+            SnackbarViewController.show("Transaction names refresh already in progress…", duration: 2.0)
+            return
+        }
+
+        isTransactionNamesRefreshInProgress = true
+        LogService.shared.info("[TransactionNames] Manual refresh triggered from settings")
+        SnackbarViewController.show("Refreshing transaction names…", duration: 2.0)
+
+        App.shared.transactionNamesRepository.syncTransactionNames(force: true) { [weak self] result in
+            guard let self else { return }
+            self.isTransactionNamesRefreshInProgress = false
+
+            switch result {
+            case .success:
+                LogService.shared.info("[TransactionNames] Manual refresh completed")
+                SnackbarViewController.show("Transaction names refreshed", duration: 3.0)
+            case .failure(let error):
+                LogService.shared.error("[TransactionNames] Manual refresh failed: \(error.localizedDescription)")
+                SnackbarViewController.show("Failed to refresh transaction names: \(error.localizedDescription)", duration: 4.0)
             }
         }
     }

@@ -6,7 +6,7 @@
 	<dict>
 		<key>Assets.car</key>
 		<data>
-		AB8zNpUXrdvQZ4sJdH5s58ywssg=
+		7Iec1bDSTdo49qtOcKxQn2+b6EY=
 		</data>
 		<key>Error.ahap</key>
 		<data>
@@ -14,39 +14,55 @@
 		</data>
 		<key>Headers/TangemSdk-Swift.h</key>
 		<data>
-		l43WPNp5MD+cIaSc7LJgQOtgGzs=
+		BwyfyI13TIfIunvJv45kL1F3kpI=
 		</data>
 		<key>Headers/TangemSdk.h</key>
 		<data>
-		OEZMqtgh3/oh+joELtkCVKD4f0k=
+		JDiNq4Pr/0rvM3haKAJu/CfMj9A=
 		</data>
 		<key>Info.plist</key>
 		<data>
-		rEmpXU96iy4J6+fXcXu8kMlNN3w=
+		HlDYHzTyefiGqfNUE+eanKJ3rTg=
 		</data>
 		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.abi.json</key>
 		<data>
-		gcwBsH4BgyFY4sVtNt+/xOKS3vY=
+		eURPwJCKQakX4wc4dhxl+iYnmNM=
+		</data>
+		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.private.swiftinterface</key>
+		<data>
+		Ej8XP/7Z7idhBLel+HcoAkBm0dA=
 		</data>
 		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.swiftdoc</key>
 		<data>
-		JgKYPTDFF16t9b/0KF5dVkD2eh8=
+		ugi+n8wPnFmQmLhoS57IhFu3lKI=
+		</data>
+		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.swiftinterface</key>
+		<data>
+		Ej8XP/7Z7idhBLel+HcoAkBm0dA=
 		</data>
 		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.swiftmodule</key>
 		<data>
-		p0mOGmKQDb2T7OYgSYm0PqDaYRo=
+		jEazDGsK7yWe7H3rUuPCEGJ8XvA=
 		</data>
 		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.abi.json</key>
 		<data>
-		gcwBsH4BgyFY4sVtNt+/xOKS3vY=
+		eURPwJCKQakX4wc4dhxl+iYnmNM=
+		</data>
+		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.private.swiftinterface</key>
+		<data>
+		ZZyJIWllBj4fwC9C0xek27ytcNk=
 		</data>
 		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.swiftdoc</key>
 		<data>
-		mPWuiRfwAMpfacyh/8bpGZ8qr2Y=
+		vWn8+pTUnVJFZA1IevEopEMiTxo=
+		</data>
+		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.swiftinterface</key>
+		<data>
+		ZZyJIWllBj4fwC9C0xek27ytcNk=
 		</data>
 		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.swiftmodule</key>
 		<data>
-		4PfFCm7CIFAaYuBz92iERS4hOmU=
+		aKkpR0JY7/mNHbxefppjgF9ok2k=
 		</data>
 		<key>Modules/module.modulemap</key>
 		<data>
@@ -156,7 +172,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			D/YAVoSemvqI1clJWBBKLY53nQBd+jwpta7uQkYbXLc=
+			puHYyjw2pk70dW9+pVGSLZyt4qT6g301NXokvbtHNn4=
 			</data>
 		</dict>
 		<key>Error.ahap</key>
@@ -170,56 +186,84 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			jyZDBLCIYfnh5apqboz49PiIe+2lOcE7W5R147xGz9s=
+			uQhvowxrLCeWtiOb/rKpbby/MNCg1gwCYhgnrjupE88=
 			</data>
 		</dict>
 		<key>Headers/TangemSdk.h</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			DEq+1so3TXKMfTYfR2br2xMZFh8VRBSfJWP5wWTNagY=
+			sHki6svKS1kp9aybvhc/kiqHPqrZiBBSEv0u6vgnJD0=
 			</data>
 		</dict>
 		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Qnesa0n4URGWAopawg9bGx36dUwkYV00BoCJ8LFzlyg=
+			qp2f6b3Ol4MnMmKDZRqej7Blrc3PgpqgN1H+4DxUrvY=
+			</data>
+		</dict>
+		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.private.swiftinterface</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			iroRan/BGeRgXnKJ/CQF13qpI8gwLnLD/IbRMWz8MNI=
 			</data>
 		</dict>
 		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ue0RRb+u6egy19P+Sy2sxT1O90sChDBAPKQKOppd4Hs=
+			3IhCxtkk6Chr+4+SS0J/8vEsOwO47Gc4H1J9dt8tbkA=
+			</data>
+		</dict>
+		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.swiftinterface</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			iroRan/BGeRgXnKJ/CQF13qpI8gwLnLD/IbRMWz8MNI=
 			</data>
 		</dict>
 		<key>Modules/TangemSdk.swiftmodule/arm64-apple-ios-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			SkjA2MuiVWhywvWkkZCxtNbJed7XNYTdCE7p8dCSVyE=
+			QGUgP1kxEeceCW6dyhP1CRdqhd32MPF4BNFHxwjWxqs=
 			</data>
 		</dict>
 		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Qnesa0n4URGWAopawg9bGx36dUwkYV00BoCJ8LFzlyg=
+			qp2f6b3Ol4MnMmKDZRqej7Blrc3PgpqgN1H+4DxUrvY=
+			</data>
+		</dict>
+		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.private.swiftinterface</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Pf0VgbfUHDYInYdpvuvg9RGVh5eyWYcsEpwYBJHmjDk=
 			</data>
 		</dict>
 		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Sk+TIllHww+5oQ+w00ww3v+JiNBAFOFEAOeikEqbapQ=
+			g5QLNDCLB/W3smFtDEplHn11Ftu5b/RwNmvUPnLIWbU=
+			</data>
+		</dict>
+		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.swiftinterface</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			Pf0VgbfUHDYInYdpvuvg9RGVh5eyWYcsEpwYBJHmjDk=
 			</data>
 		</dict>
 		<key>Modules/TangemSdk.swiftmodule/x86_64-apple-ios-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			DTDqxdKVLHvA8RV05Pqh/SyCYN+eeKoym+4A8UK4R48=
+			C6OvhxFhT1FWKfko1xoiyTevWY1OS/795+Z1yarUhMM=
 			</data>
 		</dict>
 		<key>Modules/module.modulemap</key>

@@ -40,7 +40,11 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             case chainPrefix(String)
             case appearance(String)
             case experimental(String)
+            case herencia(String)
+            case seguridad(String)
+            case planes(String)
             case logout(String)
+            case logoutAndReset(String)
         }
         
         enum Support: SectionItem {
@@ -94,29 +98,38 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         sections = []
         var appSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .app, items: [])
         
-        if FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
-            appSection.items.append(Section.App.desktopPairing("Connect to Web"))
+        if App.configuration.services.environment.isDevelopment {
+            if FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
+                appSection.items.append(Section.App.desktopPairing("Connect to Web"))
+            }
         }
         
         appSection.items.append(contentsOf: [
-            Section.App.ownerKeys("Owner keys", !KeyInfo.keysWithoutBackup().isEmpty, "\(KeyInfo.count())"),
-            Section.App.addressBook("Address Book"),
-            Section.App.passcode("Security"),
-            Section.App.fiat("Fiat currency", AppSettings.selectedFiatCode),
-            Section.App.chainPrefix("Chain prefix"),
-            // HIDDEN: Appearance setting hidden to force dark mode. To reverse, uncomment the line below.
-            //Section.App.appearance("Appearance"),
-            // we do not have experimental features at the moment
-            //Section.App.experimental("Experimental")
+            Section.App.ownerKeys("Llaves", !KeyInfo.keysWithoutBackup().isEmpty, "\(KeyInfo.count())"),
+            Section.App.addressBook("Agenda"),
+            Section.App.herencia("Herencia"),
+            Section.App.seguridad("Seguridad"),
+            Section.App.planes("Planes")
         ])
+        
+        // Show these settings in Development environment only (Debug + Release)
+        if App.configuration.services.environment.isDevelopment {
+            appSection.items.append(contentsOf: [
+                Section.App.passcode("Security"),
+                Section.App.fiat("Fiat currency", AppSettings.selectedFiatCode),
+                Section.App.chainPrefix("Chain prefix"),
+                Section.App.appearance("Appearance")
+            ])
+        }
         
         // Add logout option if user is authenticated
         if App.shared.authRepository.isAuthenticated() {
             appSection.items.append(Section.App.logout("Sign Out"))
+            appSection.items.append(Section.App.logoutAndReset("Sign Out & Reset"))
         }
         
         let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support("Support & Feedback"), items: [
-            Section.Support.chatWithUs("Chat with us"),
+            Section.Support.chatWithUs("Ayuda"),
             Section.Support.getSupport("Help Center")
         ])
         var advancedSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .advanced("Advanced"), items: [
@@ -263,7 +276,19 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.experimental(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-package", indexPath: indexPath)
             
+        case Section.App.herencia(let name):
+            return tableView.basicCell(name: name, icon: "person.2.fill", indexPath: indexPath)
+            
+        case Section.App.seguridad(let name):
+            return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
+            
+        case Section.App.planes(let name):
+            return tableView.basicCell(name: name, icon: "desktopcomputer", indexPath: indexPath)
+            
         case Section.App.logout(let name):
+            return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
+
+        case Section.App.logoutAndReset(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
             
         case Section.Support.chatWithUs(let name):
@@ -333,8 +358,23 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             let experimentalViewController = ExperimentalViewController()
             show(experimentalViewController, sender: self)
             
+        case Section.App.herencia:
+            let comingSoonVC = ComingSoonViewController()
+            show(comingSoonVC, sender: self)
+            
+        case Section.App.seguridad:
+            let comingSoonVC = ComingSoonViewController()
+            show(comingSoonVC, sender: self)
+            
+        case Section.App.planes:
+            let comingSoonVC = ComingSoonViewController()
+            show(comingSoonVC, sender: self)
+            
         case Section.App.logout:
             handleLogout()
+
+        case Section.App.logoutAndReset:
+            handleLogoutAndReset()
             
         case Section.Support.chatWithUs:
             Tracker.trackEvent(.userOpenIntercom)
@@ -431,7 +471,10 @@ extension AppSettingsViewController: NavigationRouter {
     }
     
     func canNavigate(to route: NavigationRoute) -> Bool {
-        if route.path == NavigationRoute.connectToWeb().path && FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
+        if App.configuration.services.environment.isDevelopment,
+           route.path == NavigationRoute.connectToWeb().path,
+           FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
+        {
             return true
         }
         return false
@@ -440,8 +483,13 @@ extension AppSettingsViewController: NavigationRouter {
     func navigate(to route: NavigationRoute) {
         if route.path == NavigationRoute.appearanceSettings().path {
             navigateToAppearance()
-        } else if route.path == NavigationRoute.connectToWeb().path && FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
-            navigateToConnectToWeb(route)
+        } else if
+            route.path == NavigationRoute.connectToWeb().path &&
+            FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
+        {
+            if App.configuration.services.environment.isDevelopment {
+                navigateToConnectToWeb(route)
+            }
         } else if route.path == NavigationRoute.advancedAppSettings().path {
             navigateToAdvancedAppSettings()
         } else if route.path == NavigationRoute.addressBook().path {
@@ -540,6 +588,62 @@ extension AppSettingsViewController: NavigationRouter {
                 case .failure(let error):
                     AuthLogger.error("Logout failed", error: error)
                     // Show error message
+                    SnackbarViewController.show(
+                        "Failed to sign out: \(error.localizedDescription)",
+                        duration: 4.0
+                    )
+                }
+            }
+        }
+    }
+
+    private func handleLogoutAndReset() {
+        AuthLogger.info("User initiated logout+reset from settings")
+
+        let alert = UIAlertController(
+            title: "Sign Out & Reset",
+            message: "This will sign you out, reset Terms acceptance, remove local owner keys, and remove the local vault list from this device. Continue?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Sign Out & Reset", style: .destructive) { [weak self] _ in
+            self?.performLogoutAndReset()
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func performLogoutAndReset() {
+        AuthLogger.info("Performing logout+reset...")
+
+        App.shared.authRepository.signOut { [weak self] result in
+            guard let self = self else { return }
+
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    AuthLogger.success("Logout successful, clearing local state (terms, vaults, keys, session)")
+
+                    // Must be on main thread (AppSetting wrapper enforces it)
+                    AppSettings.termsAccepted = false
+                    AppSettings.onboardingCompleted = false
+                    AppSettings.companyId = nil
+                    AppSettings.pendingOwnerKeysRegistration = false
+                    AppSettings.importedOwnerKey = false
+
+                    // Clear local vault list and owner keys so the app re-enters the "new user" path
+                    // (GenerateKeyFlow / Tangem activation) without requiring reinstall.
+                    try? Safe.removeAll()
+                    try? OwnerKeyController.deleteAllKeys(showingMessage: false)
+
+                    // Route to Terms (since termsAccepted is now false)
+                    if let sceneDelegate = self.view.window?.windowScene?.delegate as? SceneDelegate {
+                        sceneDelegate.onAppUpdateCompletion()
+                    }
+
+                case .failure(let error):
+                    AuthLogger.error("Logout+reset failed (no data cleared)", error: error)
                     SnackbarViewController.show(
                         "Failed to sign out: \(error.localizedDescription)",
                         duration: 4.0

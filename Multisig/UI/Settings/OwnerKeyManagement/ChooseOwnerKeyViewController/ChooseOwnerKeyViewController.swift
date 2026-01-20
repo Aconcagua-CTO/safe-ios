@@ -71,7 +71,7 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
         balancesLoader: AccountBalanceLoader? = nil,
         showsAddOwnerAction: Bool = false,
         keyFilter: (([KeyInfo]) -> [KeyInfo])? = nil,
-        emptyMessage: String? = "No se encuentra la llave local",
+        emptyMessage: String? = "No owner keys available",
         completionHandler: ((KeyInfo?) -> Void)? = nil
     ) {
         self.init()
@@ -84,10 +84,8 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
         self.balancesLoader = balancesLoader
         self.addButtonEnabled = showsAddOwnerAction
         self.completionHandler = completionHandler
-        // Default to local-only filter unless caller provides a custom one.
-        self.keyFilter = keyFilter ?? { keys in
-            keys.filter { $0.keyType == .deviceImported || $0.keyType == .deviceGenerated }
-        }
+        // No default filtering; call sites that need filtering must pass a `keyFilter`.
+        self.keyFilter = keyFilter
         self.emptyMessage = emptyMessage
     }
 

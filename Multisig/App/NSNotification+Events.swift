@@ -35,6 +35,8 @@ extension NSNotification.Name {
     static let queuedTxNotificationReceived = NSNotification.Name("io.gnosis.safe.queuedTxNotificationReceived")
     static let confirmationTxNotificationReceived = NSNotification.Name("io.gnosis.safe.confirmationTxNotificationReceived")
     static let initiateTxNotificationReceived = NSNotification.Name("io.gnosis.safe.initiateTxNotificationReceived")
+    
+    static let transactionNamesUpdated = NSNotification.Name("io.gnosis.safe.transactionNamesUpdated")
 
     static let biometricsActivated = NSNotification.Name("io.gnosis.safe.biometricsActivated")
 

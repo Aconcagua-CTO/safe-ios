@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="ChainGasPriceSource" representedClassName="ChainGasPriceSource" syncable="YES" codeGenerationType="class">
+        <attribute name="gasParameter" optional="YES" attributeType="String"/>
+        <attribute name="gweiFactor" optional="YES" attributeType="String"/>
+        <attribute name="sourceType" optional="YES" attributeType="String"/>
+        <attribute name="uri" optional="YES" attributeType="String"/>
+        <attribute name="weiValue" optional="YES" attributeType="String"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="gasPriceSource" inverseEntity="Chain"/>
+    </entity>
+</model>

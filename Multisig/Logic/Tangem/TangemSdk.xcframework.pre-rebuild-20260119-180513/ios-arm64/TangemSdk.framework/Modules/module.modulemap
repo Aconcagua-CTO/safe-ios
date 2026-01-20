@@ -1,0 +1,28 @@
+framework module TangemSdk {
+  umbrella header "TangemSdk.h"
+  export *
+
+  module * { export * }
+}
+
+module TangemSdk.Swift {
+  header "TangemSdk-Swift.h"
+  requires objc
+}
+
+// TangemSdk's Swift interface imports this module:
+// `import TangemSdk_secp256k1`
+//
+// The headers and the compiled implementation live inside TangemSdk.framework
+// under `Crypto/secp256k1/...`, but the module needs to be declared in the
+// *consumer-visible* modulemap (`Modules/module.modulemap`) so Swift can find it.
+framework module TangemSdk_secp256k1 [system] {
+  header "../Crypto/secp256k1/include/secp256k1_ecdh.h"
+  header "../Crypto/secp256k1/include/secp256k1_recovery.h"
+  header "../Crypto/secp256k1/include/secp256k1_preallocated.h"
+  header "../Crypto/secp256k1/include/secp256k1_schnorrsig.h"
+  header "../Crypto/secp256k1/include/secp256k1_extrakeys.h"
+  // `secp256k1.h` leads to conflicts with other secp256k1 copies when installing locally.
+  header "../Crypto/secp256k1/include/secp256k1_tangem.h"
+  export *
+}

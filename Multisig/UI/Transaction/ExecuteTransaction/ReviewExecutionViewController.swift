@@ -23,6 +23,10 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
     private var transaction: SCGModels.TransactionDetails!
 
     private var controller: TransactionExecutionController!
+    private lazy var vaultsService = VaultsService(
+        authRepository: App.shared.authRepository,
+        logger: LogService.shared
+    )
 
     private var onClose: () -> Void = { }
 
@@ -415,14 +419,18 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
     func didLoadPaymentData() {
         if controller.relaysRemaining > ReviewExecutionViewController.MIN_RELAY_TXS_LEFT && !self.userSelectedSigner && safe.chain!.isSupported(feature: .relayingMobile) {
             contentVC.model?.executionOptions.relayerState = .filled(RelayerInfoUIModel(remainingRelays: controller.relaysRemaining, limit: controller.relaysLimit))
+            validate()
         } else {
             // if we haven't search default
             if !didSearchDefaultKey && controller.selectedKey == nil {
                 userSelectedSigner = true
                 findDefaultKey()
+                // validate() will be called in findDefaultKey's completion handler via didChangeSelectedKey()
+            } else {
+                // Key already exists or was already searched, validate now
+                validate()
             }
         }
-        validate()
         contentVC.didEndReloading()
     }
 
@@ -441,6 +449,22 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             self.didSearchDefaultKey = true
             if previousKey != self.controller.selectedKey?.key {
                 self.didChangeSelectedKey()
+            } else {
+                // Key didn't change, but we still need to update UI and validate
+                if let selection = self.controller.selectedKey {
+                    let model = MiniAccountInfoUIModel(
+                        prefix: self.chain.shortName,
+                        address: selection.key.address,
+                        label: selection.key.name,
+                        imageUri: nil,
+                        badge: selection.key.keyType.badgeName,
+                        balance: selection.balance.displayAmount
+                    )
+                    self.contentVC.model?.executionOptions.accountState = .filled(model)
+                } else {
+                    self.contentVC.model?.executionOptions.accountState = .empty
+                }
+                self.validate()
             }
         }
 
@@ -680,6 +704,37 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
     func submit() {
         sendingTask?.cancel()
         relayingTask?.cancel()
+
+        if AppSettings.selfHostedExecuteEnabled {
+            do {
+                let executionData = try VaultsService.buildExecutionData(
+                    safe: safe,
+                    transaction: transaction
+                )
+                let vaultId = safe.addressValue.checksummed
+                vaultsService.executeTransactionForCurrentSession(
+                    vaultId: vaultId,
+                    executionData: executionData
+                ) { [weak self] result in
+                    guard let self = self else { return }
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .failure(let error):
+                            self.submitButton.state = .normal
+                            self.didSubmitFailed(error)
+                        case .success(let response):
+                            let txHashData = Data(ethHex: response.txHash)
+                            self.controller.didSubmitTransaction(txHash: Eth.Hash(txHashData))
+                            self.didSubmitSuccess()
+                        }
+                    }
+                }
+            } catch {
+                submitButton.state = .normal
+                didSubmitFailed(error)
+            }
+            return
+        }
 
         if controller.relaysRemaining > ReviewExecutionViewController.MIN_RELAY_TXS_LEFT && !self.userSelectedSigner {
             relayingTask = controller.relay(completion: { [weak self] result in

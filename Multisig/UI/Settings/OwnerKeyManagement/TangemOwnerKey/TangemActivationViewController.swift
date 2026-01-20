@@ -216,7 +216,7 @@ final class TangemActivationViewController: UIViewController {
     
     @objc private func doneTapped() {
         TangemLogger.info("🔧 ACTIVATION VC: User tapped done button")
-        navigationController?.popViewController(animated: true)
+        close()
     }
     
     @objc private func tryAgainTapped() {
@@ -230,9 +230,23 @@ final class TangemActivationViewController: UIViewController {
             TangemLogger.error("🔧 ACTIVATION VC: No activation info available")
             return
         }
-        
+
+        // Prevent double-taps causing duplicate imports / confusing UI.
+        addAsOwnerButton.isEnabled = false
+        doneButton.isEnabled = false
+
         onActivationComplete?(info)
-        navigationController?.popViewController(animated: true)
+        close()
+    }
+
+    /// Closes this screen whether it's pushed or presented modally.
+    private func close(animated: Bool = true) {
+        if let nav = navigationController, nav.viewControllers.first != self {
+            nav.popViewController(animated: animated)
+            return
+        }
+        // Presented as root of a nav controller (e.g. from Advanced settings) → dismiss.
+        dismiss(animated: animated)
     }
     
     private func performActivation() {

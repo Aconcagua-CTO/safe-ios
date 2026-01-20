@@ -21,6 +21,7 @@ class ActionDetailViewController: UITableViewController {
     private var dataDecoded: DataDecoded?
     private var data: DataString?
     private var placeholderTitle: String?
+    private var safe: Safe?
 
     private static let indentWidth: CGFloat = 20.0
 
@@ -32,17 +33,20 @@ class ActionDetailViewController: UITableViewController {
     convenience init(decoded: DataDecoded,
                      addressInfoIndex: AddressInfoIndex?,
                      chain: Chain,
+                     safe: Safe? = nil,
                      data: DataString? = nil) {
         self.init()
         self.dataDecoded = decoded
         self.addressInfoIndex = addressInfoIndex
         self.chain = chain
         self.data = data
+        self.safe = safe
     }
 
     convenience init(tx: MultiSendTx,
                      addressInfoIndex: AddressInfoIndex?,
                      chain: Chain,
+                     safe: Safe? = nil,
                      placeholderTitle: String?) {
         self.init()
         multiSendTx = tx
@@ -51,12 +55,15 @@ class ActionDetailViewController: UITableViewController {
         dataDecoded = tx.dataDecoded
         data = tx.data
         self.placeholderTitle = placeholderTitle
+        self.safe = safe
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        txBuilder = TransactionDetailCellBuilder(vc: self, tableView: tableView, chain: chain)
+        let resolvedSafe = safe ?? (try? Safe.getSelected())
+        guard let resolvedSafe else { return }
+        txBuilder = TransactionDetailCellBuilder(vc: self, tableView: tableView, chain: chain, safe: resolvedSafe)
         tableView.registerCell(ActionDetailTextCell.self)
         tableView.registerCell(ActionDetailExpandableCell.self)
         tableView.registerCell(ActionDetailAddressCell.self)

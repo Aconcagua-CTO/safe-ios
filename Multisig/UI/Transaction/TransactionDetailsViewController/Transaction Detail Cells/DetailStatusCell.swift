@@ -44,13 +44,20 @@ class DetailStatusCell: UITableViewCell {
         iconImageView.setCircleShapeImage(url: imageUrl, placeholder: placeholder)
     }
 
-    func setStatus(_ status: SCGModels.TxStatus) {
-        statusLabel.text = status.title
-        appendixLabel.text = status.title
-        appendixLabel.isHidden = status.isWaiting
-        bottomStackView.isHidden = !status.isWaiting
-        statusLabel.textColor = statusColor(status: status)
-        appendixLabel.textColor = statusColor(status: status)
+    func setStatus(_ status: SCGModels.TxStatus, isReplaced: Bool = false) {
+        let statusText = isReplaced ? "Replaced" : status.title
+        statusLabel.text = statusText
+        appendixLabel.text = statusText
+
+        let isWaiting = isReplaced ? false : status.isWaiting
+        appendixLabel.isHidden = isWaiting
+        bottomStackView.isHidden = !isWaiting
+
+        let color = isReplaced ? UIColor.labelSecondary : statusColor(status: status)
+        statusLabel.textColor = color
+        appendixLabel.textColor = color
+
+        applyStrikethrough(titleLabel, enabled: isReplaced)
     }
 
     func statusColor(status: SCGModels.TxStatus) -> UIColor {
@@ -69,6 +76,19 @@ class DetailStatusCell: UITableViewCell {
     func set(tag: String) {
         tagView.isHidden = tag.isEmpty
         tagView.set(title: tag)
+    }
+
+    private func applyStrikethrough(_ label: UILabel, enabled: Bool) {
+        guard let text = label.text else { return }
+        var attributes: [NSAttributedString.Key: Any] = [:]
+        if let font = label.font {
+            attributes[.font] = font
+        }
+        attributes[.foregroundColor] = label.textColor as Any
+        if enabled {
+            attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+        }
+        label.attributedText = NSAttributedString(string: text, attributes: attributes)
     }
 }
 

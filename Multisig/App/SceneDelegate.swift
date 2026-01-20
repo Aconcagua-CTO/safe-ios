@@ -16,6 +16,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var updateAppWindow: UIWindow?
     var tabBarWindow: UIWindow?
     var privacyShieldWindow: UIWindow?
+    var forceAssetsOnNextMainContent: Bool = false
 
     // the window to present
     var presentedWindow: UIWindow?
@@ -258,8 +259,36 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func makeFaceIDUnlockWindow() -> UIWindow {
         let faceIDUnlockWindow = makeWindow(scene: scene!)
-        faceIDUnlockWindow.rootViewController = ViewControllerFactory.faceIDUnlockViewController { [unowned self] in
-            onFaceIDCheckCompletion()
+        faceIDUnlockWindow.rootViewController = ViewControllerFactory.faceIDUnlockViewController { [unowned self] success, reset in
+            #if DEBUG
+            LogService.shared.debug("[SceneDelegate] Face ID completion - success: \(success), reset: \(reset)")
+            #endif
+            
+            if success {
+                onFaceIDCheckCompletion()
+            } else {
+                // Face ID failed or cancelled - fall back to passcode if lock method requires it
+                let lockMethodRequiresPasscode = App.shared.securityCenter.lockMethod.isPasscodeRequired()
+                let shouldShowPasscodeEntry = App.shared.securityCenter.shouldShowPasscode()
+                
+                #if DEBUG
+                LogService.shared.debug("[SceneDelegate] Face ID failed - lockMethodRequiresPasscode: \(lockMethodRequiresPasscode), shouldShowPasscode: \(shouldShowPasscodeEntry)")
+                #endif
+                
+                if lockMethodRequiresPasscode && shouldShowPasscodeEntry {
+                    #if DEBUG
+                    LogService.shared.debug("[SceneDelegate] Falling back to passcode window")
+                    #endif
+                    forceAssetsOnNextMainContent = false
+                    showWindow(makeEnterPasscodeWindow())
+                } else {
+                    // Biometry-only mode failed - stay on Face ID screen for retry
+                    // The user can tap the unlock button to retry
+                    #if DEBUG
+                    LogService.shared.debug("[SceneDelegate] Staying on Face ID screen (biometry-only mode)")
+                    #endif
+                }
+            }
         }
         return faceIDUnlockWindow
     }
@@ -269,10 +298,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                                  completion: ((EnterPasscodeViewController.Result) -> Void)? = nil) -> UIWindow {
         let enterPasscodeWindow = makeWindow(scene: scene!)
 
-        let vc = ViewControllerFactory.enterPasscodeViewController (showsCloseButton: showsCloseButton) { [unowned self] result in
-            if case let EnterPasscodeViewController.Result.success(passcode) = result {
-                onEnterPasscodeCompletion(userPassword: passcode)
-            } else {
+        let isGlobalUnlock = AppConfiguration.FeatureToggles.securityCenter && !showsCloseButton
+        let securityCenterBehavior: EnterPasscodeViewController.SecurityCenterBehavior =
+            isGlobalUnlock ? .unlockDataStoreForAppUnlock : .validateOnly
+
+        let vc = ViewControllerFactory.enterPasscodeViewController(
+            showsCloseButton: showsCloseButton,
+            securityCenterBehavior: securityCenterBehavior
+        ) { [unowned self] result in
+            switch result {
+            case .success(let passcode):
+                // If this is the global app-unlock flow under SecurityCenter, the passcode VC already
+                // unlocked the data store (to avoid doing the expensive work twice).
+                if isGlobalUnlock {
+                    showMainContentWindow()
+                } else {
+                    onEnterPasscodeCompletion(userPassword: passcode)
+                }
+            case .close:
                 showMainContentWindow()
             }
 
@@ -337,14 +380,32 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Terms accepted and user authenticated - proceed with security checks
         AuthLogger.info("User authenticated, proceeding with normal app flow")
         
+        #if DEBUG
+        LogService.shared.debug("[SceneDelegate] Checking security unlock flow")
+        LogService.shared.debug("[SceneDelegate] SecurityCenter enabled: \(AppConfiguration.FeatureToggles.securityCenter)")
+        LogService.shared.debug("[SceneDelegate] shouldShowPasscode (legacy): \(shouldShowPasscode)")
+        #endif
+        
         if shouldShowPasscode && !AppConfiguration.FeatureToggles.securityCenter {
+            #if DEBUG
+            LogService.shared.debug("[SceneDelegate] Showing legacy passcode window")
+            #endif
             showWindow(makeEnterPasscodeWindow())
         } else if App.shared.securityCenter.shouldShowFaceID() {
+            #if DEBUG
+            LogService.shared.debug("[SceneDelegate] Showing Face ID window")
+            #endif
             showWindow(makeFaceIDUnlockWindow())
         } else if App.shared.securityCenter.shouldShowPasscode() {
+            #if DEBUG
+            LogService.shared.debug("[SceneDelegate] Showing passcode window")
+            #endif
             showWindow(makeEnterPasscodeWindow())
         } else {
             // Go directly to main content (assets screen)
+            #if DEBUG
+            LogService.shared.debug("[SceneDelegate] No unlock needed, showing main content")
+            #endif
             showMainContentWindow()
         }
     }
@@ -358,6 +419,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func showMainContentWindow() {
         showWindow(tabBarWindow)
+        if forceAssetsOnNextMainContent,
+           let tabBarVC = tabBarWindow?.rootViewController as? MainTabBarViewController {
+            tabBarVC.switchTo(indexPath: MainTabBarViewController.Path.assets)
+            forceAssetsOnNextMainContent = false
+        }
         IntercomConfig.appDidShowMainContent()
     }
 

@@ -209,9 +209,26 @@ class VaultsRepositoryImpl: VaultsRepository {
                     VaultLogger.debug("  Type: \(vault.vaultType ?? "nil")")
                     #endif
                     
+                    // Extract address from id (handles both scoped IDs like "POLYGON:0x..." and plain addresses)
+                    let addressString: String
+                    if vault.id.contains(":") {
+                        // Scoped ID format: "NETWORK:0x..." - extract the address part
+                        let components = vault.id.components(separatedBy: ":")
+                        addressString = components.last ?? vault.id
+                    } else {
+                        // Plain address format (backward compatibility)
+                        addressString = vault.id
+                    }
+                    
+                    #if DEBUG
+                    if vault.id != addressString {
+                        VaultLogger.debug("  Extracted address from scoped ID: \(addressString)")
+                    }
+                    #endif
+                    
                     // Validate address format
-                    guard let parsedAddress = Address(vault.id) else {
-                        VaultLogger.warning("Failed to parse vault \(index + 1): Invalid address format - \(vault.id)")
+                    guard let parsedAddress = Address(addressString) else {
+                        VaultLogger.warning("Failed to parse vault \(index + 1): Invalid address format - \(vault.id) (extracted: \(addressString))")
                         skippedCount += 1
                         continue
                     }

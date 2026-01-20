@@ -42,9 +42,51 @@ final class InvertirFromTokenDetailFlowCoordinator {
     private func showConfirm(draft: InvertirDraft) {
         let s2 = InvertirConfirmViewController(draft: draft)
         s2.onConfirmInvestment = { [weak self] in
+            self?.createInvestTransactionRequest(draft: draft)
             self?.showInProgress()
         }
         navigationController?.pushViewController(s2, animated: true)
+    }
+
+    private func createInvestTransactionRequest(draft: InvertirDraft) {
+        guard let selected = try? Safe.getSelected() else {
+            LogService.shared.error("[TransactionRequests][invest] Missing selected Safe; cannot build vaultId")
+            return
+        }
+
+        let vaultId = selected.addressValue.checksummed
+        let amountString = TokenFormatter().string(from: draft.investAmount,
+                                                   decimalSeparator: ".",
+                                                   thousandSeparator: "")
+        let dec = Decimal(string: amountString) ?? 0
+        let tokenAmount = (dec as NSDecimalNumber).doubleValue
+
+        let notes =
+            "estimatedFiat=\(draft.estimatedFiat);" +
+            " fiatCode=\(draft.fiatCode)"
+
+        let payload = CreateTransactionRequestBody(
+            transactionType: .invest,
+            currency: draft.selectedToken.symbol,
+            amount: max(0, tokenAmount),
+            requestStatus: .requested,
+            destinationAddress: nil,
+            notes: notes
+        )
+
+        let service = TransactionRequestsService(authRepository: App.shared.authRepository, logger: LogService.shared)
+        service.createTransactionRequestForCurrentSession(
+            vaultEvmAddress: vaultId,
+            chainId: selected.chain?.id,
+            payload: payload
+        ) { result in
+            switch result {
+            case .success:
+                LogService.shared.info("[TransactionRequests][invest] created")
+            case .failure(let error):
+                LogService.shared.error("[TransactionRequests][invest] create FAILED", error: error)
+            }
+        }
     }
 
     private func showInProgress() {

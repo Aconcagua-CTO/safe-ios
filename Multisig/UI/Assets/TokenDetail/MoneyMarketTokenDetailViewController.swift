@@ -204,7 +204,7 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
 
     private static func chainDisplayName(chainId: Int) -> String {
         if let chain = Chain.by(String(chainId)) {
-            return chain.name
+            return chain.name ?? "Chain \(chainId)"
         }
         return "Chain \(chainId)"
     }

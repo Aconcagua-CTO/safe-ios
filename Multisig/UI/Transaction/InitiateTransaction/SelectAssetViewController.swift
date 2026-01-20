@@ -133,8 +133,8 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
             let item = filteredBalances[indexPath.row]
             cell.setSymbol(item.symbol)
             cell.setChain("") // single-vault mode has no chain label
-            cell.setFiat(item.fiatBalance)
-            cell.setAmount(item.balanceFormatted5)
+            cell.setFiat(Self.dustAwareFiatString(for: item))
+            cell.setAmount(Self.dustAwareAmountString(for: item))
             applyMoneyMarketBadgeIfNeeded(cell: cell, category: item.category)
             if let image = item.image {
                 cell.setImage(image)
@@ -146,8 +146,8 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
             let token = asset.token
             cell.setSymbol(token.symbol)
             cell.setChain(asset.chainName)
-            cell.setFiat(token.fiatBalance)            // 2 decimals from formatter
-            cell.setAmount(token.balanceFormatted5)    // up to 5 decimals, no symbol
+            cell.setFiat(Self.dustAwareFiatString(for: token))         // 2 decimals from formatter (+ dust handling)
+            cell.setAmount(Self.dustAwareAmountString(for: token))     // up to 5 decimals, no symbol (+ dust handling)
             applyMoneyMarketBadgeIfNeeded(cell: cell, category: token.category)
             if let image = token.image {
                 cell.setImage(image)
@@ -199,6 +199,42 @@ extension SelectAssetViewController: UITextFieldDelegate {
                 return false
             }
         }
+    }
+}
+
+// MARK: - Dust formatting helpers
+private extension SelectAssetViewController {
+    /// If token has a positive balance but rounds to 0 with our "up to 5 decimals" display, show "<0.00001".
+    static func dustAwareAmountString(for token: TokenBalance) -> String {
+        let formatted = token.balanceFormatted5
+        guard token.balanceValue.value > 0 else { return formatted }
+        // If it already renders as non-zero, keep it.
+        if formatted != "0" && formatted != "0.0" && formatted != "0,0" { return formatted }
+
+        // Localize the decimal separator but keep the threshold fixed (5 fraction digits).
+        let decimalSeparator = Locale.autoupdatingCurrent.decimalSeparator ?? "."
+        let threshold = "0\(decimalSeparator)00001"
+        return "<\(threshold)"
+    }
+
+    /// Optional dust handling for fiat: if fiatValue is > 0 but would display as 0.00, show "<0.01 {code}".
+    static func dustAwareFiatString(for token: TokenBalance) -> String {
+        let formatted = token.fiatBalance
+        guard token.fiatValue > 0 else { return formatted }
+
+        // Extract number portion by removing trailing currency code if present.
+        // `TokenBalance.displayCurrency` returns "{number} {code}".
+        let parts = formatted.split(separator: " ")
+        guard parts.count >= 2 else { return formatted }
+        let numberPart = String(parts[0])
+        let codePart = parts.dropFirst().joined(separator: " ")
+
+        // If it already renders as non-zero, keep it.
+        if numberPart != "0.00" && numberPart != "0,00" { return formatted }
+
+        let decimalSeparator = Locale.autoupdatingCurrent.decimalSeparator ?? "."
+        let threshold = "0\(decimalSeparator)01"
+        return "<\(threshold) \(codePart)"
     }
 }
 

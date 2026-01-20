@@ -325,10 +325,15 @@ final class TangemCardReaderViewController: UIViewController {
             let normalizedKey = try service.normalizedWalletPublicKey(walletInfo.wallet.publicKey)
             let address = try service.ethereumAddress(fromNormalizedPublicKey: normalizedKey)
             addDetailRow(label: "Ethereum Address", value: address.checksummed, to: walletStack)
+
+            let keyHex = walletInfo.wallet.publicKey.tangemHexDescription(prefix: true)
+            let logLine = "Tangem card wallet index=\(walletInfo.wallet.index) publicKey=\(keyHex) address=\(address.checksummed)"
+            LogService.shared.info("[TangemCardReader] \(logLine)")
+            NSLog("[TangemCardReader] %@", logLine)
         } catch {
             TangemLogger.error("📖 CARD READER VC: Failed to derive address for wallet \(index)", error: error)
         }
-        
+
         let keyHex = walletInfo.wallet.publicKey.map { String(format: "%02x", $0) }.joined()
         addDetailRow(label: "Public Key", value: "0x\(keyHex)", to: walletStack)
         addDetailRow(label: "Curve", value: walletInfo.wallet.curve.rawValue, to: walletStack)

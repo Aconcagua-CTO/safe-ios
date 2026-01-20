@@ -60,7 +60,9 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
                     self.onTapPaymentMethod()
                 }
             case executeWithIndex:
-                self.onTapAccount()
+                if !AppSettings.selfHostedExecuteEnabled {
+                    self.onTapAccount()
+                }
             default:
                 assertionFailure("Tapped cell at index out of bounds: \(index)")
             }
@@ -150,8 +152,13 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
 
     func buildAccountPayment(tableView: UITableView) -> UITableViewCell {
         let cell = tableView.dequeueCell(SecondaryDetailDisclosureCell.self)
-        cell.setText("With an owner key", hideDisclousre: !chain.isSupported(feature: .relayingMobile))
-        cell.selectionStyle = chain.isSupported(feature: .relayingMobile) ? .default : .none
+        if AppSettings.selfHostedExecuteEnabled {
+            cell.setText("Executed by Boveda", hideDisclousre: true)
+            cell.selectionStyle = .none
+        } else {
+            cell.setText("With an owner key", hideDisclousre: !chain.isSupported(feature: .relayingMobile))
+            cell.selectionStyle = chain.isSupported(feature: .relayingMobile) ? .default : .none
+        }
         cell.setBackgroundColor(.backgroundPrimary)
         return cell
     }
@@ -160,6 +167,11 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
         let cell = tableView.dequeueCell(DisclosureWithContentCell.self)
         cell.setText("Select key")
         cell.setBackgroundColor(.backgroundPrimary)
+        if AppSettings.selfHostedExecuteEnabled {
+            cell.selectionStyle = .none
+            cell.setContent(textView("Boveda"))
+            return cell
+        }
         switch model {
         case .none:
             preconditionFailure("Developer error: CellState not properly initialized")

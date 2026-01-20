@@ -59,6 +59,10 @@ The `${FIREBASE_CONFIG}` variable comes from `Config.xcconfig`:
 - When `SERVICE_ENV = STAGING` → uses `GoogleService-Info.Staging.plist`
 - When `SERVICE_ENV = PROD` → uses `GoogleService-Info.Production.plist`
 
+**Important:** In this repo, the `GoogleService-Info.*.plist` files are typically **gitignored**. If they are missing:
+- Debug builds will run, but **Firebase (incl. Crashlytics) will be disabled**
+- Non-Debug builds will now **fail the build** to prevent shipping without Firebase configured
+
 ### Firebase Features Enabled
 
 With Firebase configured, the following features are now active:
@@ -246,9 +250,18 @@ If they don't match, Firebase will log warnings but generally still work.
 **Cause:** Crashlytics requires additional setup  
 **Fix:**
 1. Ensure app has been run at least once
-2. Force a test crash: Settings → Advanced → Crash Debug
+2. Ensure tracking is enabled (Terms screen: “Get Started” enables sharing; “Accept without sharing data” disables it)
+3. Force a test crash: Settings → Advanced → “Crash with Crashlytics”
 3. Restart app to send crash report
 4. Wait 5-10 minutes for report to appear
+
+### dSYM upload / symbolication
+
+By default, dSYMs are uploaded on non-Debug builds. To force dSYM upload in Debug (to test symbolication), set the scheme env var:
+
+```bash
+CRASHLYTICS_UPLOAD_DSYMS_IN_DEBUG=1
+```
 
 ## Files Created/Modified
 

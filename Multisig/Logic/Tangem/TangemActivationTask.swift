@@ -35,9 +35,12 @@ final class TangemActivationTask: CardSessionRunnable {
 
         TangemLogger.debug("🔧 ACTIVATION TASK: Preflight card data - ID: \(card.cardId), wallets: \(card.wallets.count)")
 
-        guard card.wallets.isEmpty else {
-            TangemLogger.error("🔧 ACTIVATION TASK ERROR: Card already has \(card.wallets.count) wallet(s)")
-            completion(.failure(.alreadyCreated))
+        // Some Tangem cards can report `isActivated = false` while still having a wallet already created.
+        // In that case, activation should treat the existing wallet as the activated wallet (and optionally
+        // set an access code), instead of failing with `.alreadyCreated`.
+        if let existingWallet = card.wallets.first(where: { $0.curve == curve }) ?? card.wallets.first {
+            TangemLogger.info("🔧 ACTIVATION TASK: Using existing wallet index: \(existingWallet.index)")
+            finalize(card: card, wallet: existingWallet, in: session, completion: completion)
             return
         }
 
@@ -46,7 +49,10 @@ final class TangemActivationTask: CardSessionRunnable {
             switch result {
             case .success(let response):
                 TangemLogger.info("🔧 ACTIVATION TASK: Wallet created successfully, index: \(response.wallet.index)")
-                self.handlePostCreation(response: response, in: session, completion: completion)
+                self.finalize(card: session.environment.card ?? card,
+                              wallet: response.wallet,
+                              in: session,
+                              completion: completion)
 
             case .failure(let error):
                 TangemLogger.error("🔧 ACTIVATION TASK ERROR: Wallet creation failed", error: error)
@@ -55,18 +61,13 @@ final class TangemActivationTask: CardSessionRunnable {
         }
     }
 
-    private func handlePostCreation(response: CreateWalletResponse,
-                                    in session: CardSession,
-                                    completion: @escaping CompletionResult<Result>) {
-        guard let card = session.environment.card else {
-            TangemLogger.error("🔧 ACTIVATION TASK ERROR: Card missing after wallet creation")
-            completion(.failure(.missingPreflightRead))
-            return
-        }
-
+    private func finalize(card: Card,
+                          wallet: Card.Wallet,
+                          in session: CardSession,
+                          completion: @escaping CompletionResult<Result>) {
         guard let accessCode else {
             TangemLogger.debug("🔧 ACTIVATION TASK: No access code requested, finishing activation")
-            completion(.success(Result(card: card, wallet: response.wallet, accessCodeSet: false)))
+            completion(.success(Result(card: card, wallet: wallet, accessCodeSet: false)))
             return
         }
 
@@ -76,7 +77,7 @@ final class TangemActivationTask: CardSessionRunnable {
             switch result {
             case .success:
                 TangemLogger.info("🔧 ACTIVATION TASK: Access code set successfully")
-                completion(.success(Result(card: card, wallet: response.wallet, accessCodeSet: true)))
+                completion(.success(Result(card: card, wallet: wallet, accessCodeSet: true)))
 
             case .failure(let error):
                 TangemLogger.error("🔧 ACTIVATION TASK ERROR: Failed to set access code", error: error)

@@ -106,25 +106,23 @@ final class BurnerService: NSObject {
         }
         
         let summary = try await perform("scan Burner card", alertMessage: alertMessage) { executor in
+            // NDEF is not required for card activation. We use APDU commands only.
+            // This avoids CoreNFC Stack Error issues that can occur when mixing NDEF and ISO7816 operations.
             try await executor.ensureCoreSelected()
             let version = try await executor.readFirmwareVersion()
             let addonVersion = try? await executor.readAddonVersion()
             let keys = try await executor.fetchPublicKeys()
-            let ndef = try await executor.readDynamicURL()
-            executor.logKeyComparisons(keys: keys, ndef: ndef)
             
             let cardIdentifier = executor.identifierHex
-            let cardIdFromNdef = ndef?.queryItems["av"]
-            let resolvedCardId = cardIdFromNdef ?? cardIdentifier
             
-            BurnerLogger.info("✅ Burner scan completed. cardId=\(resolvedCardId) firmware=\(version ?? "unknown") keys=\(keys.count)")
+            BurnerLogger.info("✅ Burner scan completed. cardId=\(cardIdentifier) firmware=\(version ?? "unknown") keys=\(keys.count)")
             
             return BurnerCardSummary(
-                cardId: resolvedCardId,
+                cardId: cardIdentifier,
                 tagIdentifier: cardIdentifier,
                 firmwareVersion: version,
                 addonVersion: addonVersion,
-                ndefSnapshot: ndef,
+                ndefSnapshot: nil,
                 keySlots: keys
             )
         }

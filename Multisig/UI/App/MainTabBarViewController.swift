@@ -146,7 +146,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         
         let assetsVC = AssetsViewController()
 
-        let noSafesVC = NoSafesViewController()
+        let noSafesVC = AssetsNoSafesGateViewController()
         let loadSafeViewController = LoadSafeViewController()
         loadSafeViewController.trackingEvent = .assetsNoSafe
 
@@ -251,24 +251,36 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         let appSettingsVC = AppSettingsViewController()
 
         let segmentVC = SegmentViewController(namedClass: nil)
-        segmentVC.segmentItems = [
-            SegmentBarItem(image: UIImage(named: "ico-app-settings")!, title: "App Settings"),
-            SegmentBarItem(image: UIImage(named: "ico-safe-settings")!, title: "My Safe Account"),
-            SegmentBarItem(image: UIImage(named: "tab-icon-dapps")!, title: "Dapps")
-        ]
-        segmentVC.viewControllers = [
-            appSettingsVC,
-            noSafesVC,
-            dappsNoSafesVC
-        ]
+        
+        if App.configuration.services.environment.isDevelopment {
+            // Development environment (Debug + Release): show all tabs
+            segmentVC.segmentItems = [
+                SegmentBarItem(image: UIImage(named: "ico-app-settings")!, title: "App Settings"),
+                SegmentBarItem(image: UIImage(named: "ico-safe-settings")!, title: "My Safe Account"),
+                SegmentBarItem(image: UIImage(named: "tab-icon-dapps")!, title: "Dapps")
+            ]
+            segmentVC.viewControllers = [
+                appSettingsVC,
+                noSafesVC,
+                dappsNoSafesVC
+            ]
+        } else {
+            // Staging/Production (Debug + Release): only show App Settings
+            segmentVC.segmentItems = [
+                SegmentBarItem(image: UIImage(named: "ico-app-settings")!, title: "App Settings")
+            ]
+            segmentVC.viewControllers = [
+                appSettingsVC
+            ]
+        }
         segmentVC.selectedIndex = Path.appSettings.last
         let ribbonVC = RibbonViewController(rootViewController: segmentVC)
         
         let tabRoot = HeaderViewController(rootViewController: ribbonVC)
         let settingsTabVC = settingsTabViewController(
             root: tabRoot,
-            title: "Settings",
-            image: UIImage(named: "tab-icon-settings")!,
+            title: "Más",
+            image: UIImage(systemName: "line.3.horizontal")!.withRenderingMode(.alwaysTemplate),
             tag: Path.settings[0]
         )
         settingsTabVC.segmentViewController = segmentVC

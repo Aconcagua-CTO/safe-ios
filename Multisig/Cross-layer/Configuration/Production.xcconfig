@@ -13,3 +13,8 @@
 
 SERVICE_ENV = PROD
 CODE_SIGN_ENTITLEMENTS = Multisig_PROD.entitlements
+SHOW_EMAIL_PASSWORD_LOGIN = NO
+
+// Debug-only logging overrides for production
+LOGGERS[config=Debug.Production] = crashlytics, console
+LOG_LEVEL[config=Debug.Production] = DEBUG

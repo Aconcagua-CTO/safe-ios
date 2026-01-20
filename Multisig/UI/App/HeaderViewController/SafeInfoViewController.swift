@@ -14,6 +14,7 @@ class SafeInfoViewController: ContainerViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
         let view = SafeInfoView()
             .environment(\.managedObjectContext, App.shared.coreDataStack.viewContext)
         let viewController = UIHostingController(rootView: view)

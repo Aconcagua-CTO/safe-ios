@@ -38,6 +38,14 @@ final class DisabledAuthRepository: AuthRepository {
     func getIdToken(forceRefresh: Bool, completion: @escaping (Result<String, Error>) -> Void) {
         completion(.failure(notAvailableError()))
     }
+
+    func signInWithApple(idTokenString: String, rawNonce: String, completion: @escaping (Result<User, Error>) -> Void) {
+        completion(.failure(notAvailableError()))
+    }
+
+    func linkAppleToCurrentUser(idTokenString: String, rawNonce: String, completion: @escaping (Result<User, Error>) -> Void) {
+        completion(.failure(notAvailableError()))
+    }
 }
 
 /**
@@ -165,6 +173,71 @@ class AuthRepositoryImpl: AuthRepository {
             completion(.success(token))
         }
     }
+
+    // MARK: - Apple Sign In (Firebase Auth)
+
+    func signInWithApple(idTokenString: String, rawNonce: String, completion: @escaping (Result<User, Error>) -> Void) {
+        AuthLogger.info("AuthRepositoryImpl.signInWithApple() starting")
+        AuthLogger.debug("Apple idToken len=\(idTokenString.count), rawNonce len=\(rawNonce.count)")
+        NSLog("[AUTH][AuthRepo] signInWithApple start idTokenLen=%d rawNonceLen=%d", idTokenString.count, rawNonce.count)
+        let credential = appleOAuthCredential(idTokenString: idTokenString, rawNonce: rawNonce)
+
+        firebaseAuth.signIn(with: credential) { [weak self] authResult, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                AuthLogger.error("Apple sign-in failed", error: error)
+                NSLog("[AUTH][AuthRepo] signInWithApple FAILED %@", error.localizedDescription)
+                completion(.failure(error))
+                return
+            }
+
+            guard let user = authResult?.user else {
+                AuthLogger.error("Apple sign-in returned nil user")
+                NSLog("[AUTH][AuthRepo] signInWithApple FAILED nil user")
+                completion(.failure(GSError.AuthGenericError(
+                    description: NSLocalizedString("auth_login_failed", comment: ""),
+                    reason: "Authentication failed"
+                )))
+                return
+            }
+
+            AuthLogger.success("Apple sign-in successful for user: \(user.uid)")
+            AuthLogger.debug("Firebase user email=\(user.email ?? "nil") providers=\(user.providerData.map { $0.providerID })")
+            NSLog("[AUTH][AuthRepo] signInWithApple OK uid=%@ email=%@", user.uid, user.email ?? "nil")
+            completion(.success(user))
+        }
+    }
+
+    func linkAppleToCurrentUser(idTokenString: String, rawNonce: String, completion: @escaping (Result<User, Error>) -> Void) {
+        guard let currentUser = firebaseAuth.currentUser else {
+            completion(.failure(GSError.AuthGenericError(
+                description: NSLocalizedString("auth_login_failed", comment: ""),
+                reason: "No authenticated user to link Apple ID"
+            )))
+            return
+        }
+
+        let credential = appleOAuthCredential(idTokenString: idTokenString, rawNonce: rawNonce)
+        currentUser.link(with: credential) { authResult, error in
+            if let error = error {
+                AuthLogger.error("Failed to link Apple ID", error: error)
+                completion(.failure(error))
+                return
+            }
+
+            guard let linkedUser = authResult?.user else {
+                completion(.failure(GSError.AuthGenericError(
+                    description: NSLocalizedString("auth_login_failed", comment: ""),
+                    reason: "Linking failed"
+                )))
+                return
+            }
+
+            AuthLogger.success("Apple ID linked successfully for user: \(linkedUser.uid)")
+            completion(.success(linkedUser))
+        }
+    }
     
     // MARK: - Private Helpers
     
@@ -198,6 +271,10 @@ class AuthRepositoryImpl: AuthRepository {
                 reason: error.localizedDescription
             )
         }
+    }
+
+    private func appleOAuthCredential(idTokenString: String, rawNonce: String) -> AuthCredential {
+        OAuthProvider.credential(withProviderID: "apple.com", idToken: idTokenString, rawNonce: rawNonce)
     }
 }
 

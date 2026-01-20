@@ -152,6 +152,10 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
                 let items: [WalletItem] = try supportedWallets.map { wallet in
                     let normalizedKey = try self.service.normalizedWalletPublicKey(wallet.publicKey)
                     let address = try self.service.ethereumAddress(fromNormalizedPublicKey: normalizedKey)
+                    let logLine = "Tangem scan wallet index=\(wallet.index) rawKey(\(wallet.publicKey.count) bytes)=\(wallet.publicKey.tangemHexDescription()) normalizedKey(\(normalizedKey.count) bytes)=\(normalizedKey.tangemHexDescription()) address=\(address.checksummed)"
+                    LogService.shared.info("[TangemScan] \(logLine)")
+                    print("[TangemScan] \(logLine)")
+                    NSLog("[TangemScan] %@", logLine)
                     return WalletItem(wallet: wallet,
                                       rawPublicKey: wallet.publicKey,
                                       normalizedPublicKey: normalizedKey,
@@ -279,7 +283,23 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         let pathLog = derivationPath ?? "nil"
         TangemLogger.debug("Derived default path for wallet index \(item.wallet.index): \(pathLog)")
         TangemLogger.info("User selected Tangem wallet index=\(item.wallet.index) cardId=\(cardId)")
+        #if DEBUG
+        let rawKeyHex = item.rawPublicKey.tangemHexDescription(prefix: true)
+        let message = """
+        Address: \(item.address.checksummed)
+        Wallet index: \(item.wallet.index)
+        Public key: \(rawKeyHex)
+        """
+        let alert = UIAlertController(title: "Tangem Wallet Key", message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Copy & Continue", style: .default) { [weak self] _ in
+            UIPasteboard.general.string = rawKeyHex
+            self?.onWalletSelected?(selection)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+        #else
         onWalletSelected?(selection)
+        #endif
     }
 }
 

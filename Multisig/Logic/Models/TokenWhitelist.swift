@@ -174,7 +174,8 @@ extension TokenWhitelist {
         let existingObjects = TokenWhitelist.all
         var existingById: [String: TokenWhitelist] = [:]
         for obj in existingObjects {
-            if let id = obj.id, !id.isEmpty {
+            let id = obj.id
+            if !id.isEmpty {
                 existingById[id] = obj
             }
         }

@@ -190,7 +190,7 @@
         <attribute name="topic" attributeType="String"/>
         <relationship name="safe" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Safe" inverseName="wcSessions" inverseEntity="Safe"/>
     </entity>
-    <entity name="TokenWhitelist" representedClassName="TokenWhitelist" syncable="YES" codeGenerationType="manual">
+    <entity name="TokenWhitelist" representedClassName="TokenWhitelist" syncable="YES" codeGenerationType="none">
         <attribute name="id" attributeType="String"/>
         <attribute name="tokenSymbol" optional="YES" attributeType="String"/>
         <attribute name="tokenName" optional="YES" attributeType="String"/>
@@ -210,6 +210,11 @@
         <attribute name="descriptionText" optional="YES" attributeType="String"/>
         <attribute name="priceSource" optional="YES" attributeType="String"/>
         <attribute name="priceSourceParam" optional="YES" attributeType="String"/>
+        <!-- Yield enrichment (MoneyMarket / Aave) -->
+        <attribute name="yieldSource" optional="YES" attributeType="String"/>
+        <attribute name="aaveMarketPoolAddress" optional="YES" attributeType="String"/>
+        <attribute name="aaveUnderlyingTokenAddress" optional="YES" attributeType="String"/>
+        <attribute name="aaveMarketName" optional="YES" attributeType="String"/>
         <uniquenessConstraints>
             <uniquenessConstraint>
                 <constraint value="id"/>

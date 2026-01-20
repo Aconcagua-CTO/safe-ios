@@ -76,6 +76,9 @@ extension AppSettings {
     
     @UserDefault(key: "io.gnosis.multisig.multiVaultBalancesEnabled")
     private static var _multiVaultBalancesEnabled: Bool?
+
+    @UserDefault(key: "io.gnosis.multisig.selfHostedExecuteEnabled")
+    private static var _selfHostedExecuteEnabled: Bool?
     
     /// Feature flag: Use local vaults instead of syncing from backend
     /// Default: false (use backend)
@@ -89,6 +92,35 @@ extension AppSettings {
     static var multiVaultBalancesEnabled: Bool {
         get { _multiVaultBalancesEnabled ?? true }
         set { _multiVaultBalancesEnabled = newValue }
+    }
+
+    /// Feature flag: Execute Safe transactions via backend instead of gateway
+    /// Default: true (self-hosted)
+    static var selfHostedExecuteEnabled: Bool {
+        get { _selfHostedExecuteEnabled ?? true }
+        set { _selfHostedExecuteEnabled = newValue }
+    }
+
+    // MARK: - Onboarding key registration (Aconcagua)
+
+    @UserDefault(key: "io.gnosis.multisig.pendingOwnerKeysRegistration")
+    private static var _pendingOwnerKeysRegistration: Bool?
+
+    // MARK: - Aconcagua session (company context)
+
+    /// Primary company context for the logged-in client user (single-company assumption).
+    /// Filled after login by fetching `/users/:uid` from Aconcagua-API.
+    @UserDefault(key: "io.gnosis.multisig.companyId")
+    static var companyId: String?
+
+    /// Cached enterprise roles from Firebase token claims or backend profile.
+    @UserDefault(key: "io.gnosis.multisig.enterpriseRols")
+    static var enterpriseRolsData: Data?
+
+    /// When true, the app should retry registering onboarding owner keys (deviceGenerated + tangem) with backend.
+    static var pendingOwnerKeysRegistration: Bool {
+        get { _pendingOwnerKeysRegistration ?? false }
+        set { _pendingOwnerKeysRegistration = newValue }
     }
     
     @UserDefault(key: "global.safe.ios.connectToWebDeprecationMessageShown")

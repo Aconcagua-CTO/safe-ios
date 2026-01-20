@@ -16,7 +16,8 @@ class DetailConfirmationCell: UITableViewCell {
                           required: Int,
                           status: SCGModels.TxStatus,
                           executor: Address?,
-                          isRejectionTx: Bool = false) {
+                          isRejectionTx: Bool = false,
+                          isReplaced: Bool = false) {
         let bounds = contentView.bounds
         var views: [UIView] = []
 
@@ -35,7 +36,13 @@ class DetailConfirmationCell: UITableViewCell {
             return v
         }
 
-        switch status {
+        if isReplaced {
+            let status = ConfirmationStatusPiece(frame: bounds)
+            status.setText("Replaced", style: .headline)
+            status.setSymbol("arrow.triangle.2.circlepath", color: .labelSecondary)
+            views.append(status)
+        } else {
+            switch status {
         case .awaitingConfirmations, .awaitingYourConfirmation:
             let confirmationsRemaining = required - confirmations.count
             if confirmationsRemaining > 0 {
@@ -89,6 +96,7 @@ class DetailConfirmationCell: UITableViewCell {
             status.setText("Pending", style: .headline)
             status.setSymbol("circle", color: .success)
             views.append(status)
+            }
         }
 
         for view in stackView.arrangedSubviews {

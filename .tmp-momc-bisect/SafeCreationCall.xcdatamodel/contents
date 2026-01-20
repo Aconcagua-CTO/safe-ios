@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="SafeCreationCall" representedClassName="SafeCreationCall" syncable="YES" codeGenerationType="class">
+        <attribute name="chainId" attributeType="String"/>
+        <attribute name="deployerAddress" optional="YES" attributeType="String"/>
+        <attribute name="fallbackHandlerAddress" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="owners" optional="YES" attributeType="String"/>
+        <attribute name="proxyFactoryAddress" optional="YES" attributeType="String"/>
+        <attribute name="safeAddress" attributeType="String"/>
+        <attribute name="saltNonce" optional="YES" attributeType="String"/>
+        <attribute name="singletonAddress" optional="YES" attributeType="String"/>
+        <attribute name="threshold" optional="YES" attributeType="String"/>
+        <attribute name="transactionData" optional="YES" attributeType="Binary"/>
+        <attribute name="transactionHash" optional="YES" attributeType="String"/>
+        <attribute name="version" optional="YES" attributeType="String"/>
+    </entity>
+</model>

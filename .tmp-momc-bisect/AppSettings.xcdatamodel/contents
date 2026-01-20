@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AppSettings" representedClassName="AppSettings" syncable="YES" codeGenerationType="class">
+        <attribute name="appReviewEventCount" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="copyAddressWithChainPrefix" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="dismissedImportKeyBanner" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="displayMode" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="fiatCode" optional="YES" attributeType="String" defaultValueString="USD"/>
+        <attribute name="importedOwnerKey" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="importKeyOnBoardingShown" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="lastBuildVersion" optional="YES" attributeType="String"/>
+        <attribute name="lastIgnoredUpdateVersion" optional="YES" attributeType="String"/>
+        <attribute name="lastMarketingVersion" optional="YES" attributeType="String"/>
+        <attribute name="onboardingCompleted" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="passcodeBannerDismissed" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="passcodeOptions" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="passcodeWasSetAtLeastOnce" optional="YES" attributeType="Boolean" defaultValueString="NO"/>
+        <attribute name="prependingChainPrefixToAddresses" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="securityCenterVersion" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="securityLockEnabled" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="securityLockMethod" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="termsAccepted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="toggle_securityCenter" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="trackingEnabled" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="walletAppRegistryMigrationCompleted" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+    </entity>
+</model>

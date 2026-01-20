@@ -28,15 +28,21 @@ class OnboardingStepCollectionViewCell: UICollectionViewCell {
             titleLabel.setStyle(.title1)
         }
 
-        if let highlightedText = step.description.highlightedText {
-            descriptionLabel.attributedText = step.description.text.highlightRange(
-                originalStyle: .body,
-                highlightStyle: .bodyPrimary,
-                textToHighlight: highlightedText
-            )
+        // Hide description label if text is empty
+        if step.description.text.isEmpty {
+            descriptionLabel.isHidden = true
         } else {
-            descriptionLabel.text = step.description.text
-            descriptionLabel.setStyle(.body)
+            descriptionLabel.isHidden = false
+            if let highlightedText = step.description.highlightedText {
+                descriptionLabel.attributedText = step.description.text.highlightRange(
+                    originalStyle: .body,
+                    highlightStyle: .bodyPrimary,
+                    textToHighlight: highlightedText
+                )
+            } else {
+                descriptionLabel.text = step.description.text
+                descriptionLabel.setStyle(.body)
+            }
         }
         imageView.image = step.image
     }

@@ -1,7 +1,6 @@
 import UIKit
 import SafeWeb3
 import TangemSdk
-import struct TangemSdk.SigningMethod
 
 final class TangemSignerViewController: UINavigationController {
     var completion: ((String) -> Void)?

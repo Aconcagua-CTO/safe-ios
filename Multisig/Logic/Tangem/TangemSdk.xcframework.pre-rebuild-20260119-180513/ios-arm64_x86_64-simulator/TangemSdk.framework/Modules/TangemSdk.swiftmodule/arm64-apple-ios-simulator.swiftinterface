@@ -16,7 +16,6 @@ import LocalAuthentication
 import Security
 import Swift
 import SwiftUI
-@_exported import TangemSdk
 import TangemSdk_secp256k1
 import UIKit
 import _Concurrency

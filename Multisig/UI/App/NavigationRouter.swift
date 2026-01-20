@@ -502,16 +502,21 @@ extension NavigationRoute {
         return NavigationRoute(path: "/settings/app/about/licenses")
     }
     
-    static var appSettingsDetailPaths: [String] = [
-        NavigationRoute.connectToWeb(),
-        .appearanceSettings(),
-        .advancedAppSettings(),
-        .addressBook(),
-        .about(),
-        .terms(),
-        .licenses(),
-        .privacy()
-    ].map { $0.path }
+    static var appSettingsDetailPaths: [String] = {
+        var routes: [NavigationRoute] = [
+            .appearanceSettings(),
+            .advancedAppSettings(),
+            .addressBook(),
+            .about(),
+            .terms(),
+            .licenses(),
+            .privacy()
+        ]
+        if App.configuration.services.environment.isDevelopment {
+            routes.insert(.connectToWeb(), at: 0)
+        }
+        return routes.map { $0.path }
+    }()
     
     static var appSettingsAboutPaths: [String] = [
         NavigationRoute.about(),

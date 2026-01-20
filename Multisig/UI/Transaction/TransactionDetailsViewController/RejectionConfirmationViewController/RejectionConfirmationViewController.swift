@@ -75,6 +75,13 @@ class RejectionConfirmationViewController: UIViewController {
     }
 
     @IBAction func rejectButtonTouched(_ sender: Any) {
+        if let safeNonce = safe.nonce,
+           let txNonce = transaction.multisigInfo?.nonce.value,
+           safeNonce > txNonce {
+            App.shared.snackbar.show(message: "This transaction can no longer be rejected because a newer nonce was already executed.")
+            return
+        }
+
         guard let rejectors = transaction.multisigInfo?.rejectorKeys() else {
             assertionFailure()
             return

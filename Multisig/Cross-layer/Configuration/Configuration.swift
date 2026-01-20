@@ -57,6 +57,8 @@ struct AppConfiguration {
             static func convert(from value: Any) -> Self {
                 (value as? String).flatMap { Self(rawValue: $0) } ?? .production
             }
+
+            var isDevelopment: Bool { self == .development }
         }
     }
     
@@ -214,6 +216,9 @@ struct AppConfiguration {
 
         @ConfigurationKey("CFBundleIdentifier")
         var bundleIdentifier: String
+        
+        @ConfigurationKey("SHOW_EMAIL_PASSWORD_LOGIN")
+        var showEmailPasswordLogin: Bool
 
         @ConfigurationKey("LOGGERS")
         var loggers: String

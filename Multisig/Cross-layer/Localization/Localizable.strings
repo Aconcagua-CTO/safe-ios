@@ -99,6 +99,8 @@
 "auth_forgot_password" = "Forgot password?";
 "auth_register_link" = "Don't have an account? Register";
 "auth_password_reset_sent" = "Password reset email sent";
+"auth_apple_share_email_required" = "Debes compartir tu mail para que podamos validar tu acceso";
+"auth_apple_account_exists" = "Tu cuenta ya existe. Inicia sesión con email y contraseña y luego vincula Apple ID.";
 
 /* ===== END OF AUTHENTICATION ==== */
 
@@ -109,3 +111,14 @@
 "vault_sync_retry" = "Please check your connection and try again";
 
 /* ===== END OF VAULT SYNC ==== */
+
+/* ===== POST-LOGIN VAULT/KEY GATE ==== */
+
+"pending_vault_activation_message" = "Estamos activando tu bóveda, en breve va a estar lista";
+"pending_vault_activation_refresh_button" = "Refrescar Bóvedas";
+"local_key_recover_message" = "No se encuentra tu llave local, contactate con nosotros";
+"local_key_recover_whatsapp_link" = "Abrir WhatsApp";
+"auth_lead_pending_message" = "Todavía no procesamos tu inscripción, contactanos para detalles";
+"auth_lead_created_message" = "Si te interesa sumarte, contactanos!";
+
+/* ===== END OF POST-LOGIN VAULT/KEY GATE ==== */

@@ -50,8 +50,8 @@ class ActivityButtonView: UINibView {
                 rejectButton.isEnabled = false
                 activityIndicator.isHidden = true
                 activityIndicator.stopAnimating()
-                actionButton.setText("", .filled)
-                rejectButton.setText("", .filledError)
+                actionButton.setText(actionTitle, .filled)
+                rejectButton.setText(rejectTitle, .filledError)
             }
         }
     }

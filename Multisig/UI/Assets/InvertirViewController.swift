@@ -530,9 +530,9 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
     var onContinue: ((InvestBuyDraft) -> Void)?
 
     private let selectedToken: TokenBalance
-    private var paymentTotalFiat: Double
     private let fiatCode: String
     private var paymentBalances: [TokenBalance]
+    private var selectedPaymentToken: TokenBalance?
 
     private let scrollView = UIScrollView()
     private let contentView = UIView()
@@ -558,11 +558,11 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
     private var debounceTimer: Timer?
     private let debounceDuration: TimeInterval = 0.15
 
-    init(selectedToken: TokenBalance, paymentTotalFiat: Double, fiatCode: String, paymentBalances: [TokenBalance]) {
+    init(selectedToken: TokenBalance, paymentTotalFiat _: Double, fiatCode: String, paymentBalances: [TokenBalance]) {
         self.selectedToken = selectedToken
-        self.paymentTotalFiat = max(0, paymentTotalFiat)
         self.fiatCode = fiatCode
         self.paymentBalances = paymentBalances
+        self.selectedPaymentToken = paymentBalances.first
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -581,13 +581,20 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         recompute()
     }
 
-    func updatePaymentBalances(_ balances: [TokenBalance], totalFiat: Double) {
+    func updatePaymentBalances(_ balances: [TokenBalance], totalFiat _: Double) {
         paymentBalances = balances
-        paymentTotalFiat = max(0, totalFiat)
+        // Preserve current selection if possible; otherwise default to first item.
+        if let current = selectedPaymentToken,
+           let match = balances.first(where: { $0.address == current.address }) {
+            selectedPaymentToken = match
+        } else {
+            selectedPaymentToken = balances.first
+        }
 
         let height = CGFloat(paymentBalances.count) * paymentAssetsTableView.rowHeight
         paymentAssetsTableHeightConstraint?.constant = max(0, height)
         paymentAssetsTableView.reloadData()
+        applySelectedPaymentSelection(animated: false)
 
         // Re-validate amount if user already typed.
         recompute()
@@ -725,10 +732,16 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         paymentAssetsTableView.rowHeight = 64
         paymentAssetsTableView.estimatedRowHeight = 64
         paymentAssetsTableView.isScrollEnabled = false
-        paymentAssetsTableView.allowsSelection = false
+        paymentAssetsTableView.allowsSelection = true
         paymentAssetsTableView.tableFooterView = UIView()
         paymentAssetsTableView.register(SelectAssetRowCell.self, forCellReuseIdentifier: SelectAssetRowCell.reuseID)
         paymentAssetsTableView.dataSource = self
+        paymentAssetsTableView.delegate = self
+#if DEBUG
+        if paymentAssetsTableView.allowsSelection == false || paymentAssetsTableView.delegate == nil {
+            LogService.shared.error("[InvestBuy] Payment assets table must be selectable (regression guard)")
+        }
+#endif
 
         let height = CGFloat(paymentBalances.count) * paymentAssetsTableView.rowHeight
         paymentAssetsTableHeightConstraint = paymentAssetsTableView.heightAnchor.constraint(equalToConstant: max(0, height))
@@ -737,6 +750,14 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
 
     private func configureInitialValues() {
         assetSymbolLabel.text = selectedToken.symbol
+        applySelectedPaymentSelection(animated: false)
+    }
+
+    private func applySelectedPaymentSelection(animated: Bool) {
+        guard let selected = selectedPaymentToken else { return }
+        guard let idx = paymentBalances.firstIndex(where: { $0.address == selected.address }) else { return }
+        let indexPath = IndexPath(row: idx, section: 0)
+        paymentAssetsTableView.selectRow(at: indexPath, animated: animated, scrollPosition: .none)
     }
 
     private func spacer(_ height: CGFloat) -> UIView {
@@ -779,6 +800,13 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
 
         assetPriceLabel.text = "Precio: \(formatFiat(unitPrice, code: fiatCode))"
 
+        guard let paymentToken = selectedPaymentToken else {
+            amountErrorLabel.text = "Seleccioná un token para pagar"
+            amountErrorLabel.isHidden = false
+            quantityValueLabel.text = "—"
+            return nil
+        }
+
         guard let amountFiat = parseUserFiatAmount(amountField.text),
               amountFiat > 0
         else {
@@ -786,7 +814,8 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
             return nil
         }
 
-        if amountFiat > paymentTotalFiat + 0.000_000_1 {
+        // Validate against the selected payment token's available fiat value (not the sum of all tokens).
+        if amountFiat > paymentToken.fiatValue + 0.000_000_1 {
             amountErrorLabel.text = "Saldo insuficiente"
             amountErrorLabel.isHidden = false
             quantityValueLabel.text = "—"
@@ -796,10 +825,10 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         let qty = amountFiat / unitPrice
         quantityValueLabel.text = "\(formatNumber5(qty)) \(selectedToken.symbol)"
 
-        let remaining = max(0, paymentTotalFiat - amountFiat)
+        let remaining = max(0, paymentToken.fiatValue - amountFiat)
         let draft = InvestBuyDraft(
             selectedToken: selectedToken,
-            savingsTotalFiat: paymentTotalFiat,
+            savingsTotalFiat: paymentToken.fiatValue,
             investAmountFiat: amountFiat,
             unitPriceFiatPerToken: unitPrice,
             buyQuantity: qty,
@@ -876,6 +905,7 @@ extension InvestEnterAmountViewController: UITableViewDataSource {
         cell.setChain("")
         cell.setFiat(item.fiatBalance)
         cell.setAmount(item.balanceFormatted5)
+        cell.accessoryType = (item.address == selectedPaymentToken?.address) ? .checkmark : .none
 
         let normalized = item.category
             .lowercased()
@@ -895,6 +925,14 @@ extension InvestEnterAmountViewController: UITableViewDataSource {
             cell.setImage(with: item.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
         }
         return cell
+    }
+}
+
+extension InvestEnterAmountViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        selectedPaymentToken = paymentBalances[indexPath.row]
+        tableView.reloadData() // update checkmarks
+        recompute()
     }
 }
 
@@ -1160,9 +1198,47 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
     private func showConfirm(draft: InvestBuyDraft) {
         let s3 = InvestConfirmViewController(draft: draft)
         s3.onPurchase = { [weak self] in
+            self?.createBuyTransactionRequest(draft: draft)
             self?.showInProgress()
         }
         navigationController?.pushViewController(s3, animated: true)
+    }
+
+    private func createBuyTransactionRequest(draft: InvestBuyDraft) {
+        guard let selected = try? Safe.getSelected() else {
+            LogService.shared.error("[TransactionRequests][buy] Missing selected Safe; cannot build vaultId")
+            return
+        }
+        let vaultEvmAddress = selected.addressValue.checksummed
+
+        let notes =
+            "investAmountFiat=\(draft.investAmountFiat);" +
+            " unitPriceFiatPerToken=\(draft.unitPriceFiatPerToken);" +
+            " fiatCode=\(draft.fiatCode);" +
+            " buyQuantity=\(draft.buyQuantity)"
+
+        let payload = CreateTransactionRequestBody(
+            transactionType: .buy,
+            currency: draft.selectedToken.symbol,
+            amount: max(0, draft.buyQuantity),
+            requestStatus: .requested,
+            destinationAddress: nil,
+            notes: notes
+        )
+
+        let service = TransactionRequestsService(authRepository: App.shared.authRepository, logger: LogService.shared)
+        service.createTransactionRequestForCurrentSession(
+            vaultEvmAddress: vaultEvmAddress,
+            chainId: selected.chain?.id,
+            payload: payload
+        ) { result in
+            switch result {
+            case .success:
+                LogService.shared.info("[TransactionRequests][buy] created")
+            case .failure(let error):
+                LogService.shared.error("[TransactionRequests][buy] create FAILED", error: error)
+            }
+        }
     }
 
     private func showInProgress() {
@@ -1371,9 +1447,12 @@ final class LatestBalancesCache {
 
     private(set) var balances: [TokenBalance] = []
 
-    func update(balances: [TokenBalance]) {
-        // Only store if it looks like real balances (at least one non-zero amount).
-        guard balances.contains(where: { $0.balanceValue.value > 0 }) else { return }
+    func update(balances: [TokenBalance], allowAllZero: Bool = false) {
+        // By default, only store if it looks like real balances (at least one non-zero amount),
+        // to avoid accidentally caching "market" lists.
+        if !allowAllZero {
+            guard balances.contains(where: { $0.balanceValue.value > 0 }) else { return }
+        }
         self.balances = balances
     }
 }
