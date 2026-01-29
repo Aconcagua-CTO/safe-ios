@@ -44,7 +44,7 @@ final class VenderConfirmViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = "Confirmar"
+        title = NSLocalizedString("ui_vender_confirm_title", comment: "Vender confirm title")
 
         configureLayout()
         configureValues()
@@ -106,7 +106,7 @@ final class VenderConfirmViewController: UIViewController {
             label.numberOfLines = 0
         }
 
-        sellButton.setText("Vender", .filled)
+        sellButton.setText(NSLocalizedString("ui_vender_sell_action", comment: "Vender sell action"), .filled)
         sellButton.addTarget(self, action: #selector(didTapSell), for: .touchUpInside)
 
         stack.addArrangedSubview(titleLabel)

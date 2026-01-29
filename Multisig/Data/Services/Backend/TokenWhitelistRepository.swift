@@ -48,6 +48,7 @@ class TokenWhitelistRepositoryImpl: TokenWhitelistRepository {
                         LogService.shared.debug("[TokenWhitelistRepository] sync received entries=\(entries.count) wrapLabelNonEmpty=\(nonEmptyWrapLabel) priceSourceNonEmpty=\(nonEmptySource) priceSourceParamNonEmpty=\(nonEmptyParam) force=\(force) network=\(network ?? "nil")")
                         let counts = TokenWhitelist.sync(entries: entries)
                         LogService.shared.info("[TokenWhitelist] Synced \(entries.count) tokens (same: \(counts.same), new: \(counts.new), removed: \(counts.removed))")
+                        NotificationCenter.default.post(name: .tokenWhitelistUpdated, object: nil)
                         completion(.success(()))
                     case .failure(let error):
                         completion(.failure(error))

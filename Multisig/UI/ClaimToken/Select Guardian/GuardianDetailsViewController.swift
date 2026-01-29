@@ -27,12 +27,13 @@ class GuardianDetailsViewController: UIViewController {
         Tracker.trackEvent(.screenClaimDeldet)
 
         ViewControllerFactory.removeNavigationBarBorder(self)
-        title = "Choose a delegate"
+        title = NSLocalizedString("ui_claim_choose_delegate_title", comment: "Choose delegate title")
         navigationItem.largeTitleDisplayMode = .never
 
         identiconInfoView.setGuardian(guardian: guardian)
 
-        viewOnEtherscan.setText("View on Etherscan", underlined: false)
+        viewOnEtherscan.setText(NSLocalizedString("ui_claim_view_on_etherscan_action", comment: "View on Etherscan action"),
+                                underlined: false)
 
         reasonTitleLabel.setStyle(.headline)
         reasonTextLabel.setStyle(.body)
@@ -42,10 +43,11 @@ class GuardianDetailsViewController: UIViewController {
         contributionTextLabel.setStyle(.body)
         contributionTextLabel.text = guardian.contribution
 
-        continueButton.setText("Select & Continue", .filled)
+        continueButton.setText(NSLocalizedString("ui_claim_select_continue_action", comment: "Select and continue action"),
+                               .filled)
 
         if guardian.address.address == Address.zero {
-            App.shared.snackbar.show(message: "Missing ENS name or guardian address")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_claim_missing_guardian_error", comment: "Missing guardian error"))
             continueButton.isEnabled = false
         } else {
             viewOnEtherscan.url = chain.browserURL(address: guardian.address.address.checksummed)
@@ -79,7 +81,8 @@ class GuardianDetailsViewController: UIViewController {
 
         // if all fails, just copy on tap
         Pasteboard.string = text
-        App.shared.snackbar.show(message: "Copied to clipboard", duration: 2)
+        App.shared.snackbar.show(message: NSLocalizedString("ui_copied_to_clipboard_message", comment: "Copied to clipboard message"),
+                                 duration: 2)
     }
 
     @IBAction func didTapContinueButton(_ sender: Any) {

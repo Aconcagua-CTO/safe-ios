@@ -54,14 +54,14 @@ class ContractVersionStatusCell: UITableViewCell {
             statusView.image = UIImage(systemName: "checkmark", withConfiguration: semiboldConfiguration)
             statusView.tintColor = .success
             statusLabel.setStyle(.headlineSuccess)
-            statusLabel.text = "Up to date"
+            statusLabel.text = NSLocalizedString("ui_contract_version_up_to_date", comment: "Contract version up to date")
 
         case .upgradeAvailable:
             headerLabel.text = version
             statusView.image = UIImage(systemName: "exclamationmark.circle", withConfiguration: semiboldConfiguration)
             statusView.tintColor = .error
             statusLabel.setStyle(.headlineError)
-            statusLabel.text = "Upgrade available"
+            statusLabel.text = NSLocalizedString("ui_contract_version_upgrade_available", comment: "Contract version upgrade available")
 
         case .unknown:
             headerLabel.text = info.name ?? "Unknown"
@@ -79,7 +79,8 @@ class ContractVersionStatusCell: UITableViewCell {
     @objc private func copyAddress() {
         guard let address = address else { return }
         Pasteboard.string = copyPrefixString() + address.checksummed
-        App.shared.snackbar.show(message: "Copied to clipboard", duration: 2)
+        App.shared.snackbar.show(message: NSLocalizedString("ui_copied_to_clipboard_message", comment: "Copied to clipboard message"),
+                                 duration: 2)
     }
 
     // visual reaction for user touches

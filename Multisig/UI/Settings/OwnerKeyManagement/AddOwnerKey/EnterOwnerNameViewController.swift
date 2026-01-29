@@ -46,13 +46,15 @@ class EnterOwnerNameViewController: UIViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: stepLabel)
 
         stepLabel.setStyle(.calloutTertiary)
-        stepLabel.text = "\(stepNumber) of \(maxSteps)"
+        stepLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                stepNumber,
+                                maxSteps)
 
         identiconView.set(address: address)
         let prefixString = prefixString()
         addressLabel.attributedText = (prefixString + address.checksummed).highlight(prefix: prefixString.count + 6)
 
-        textField.setPlaceholder("Enter name")
+        textField.setPlaceholder(NSLocalizedString("ui_enter_name_placeholder", comment: "Enter name placeholder"))
         textField.textField.delegate = self
         textField.textField.becomeFirstResponder()
         if let name = name {
@@ -61,7 +63,7 @@ class EnterOwnerNameViewController: UIViewController {
 
         disclaimerLabel.setStyle(.body)
 
-        continueButton.setText("Continue", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
 
         validateName()
 

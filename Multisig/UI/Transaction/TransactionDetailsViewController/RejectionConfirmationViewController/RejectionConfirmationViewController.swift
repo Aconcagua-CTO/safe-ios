@@ -44,8 +44,8 @@ class RejectionConfirmationViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        rejectionButton.setText("Reject transaction", .filledError)
-        navigationItem.title = "Reject Transaction"
+        rejectionButton.setText(NSLocalizedString("ui_tx_reject_transaction_title", comment: "Reject transaction title"), .filledError)
+        navigationItem.title = NSLocalizedString("ui_tx_reject_title", comment: "Title for rejecting a transaction")
 
         createOnChainRejectionLabel.setStyle(.footnote)
         collectConfirmationsLabel.setStyle(.footnote)
@@ -78,7 +78,7 @@ class RejectionConfirmationViewController: UIViewController {
         if let safeNonce = safe.nonce,
            let txNonce = transaction.multisigInfo?.nonce.value,
            safeNonce > txNonce {
-            App.shared.snackbar.show(message: "This transaction can no longer be rejected because a newer nonce was already executed.")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_rejection_not_possible_error", comment: "Rejection not possible error"))
             return
         }
 
@@ -120,7 +120,7 @@ class RejectionConfirmationViewController: UIViewController {
                     rejectAndCloseController(signature: signature.hexadecimal)
 
                 } catch {
-                    App.shared.snackbar.show(message: "Failed to Reject transaction")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_tx_rejection_failed_error", comment: "Rejection failed message"))
                 }
             }
 
@@ -128,7 +128,7 @@ class RejectionConfirmationViewController: UIViewController {
             rejectWithWalletConnect(rejectionTransaction, keyInfo: keyInfo)
 
         case .ledgerNanoX:
-            let request = SignRequest(title: "Reject Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_reject_title", comment: "Title for rejecting a transaction"),
                                       tracking: ["action" : "reject"],
                                       signer: keyInfo,
                                       hexToSign: rejectionTransaction.safeTxHash.description)
@@ -142,7 +142,7 @@ class RejectionConfirmationViewController: UIViewController {
                 self?.endLoading()
             }
         case .tangem, .tangem0:
-            let request = SignRequest(title: "Reject Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_reject_title", comment: "Title for rejecting a transaction"),
                                       tracking: ["action": "reject"],
                                       signer: keyInfo,
                                       hexToSign: rejectionTransaction.safeTxHash.description)
@@ -157,7 +157,7 @@ class RejectionConfirmationViewController: UIViewController {
                 self?.endLoading()
             }
         case .burner:
-            let request = SignRequest(title: "Reject Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_reject_title", comment: "Title for rejecting a transaction"),
                                       tracking: ["action": "reject"],
                                       signer: keyInfo,
                                       hexToSign: rejectionTransaction.safeTxHash.description)
@@ -247,7 +247,7 @@ class RejectionConfirmationViewController: UIViewController {
                             return
                         }
 
-                        App.shared.snackbar.show(error: GSError.error(description: "Failed to Reject transaction",
+                        App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_rejection_failed_error", comment: "Rejection failed message"),
                                                                       error: error))
                     case .success(_):
                         NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
@@ -257,7 +257,7 @@ class RejectionConfirmationViewController: UIViewController {
                             parameters: TrackingEvent.keyTypeParameters(keyInfo, parameters: ["source": "tx_details"])
                         )
 
-                        App.shared.snackbar.show(message: "Rejection successfully submitted")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_tx_rejection_submitted_message", comment: "Rejection submitted message"))
                         self?.navigationController?.popToRootViewController(animated: true)
                     }
 

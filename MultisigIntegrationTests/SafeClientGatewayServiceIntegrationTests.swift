@@ -45,9 +45,86 @@ class SafeClientGatewayServiceIntegrationTests: CoreDataTestCase {
         }
     }
 
+    func testQueuedTransactionsRequest_usesTxServicePathForRootstock() {
+        let safeAddress = "0x1230B3d59858296A31053C1b8562Ecf89A2f888b"
+        let request = QueuedTransactionsSummaryListRequest(safeAddress: safeAddress, chainId: Chain.ChainID.rootstock)
+
+        XCTAssertEqual(request.urlPath, "/api/v1/safes/\(safeAddress)/multisig-transactions/")
+        XCTAssertEqual(request.query, "executed=false&limit=20")
+    }
+
+    func testQueuedTransactionsRequest_usesScgPathForStandardChain() {
+        let safeAddress = "0x1230B3d59858296A31053C1b8562Ecf89A2f888b"
+        let request = QueuedTransactionsSummaryListRequest(safeAddress: safeAddress, chainId: Chain.ChainID.ethereumMainnet)
+
+        XCTAssertEqual(request.urlPath, "/v1/chains/1/safes/\(safeAddress)/transactions/queued")
+        XCTAssertTrue(request.query?.starts(with: "timezone_offset=") ?? false)
+    }
+
+    func testHistoryTransactionsRequest_usesTxServicePathForRootstock() {
+        let safeAddress = "0x1230B3d59858296A31053C1b8562Ecf89A2f888b"
+        let request = HistoryTransactionsSummaryListRequest(safeAddress: safeAddress, chainId: Chain.ChainID.rootstock)
+
+        XCTAssertEqual(request.urlPath, "/api/v1/safes/\(safeAddress)/multisig-transactions/")
+        XCTAssertEqual(request.query, "executed=true&limit=20")
+    }
+
+    func testTransactionSummaryPage_decodesTxServiceList() throws {
+        let json = """
+        {
+          "count": 1,
+          "next": null,
+          "previous": null,
+          "results": [
+            {
+              "safe": "0x0000000000000000000000000000000000000001",
+              "safeTxHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "to": "0x0000000000000000000000000000000000000002",
+              "value": "0",
+              "data": "0x",
+              "dataDecoded": { "method": "transfer" },
+              "confirmationsRequired": 2,
+              "confirmations": [
+                { "owner": "0x0000000000000000000000000000000000000003", "signature": "0x11" }
+              ],
+              "isExecuted": false,
+              "isSuccessful": false,
+              "submissionDate": "2025-01-01T00:00:00Z",
+              "nonce": "3"
+            }
+          ]
+        }
+        """
+
+        let data = Data(json.utf8)
+        let page = try JSONDecoder().decode(TransactionSummaryPage.self, from: data)
+
+        XCTAssertEqual(page.results.count, 1)
+
+        guard case let .transaction(item) = page.results.first else {
+            return XCTFail("Expected transaction item")
+        }
+
+        XCTAssertEqual(item.transaction.txStatus, .awaitingConfirmations)
+
+        if case let .custom(info) = item.transaction.txInfo {
+            XCTAssertEqual(info.methodName, "transfer")
+        } else {
+            XCTFail("Expected custom tx info")
+        }
+
+        if case let .multisig(info) = item.transaction.executionInfo {
+            XCTAssertEqual(info.nonce.value, UInt256(3))
+            XCTAssertEqual(info.confirmationsSubmitted, 1)
+            XCTAssertEqual(info.confirmationsRequired, 2)
+        } else {
+            XCTFail("Expected multisig execution info")
+        }
+    }
+
     private func goThroughAllTransactions(safe: Address, line: UInt = #line) {
-        var page: Page<SCGModels.TransactionSummaryItem>?
-        var pages = [Page<SCGModels.TransactionSummaryItem>]()
+        var page: TransactionSummaryPage?
+        var pages = [TransactionSummaryPage]()
 
         let firstPageExp = expectation(description: "first page")
 

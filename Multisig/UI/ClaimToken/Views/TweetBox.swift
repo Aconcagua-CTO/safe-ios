@@ -24,7 +24,7 @@ class TweetBox: UINibView {
         layer.cornerRadius = 8
 
         tweetLabel.setStyle(.body)
-        tweetButton.setText("Tweet", .tweet)
+        tweetButton.setText(NSLocalizedString("ui_tweet_action", comment: "Tweet action"), .tweet)
     }
 
     override func layoutSubviews() {

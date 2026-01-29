@@ -62,13 +62,13 @@ private enum BurnerSignerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingMetadata:
-            return "Burner card metadata is missing. Please re-import the card."
+            return NSLocalizedString("ui_burner_sign_missing_metadata", comment: "Error when Burner key metadata is missing")
         case .invalidHashLength:
-            return "Expected a 32-byte hash to sign."
+            return NSLocalizedString("ui_burner_sign_expected_32_bytes", comment: "Error when hash length is invalid for Burner signing")
         case .invalidSignature:
-            return "Burner card returned an invalid signature."
+            return NSLocalizedString("ui_burner_sign_invalid_signature", comment: "Error when Burner signature is invalid")
         case .signerMismatch:
-            return "The Burner card signed with a different address than expected."
+            return NSLocalizedString("ui_burner_sign_signer_mismatch", comment: "Error when Burner signature is from unexpected address")
         }
     }
 }
@@ -162,7 +162,7 @@ private final class BurnerSignContentViewController: UIViewController {
         
         activityIndicator.hidesWhenStopped = true
         
-        actionButton.setTitle("Try Again", for: .normal)
+        actionButton.setTitle(NSLocalizedString("ui_try_again", comment: "Retry button title"), for: .normal)
         actionButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
         actionButton.isHidden = true
         
@@ -196,7 +196,7 @@ private final class BurnerSignContentViewController: UIViewController {
                 BurnerLogger.debug("BurnerSigner ▶️ Metadata cardId=\(metadata.cardId) tagId=\(tagLog) slot=\(metadata.slot)")
                 
                 let payload = try self.makeSigningPayload()
-                let signingMessage = "Hold your Burner card near the top of your iPhone to sign."
+                let signingMessage = NSLocalizedString("ui_burner_hold_to_sign", comment: "NFC instruction for signing with Burner card")
                 
                 let result = try await self.service.signHash(cardId: metadata.cardId,
                                                              tagIdentifier: metadata.tagIdentifier,
@@ -223,7 +223,7 @@ private final class BurnerSignContentViewController: UIViewController {
                         self.onSignedTransaction?(signature)
                     default:
                         BurnerLogger.error("Burner signing payload mismatch")
-                        self.state = .error(BurnerSignerError.invalidSignature.errorDescription ?? "Invalid signature")
+                        self.state = .error(BurnerSignerError.invalidSignature.errorDescription ?? NSLocalizedString("ui_invalid_signature", comment: "Generic invalid signature error"))
                     }
                 }
             } catch {
@@ -368,10 +368,10 @@ private final class BurnerSignContentViewController: UIViewController {
     
     private func message(for error: Error) -> String {
         if let burnerError = error as? BurnerService.BurnerServiceError {
-            return burnerError.errorDescription ?? "Burner card interaction failed."
+            return burnerError.errorDescription ?? NSLocalizedString("ui_burner_interaction_failed", comment: "Fallback error for Burner card interaction failure")
         }
         if let signerError = error as? BurnerSignerError {
-            return signerError.errorDescription ?? "Burner card interaction failed."
+            return signerError.errorDescription ?? NSLocalizedString("ui_burner_interaction_failed", comment: "Fallback error for Burner card interaction failure")
         }
         return error.localizedDescription
     }
@@ -384,17 +384,17 @@ private final class BurnerSignContentViewController: UIViewController {
             activityIndicator.stopAnimating()
             actionButton.isHidden = true
         case .waiting:
-            statusLabel.text = "Ready to Sign"
-            detailLabel.text = "Hold your Burner card near the top edge of your iPhone."
+            statusLabel.text = NSLocalizedString("ui_burner_ready_to_sign_title", comment: "Status shown before signing with Burner card")
+            detailLabel.text = NSLocalizedString("ui_burner_hold_near_top_edge", comment: "Instruction for holding the Burner card near the phone")
             activityIndicator.startAnimating()
             actionButton.isHidden = true
         case .signing:
-            statusLabel.text = "Processing Signature"
-            detailLabel.text = "Stay close to the Burner card until the signature is completed."
+            statusLabel.text = NSLocalizedString("ui_burner_processing_signature_title", comment: "Status shown while processing Burner signature")
+            detailLabel.text = NSLocalizedString("ui_burner_stay_close_detail", comment: "Instruction to keep Burner card close until completion")
             activityIndicator.startAnimating()
             actionButton.isHidden = true
         case .error(let message):
-            statusLabel.text = "Unable to Sign"
+            statusLabel.text = NSLocalizedString("ui_burner_unable_to_sign_title", comment: "Title shown when Burner signing fails")
             detailLabel.text = message
             activityIndicator.stopAnimating()
             actionButton.isHidden = false

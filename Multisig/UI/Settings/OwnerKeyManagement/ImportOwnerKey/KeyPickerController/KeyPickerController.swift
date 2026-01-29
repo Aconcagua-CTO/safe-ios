@@ -47,7 +47,7 @@ class KeyPickerController: UITableViewController {
 
     private lazy var importButton: UIBarButtonItem = {
         let button = UIBarButtonItem(
-            title: "Import",
+            title: NSLocalizedString("button_import", comment: "Import button title"),
             style: .done,
             target: self,
             action: #selector(didTapImport))
@@ -66,7 +66,7 @@ class KeyPickerController: UITableViewController {
         tableView.registerCell(ButtonTableViewCell.self)
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 44
-        navigationItem.title = "Import Owner Key"
+        navigationItem.title = NSLocalizedString("ui_owner_key_import_title", comment: "Title for importing an owner key")
         navigationItem.rightBarButtonItem = importButton
         tableView.backgroundColor = .backgroundPrimary
     }

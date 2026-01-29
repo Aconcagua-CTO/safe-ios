@@ -74,21 +74,27 @@ class TransactionViewController: UIViewController {
         }
 #endif
 
-        navigationItem.title = "Send " + tokenBalance.symbol
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.title = String(format: NSLocalizedString("ui_send_token_title_format", comment: "Title for sending a specific token"), tokenBalance.symbol)
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         
-        navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
-        reviewBarButton = UIBarButtonItem(title: "Review", style: .done, target: self, action: #selector(review))
+        navigationItem.backBarButtonItem = UIBarButtonItem(title: NSLocalizedString("button_back", comment: "Back button title"),
+                                                           style: .plain,
+                                                           target: nil,
+                                                           action: nil)
+        reviewBarButton = UIBarButtonItem(title: NSLocalizedString("ui_tx_review_action", comment: "Review transaction action"),
+                                          style: .done,
+                                          target: self,
+                                          action: #selector(review))
         navigationItem.rightBarButtonItem = reviewBarButton
         
-        maxButton.setText("Send max", .primary)
+        maxButton.setText(NSLocalizedString("ui_tx_send_max_action", comment: "Send max action"), .primary)
         maxButton.contentHorizontalAlignment = .right
 
         safeAddressInfoView.setAddress(safe.addressValue,
                                        label: safe.name,
                                        prefix: safe.chain!.shortName)
 
-        addressField.setPlaceholderText("Recipient's address")
+        addressField.setPlaceholderText(NSLocalizedString("ui_recipient_address_placeholder", comment: "Recipient address placeholder"))
         addressField.onTap = { [weak self] in self?.didTapAddressField() }
 
         enableReviewButtons(false)
@@ -103,7 +109,7 @@ class TransactionViewController: UIViewController {
         tooltipSource?.message = tokenBalance.fullBalanceWithSymbol
         tooltipSource?.aboveTarget = false
 
-        reviewButton.setText("Review", .filled)
+        reviewButton.setText(NSLocalizedString("ui_tx_review_action", comment: "Review transaction action"), .filled)
         amountTextField.setToken(logoURL: tokenBalance.imageURL)
         amountTextField.delegate = self
         
@@ -168,19 +174,23 @@ class TransactionViewController: UIViewController {
             popoverPresentationController.sourceView = addressField
         }
 
-        alertVC.addAction(UIAlertAction(title: "Paste from Clipboard", style: .default, handler: { [weak self] _ in
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_paste_from_clipboard", comment: "Paste from clipboard action"),
+                                        style: .default,
+                                        handler: { [weak self] _ in
             let text = Pasteboard.string
             self?.didEnterText(text)
         }))
 
-        alertVC.addAction(UIAlertAction(title: "Scan QR Code", style: .default, handler: { [weak self] _ in
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_scan_qr_code", comment: "Scan QR code action"),
+                                        style: .default,
+                                        handler: { [weak self] _ in
             guard let self = self else { return }
             let vc = QRCodeScannerViewController()
             vc.scannedValueValidator = { value in
                 if let _ = try? Address.addressWithPrefix(text: value) {
                     return .success(value)
                 } else {
-                    return .failure(GSError.error(description: "Can’t use this QR code",
+                    return .failure(GSError.error(description: NSLocalizedString("ui_qr_code_invalid_error", comment: "Invalid QR code error"),
                                                   error: GSError.SafeAddressNotValid()))
                 }
             }
@@ -190,7 +200,9 @@ class TransactionViewController: UIViewController {
             self.present(vc, animated: true, completion: nil)
         }))
 
-        alertVC.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                        style: .cancel,
+                                        handler: nil))
         
         if let popoverPresentationController = alertVC.popoverPresentationController {
             popoverPresentationController.sourceView = addressField
@@ -218,7 +230,7 @@ class TransactionViewController: UIViewController {
 
         guard !text.isEmpty else {
             VaultLogger.debug("[PASTE] Text is empty, setting error")
-            addressField.setError("Address should not be empty")
+            addressField.setError(NSLocalizedString("ui_address_empty_error", comment: "Address should not be empty error"))
             return
         }
 
@@ -252,7 +264,8 @@ class TransactionViewController: UIViewController {
                 LogService.shared.error("[TransactionViewController] didEnterText: safe.chain?.id is nil, cannot set address")
                 #endif
                 VaultLogger.error("[PASTE] Safe chain ID is nil, cannot proceed")
-                addressField.setError(GSError.error(description: "Safe chain is unavailable", error: nil))
+                addressField.setError(GSError.error(description: NSLocalizedString("ui_safe_chain_unavailable_error", comment: "Safe chain unavailable error"),
+                                                    error: nil))
                 return
             }
 
@@ -278,7 +291,7 @@ class TransactionViewController: UIViewController {
         } catch {
             VaultLogger.error("[PASTE] Address parsing failed", error: error)
             addressField.setError(
-                GSError.error(description: "Can’t use this address",
+                GSError.error(description: NSLocalizedString("ui_address_invalid_error", comment: "Address invalid error"),
                               error: error is EthereumAddress.Error ? GSError.SafeAddressNotValid() : error))
         }
 
@@ -300,11 +313,12 @@ class TransactionViewController: UIViewController {
         var message: String? = nil
 
         if amountTextField.balance.numberOfDecimals > tokenBalance.decimals {
-            message = "Should be 1 to \(tokenBalance.decimals) decimals"
+            message = String(format: NSLocalizedString("ui_amount_decimals_format", comment: "Amount decimals format"),
+                             "\(tokenBalance.decimals)")
         } else if amount.value <= 0 {
-            message = "Amount should be greater than 0"
+            message = NSLocalizedString("ui_amount_greater_than_zero_error", comment: "Amount must be greater than zero error")
         } else if amount.value > tokenBalance.balanceValue.value {
-            message = "Insufficient funds"
+            message = NSLocalizedString("ui_insufficient_funds_error", comment: "Insufficient funds error")
         }
 
         enableReviewButtons(message == nil && address != nil)

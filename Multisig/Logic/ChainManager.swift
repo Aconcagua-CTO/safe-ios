@@ -40,17 +40,31 @@ private struct CMCustomChainResponse: Decodable {
 }
 
 class ChainManager {
-    static func updateChainsInfo() {
+    private static let safeConfigService = SafeConfigService(logger: LogService.shared)
+    private static var cachedSafeConfigChains: [SafeConfigChain] = []
+
+    static func cachedChainInfo(for chainId: String) -> SafeConfigChain? {
+        cachedSafeConfigChains.first { $0.chainId == chainId }
+    }
+
+    static func updateChainsInfo(completion: ((Result<Int, Error>) -> Void)? = nil) {
         let group = DispatchGroup()
 
         var standardChains: [SCGModels.Chain] = []
         var customChains: [CMCustomChainResponse] = []
+        var standardChainsError: Error?
 
         group.enter()
-        App.shared.clientGatewayService.asyncChains { result in
+        safeConfigService.fetchChains { result in
             defer { group.leave() }
-            if case .success(let chains) = result {
-                standardChains = chains.results
+            switch result {
+            case .success(let chains):
+                standardChains = chains.map { $0.toSCGChain() }
+                cachedSafeConfigChains = chains
+                LogService.shared.info("[ChainManager] updateChainsInfo() - Loaded \(chains.count) chain(s) from Safe Config")
+            case .failure(let error):
+                standardChainsError = error
+                LogService.shared.error("[ChainManager] updateChainsInfo() - Failed to fetch Safe Config chains", error: error)
             }
         }
 
@@ -110,6 +124,12 @@ class ChainManager {
 
             if !merged.isEmpty {
                 NotificationCenter.default.post(name: .chainInfoChanged, object: nil)
+            }
+
+            if merged.isEmpty, let standardChainsError {
+                completion?(.failure(standardChainsError))
+            } else {
+                completion?(.success(merged.count))
             }
         }
     }

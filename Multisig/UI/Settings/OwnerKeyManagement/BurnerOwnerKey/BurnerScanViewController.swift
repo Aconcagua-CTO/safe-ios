@@ -12,6 +12,10 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
     var onSlotSelected: ((BurnerKeySelection) -> Void)?
     var onCancelled: (() -> Void)?
     
+    /// When enabled, the scan will automatically pick the first available slot and continue the flow.
+    /// This avoids prompting the user to choose a slot.
+    var autoSelectFirstSlot: Bool = false
+    
     private enum State {
         case idle
         case scanning
@@ -54,7 +58,7 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
         super.viewDidLoad()
         
         view.backgroundColor = .backgroundSecondary
-        navigationItem.title = "Scan Burner Card"
+        navigationItem.title = NSLocalizedString("ui_burner_scan_card_title", comment: "Title for the burner card scan screen")
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel,
                                                             target: self,
@@ -125,7 +129,7 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
     }
     
     private func configureActionButton() {
-        actionButton.setTitle("Try Again", for: .normal)
+        actionButton.setTitle(NSLocalizedString("ui_try_again", comment: "Retry button title"), for: .normal)
         actionButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
         actionButton.isHidden = true
     }
@@ -143,13 +147,27 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
                 await MainActor.run {
                     if summary.keySlots.isEmpty {
                         self.summary = nil
-                        self.state = .error("This Burner card does not expose Ethereum-compatible key slots.")
+                        self.state = .error(NSLocalizedString("ui_burner_no_eth_slots_error", comment: "Error shown when Burner card doesn't have compatible key slots"))
                         self.tableView.isHidden = true
                     } else {
                         self.summary = summary
-                        self.state = .ready
-                        self.tableView.reloadData()
-                        self.tableView.isHidden = false
+                        if self.autoSelectFirstSlot, let first = summary.keySlots.first {
+                            // Proceed automatically with the first slot.
+                            self.state = .scanning
+                            self.tableView.isHidden = true
+                            let selection = BurnerKeySelection(cardId: summary.cardId,
+                                                               tagIdentifier: summary.tagIdentifier,
+                                                               slot: first.slot,
+                                                               publicKey: first.publicKey,
+                                                               address: first.ethereumAddress,
+                                                               attestationValid: first.attestationValid)
+                            BurnerLogger.info("Burner auto-selected first slot cardId=\(summary.cardId) slot=\(first.slot)")
+                            self.onSlotSelected?(selection)
+                        } else {
+                            self.state = .ready
+                            self.tableView.reloadData()
+                            self.tableView.isHidden = false
+                        }
                     }
                 }
             } catch {
@@ -165,7 +183,7 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
     
     private func message(for error: Error) -> String {
         if let burnerError = error as? BurnerService.BurnerServiceError {
-            return burnerError.errorDescription ?? "Unable to scan Burner card."
+            return burnerError.errorDescription ?? NSLocalizedString("ui_burner_unable_to_scan_fallback", comment: "Fallback error for Burner scan failure")
         }
         return error.localizedDescription
     }
@@ -178,21 +196,24 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
             activityIndicator.stopAnimating()
             actionButton.isHidden = true
         case .scanning:
-            statusLabel.text = "Scanning Burner Card"
-            detailLabel.text = "Hold your Burner card near the top edge of your iPhone."
+            statusLabel.text = NSLocalizedString("ui_burner_scanning_title", comment: "Status shown while scanning a Burner card")
+            detailLabel.text = NSLocalizedString("ui_burner_hold_near_top_edge", comment: "Instruction for holding the Burner card near the phone")
             activityIndicator.startAnimating()
             actionButton.isHidden = true
         case .ready:
-            statusLabel.text = "Select Key Slot"
+            statusLabel.text = NSLocalizedString("ui_burner_select_key_slot_title", comment: "Title shown when selecting a Burner key slot")
             if let summary = summary {
-                detailLabel.text = "Detected card \(summary.cardId). Choose a slot to import."
+                detailLabel.text = String(
+                    format: NSLocalizedString("ui_burner_detected_card_choose_slot_format", comment: "Detail shown after detecting a Burner card; includes card id"),
+                    summary.cardId
+                )
             } else {
-                detailLabel.text = "Choose which key slot you want to add."
+                detailLabel.text = NSLocalizedString("ui_burner_choose_slot_detail", comment: "Detail shown when asking user to choose a key slot")
             }
             activityIndicator.stopAnimating()
             actionButton.isHidden = true
         case .error(let message):
-            statusLabel.text = "Unable to Scan"
+            statusLabel.text = NSLocalizedString("ui_burner_unable_to_scan_title", comment: "Title shown when Burner scan fails")
             detailLabel.text = message
             activityIndicator.stopAnimating()
             actionButton.isHidden = false
@@ -221,7 +242,10 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
             UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
         guard let slot = summary?.keySlots[indexPath.row] else { return cell }
         cell.textLabel?.text = slot.ethereumAddress.checksummed
-        cell.detailTextLabel?.text = "Slot #\(slot.slot)"
+        cell.detailTextLabel?.text = String(
+            format: NSLocalizedString("ui_burner_slot_format", comment: "Burner slot label, e.g. 'Slot #1'"),
+            slot.slot
+        )
         cell.imageView?.image = UIImage(named: KeyType.burner.imageName)
         cell.accessoryType = .disclosureIndicator
         cell.selectionStyle = .default

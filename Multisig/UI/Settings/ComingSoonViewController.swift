@@ -8,6 +8,17 @@
 import UIKit
 
 class ComingSoonViewController: UIViewController {
+    private let screenTitle: String?
+
+    init(title: String? = nil) {
+        self.screenTitle = title
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        self.screenTitle = nil
+        super.init(coder: coder)
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -16,7 +27,7 @@ class ComingSoonViewController: UIViewController {
         
         // Create label with "Coming soon!" text
         let label = GSLabel()
-        label.text = "Coming soon!"
+        label.text = NSLocalizedString("ui_coming_soon_title", comment: "Placeholder title for screens that are not implemented yet")
         label.style = .headline
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -29,6 +40,6 @@ class ComingSoonViewController: UIViewController {
         ])
         
         // Set navigation title if needed
-        title = ""
+        title = screenTitle ?? ""
     }
 }

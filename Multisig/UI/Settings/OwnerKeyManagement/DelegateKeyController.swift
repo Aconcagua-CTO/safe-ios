@@ -11,11 +11,8 @@ import UIKit
 class DelegateKeyController {
 
     weak var presenter: UIViewController?
-    private var clientGatewayService: SafeClientGatewayService {
-        guard let chain = try? Safe.getSelected()?.chain else {
-            return App.shared.clientGatewayService
-        }
-        return chain.gatewayService()
+    private var notificationGatewayService: SafeClientGatewayService {
+        App.shared.safeClientGatewayService
     }
     private var keystoneSignFlow: KeystoneSignFlow!
 
@@ -74,11 +71,13 @@ class DelegateKeyController {
                             // save the database modifications
                             self.keyInfo.save()
 
-                            // post notification so that UI state can be updated
-                            NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil)
+                            DispatchQueue.main.async {
+                                // post notification so that UI state can be updated
+                                NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil)
 
-                            // trigger push notification registration
-                            App.shared.notificationHandler.signingKeyUpdated()
+                                // trigger push notification registration
+                                App.shared.notificationHandler.signingKeyUpdated()
+                            }
 
                             Tracker.trackEvent(.addDelegateKeySuccess)
                         } catch {
@@ -89,7 +88,9 @@ class DelegateKeyController {
                             self.keyInfo.rollback()
                         }
 
-                        self.completionHandler()
+                        DispatchQueue.main.async {
+                            self.completionHandler()
+                        }
                         break
 
                     // 4.2. on error - show to the user, abort, close/completion
@@ -127,15 +128,19 @@ class DelegateKeyController {
                             self.keyInfo.delegateAddressString = nil
                             try delegateKey.remove(protectionClass: .data)
                             self.keyInfo.save()
-                            NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil)
-                            App.shared.notificationHandler.signingKeyUpdated()
+                            DispatchQueue.main.async {
+                                NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil)
+                                App.shared.notificationHandler.signingKeyUpdated()
+                            }
 
                             Tracker.trackEvent(.deleteDelegateKeySuccess)
                         } catch {
                             self.keyInfo.rollback()
                         }
 
-                        self.completionHandler()
+                        DispatchQueue.main.async {
+                            self.completionHandler()
+                        }
                     case .failure(let error):
                         self.abortProcess(error: error, trackingEvent: .deleteDelegateKeyFailed)
                     }
@@ -148,7 +153,7 @@ class DelegateKeyController {
 
     // sign and call back with signature or fail with error (incl. cancelled error)
     private func sign(message: Data, completion: @escaping (Result<Data, Error>) -> Void) {
-        let title = "Confirm Push Notifications"
+        let title = NSLocalizedString("ui_push_confirm_title", comment: "Title for confirming push notifications via signature")
         let hexMessage = message.toHexStringWithPrefix()
         let chain = try? Safe.getSelected()?.chain ?? Chain.mainnetChain()
         switch keyInfo.keyType {
@@ -272,60 +277,126 @@ class DelegateKeyController {
     }
 
     func createOnBackEnd(delegateAddress: Address, signature: Data, completion: @escaping (Result<Void, Error>) -> Void) {
-        // to synchronize multiple async processes, we use DispatchGroup
+        // To synchronize multiple async processes, we use DispatchGroup.
+        // IMPORTANT: Never block the calling thread (can be main/UI).
         let group = DispatchGroup()
+        let completionQueue = DispatchQueue.global(qos: .userInitiated)
+        var didComplete = false
+        let completeOnce: (Result<Void, Error>) -> Void = { result in
+            completionQueue.async {
+                guard !didComplete else { return }
+                didComplete = true
+                completion(result)
+            }
+        }
 
-        Chain.all.forEach { chain in
+        let targetChains = Chain.chainSafes()
+            .map { $0.chain }
+            .filter { $0.gatewayUrl == nil }
+        if targetChains.isEmpty {
+            completeOnce(.success(()))
+            return
+        }
+
+        let errorQueue = DispatchQueue(label: "io.gnosis.multisig.delegateKeyCreateErrors")
+        var errors: [Error] = []
+
+        targetChains.forEach { chain in
             // trigger request
             group.enter()
-            clientGatewayService.asyncCreateDelegate(safe: nil,
-                                                     owner: keyInfo.address,
-                                                     delegate: delegateAddress,
-                                                     signature: signature,
-                                                     label: "iOS Device Delegate",
-                                                     chainId: chain.id!) { result in
+            notificationGatewayService.asyncCreateDelegate(safe: nil,
+                                                           owner: keyInfo.address,
+                                                           delegate: delegateAddress,
+                                                           signature: signature,
+                                                           label: "iOS Device Delegate",
+                                                           chainId: chain.id!) { result in
+                if case .failure(let error) = result {
+                    errorQueue.sync {
+                        errors.append(error)
+                    }
+                }
                 group.leave()
             }
         }
 
         // We use 60 seconds because it's a URLRequest's default timeout and
-        // we expect all requests to finish before that
-        let createDelegateRequestTimeoutInSeconds = 60 // one minute
-        let timeoutResult = group.wait(timeout: .now() + .seconds(createDelegateRequestTimeoutInSeconds))
+        // we expect all requests to finish before that.
+        let timeoutSeconds = 60
+        let timeoutWorkItem = DispatchWorkItem { [weak self] in
+            guard self != nil else { return }
+            completeOnce(.failure(GSError.AddDelegateTimedOut()))
+        }
+        completionQueue.asyncAfter(deadline: .now() + .seconds(timeoutSeconds), execute: timeoutWorkItem)
 
-        switch timeoutResult {
-        case .success:
-            completion(.success(()))
-        case .timedOut:
-            completion(.failure(GSError.AddDelegateTimedOut()))
+        group.notify(queue: completionQueue) {
+            timeoutWorkItem.cancel()
+            let firstError = errorQueue.sync { errors.first }
+            if let firstError {
+                completeOnce(.failure(firstError))
+            } else {
+                completeOnce(.success(()))
+            }
         }
     }
 
     func deleteOnBackEnd(delegateAddress: Address, signature: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        // to synchronize multiple async processes, we use DispatchGroup
+        // To synchronize multiple async processes, we use DispatchGroup.
+        // IMPORTANT: Never block the calling thread (can be main/UI).
         let group = DispatchGroup()
+        let completionQueue = DispatchQueue.global(qos: .userInitiated)
+        var didComplete = false
+        let completeOnce: (Result<Void, Error>) -> Void = { result in
+            completionQueue.async {
+                guard !didComplete else { return }
+                didComplete = true
+                completion(result)
+            }
+        }
 
-        Chain.all.forEach { chain in
+        let targetChains = Chain.chainSafes()
+            .map { $0.chain }
+            .filter { $0.gatewayUrl == nil }
+        if targetChains.isEmpty {
+            completeOnce(.success(()))
+            return
+        }
+
+        let errorQueue = DispatchQueue(label: "io.gnosis.multisig.delegateKeyDeleteErrors")
+        var errors: [Error] = []
+
+        targetChains.forEach { chain in
             // trigger request
             group.enter()
-            clientGatewayService.asyncDeleteDelegate(owner: keyInfo.address,
-                                                     delegate: delegateAddress,
-                                                     signature: signature,
-                                                     chainId: chain.id!) { result in
+            notificationGatewayService.asyncDeleteDelegate(owner: keyInfo.address,
+                                                           delegate: delegateAddress,
+                                                           signature: signature,
+                                                           chainId: chain.id!) { result in
+                if case .failure(let error) = result {
+                    errorQueue.sync {
+                        errors.append(error)
+                    }
+                }
                 group.leave()
             }
         }
 
         // We use 60 seconds because it's a URLRequest's default timeout and
-        // we expect all requests to finish before that
-        let createDelegateRequestTimeoutInSeconds = 60 // one minute
-        let timeoutResult = group.wait(timeout: .now() + .seconds(createDelegateRequestTimeoutInSeconds))
+        // we expect all requests to finish before that.
+        let timeoutSeconds = 60
+        let timeoutWorkItem = DispatchWorkItem { [weak self] in
+            guard self != nil else { return }
+            completeOnce(.failure(GSError.DeleteDelegateTimedOut()))
+        }
+        completionQueue.asyncAfter(deadline: .now() + .seconds(timeoutSeconds), execute: timeoutWorkItem)
 
-        switch timeoutResult {
-        case .success:
-            completion(.success(()))
-        case .timedOut:
-            completion(.failure(GSError.DeleteDelegateTimedOut()))
+        group.notify(queue: completionQueue) {
+            timeoutWorkItem.cancel()
+            let firstError = errorQueue.sync { errors.first }
+            if let firstError {
+                completeOnce(.failure(firstError))
+            } else {
+                completeOnce(.success(()))
+            }
         }
     }
 

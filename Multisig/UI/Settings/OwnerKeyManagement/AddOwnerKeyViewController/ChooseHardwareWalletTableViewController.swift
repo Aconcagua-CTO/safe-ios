@@ -12,6 +12,7 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
     private typealias SectionItems = (section: String, items: [Row])
 
     enum Row {
+        case cardKey
         case ledger
         case keystone
         case tangem
@@ -20,21 +21,25 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
 
         var title: String {
             switch self {
+            case .cardKey:
+                return NSLocalizedString("ui_card_key_connect_title", comment: "Title for connecting a card key")
             case .ledger:
-                return "Connect Ledger Nano X"
+                return NSLocalizedString("ui_ledger_connect_nano_x_title", comment: "Title for connecting a Ledger Nano X device")
             case .keystone:
-                return "Connect Keystone"
+                return NSLocalizedString("ui_keystone_connect_title", comment: "Title for connecting a Keystone device")
             case .tangem:
-                return "Connect Tangem Card"
+                return NSLocalizedString("ui_tangem_connect_card_title", comment: "Title for connecting a Tangem card")
             case .tangem0:
-                return "Connect Tangem0 Card"
+                return NSLocalizedString("ui_tangem0_connect_card_title", comment: "Title for connecting a Tangem0 card")
             case .burner:
-                return "Connect Burner Card"
+                return NSLocalizedString("ui_burner_connect_card_title", comment: "Title for the burner owner key connect flow")
             }
         }
 
         var image: UIImage {
             switch self {
+            case .cardKey:
+                return UIImage(named: "ico-payment-key")!
             case .keystone:
                 return UIImage(named: KeyType.keystone.imageName)!
             case .ledger:
@@ -57,11 +62,13 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
     private var tangemKeyFlow: TangemKeyFlow!
     private var tangem0KeyFlow: TangemKeyFlow!
     private var burnerKeyFlow: BurnerKeyFlow!
+    private var cardKeyFlow: AddKeyFlow?
+    private var tangemProvisioningCoordinator: TangemCardKeyProvisioningCoordinator?
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Pair hardware device"
+        title = NSLocalizedString("ui_hardware_pair_device_title", comment: "Title for selecting/pairing a hardware device")
 
         tableView.registerCell(AddOwnerKeyCell.self)
         tableView.separatorStyle = .none
@@ -70,12 +77,9 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
         tableView.backgroundColor = .backgroundSecondary
         tableView.tableFooterView = UIView()
 
-        var hardwareOptions: [Row] = [.ledger, .keystone, .tangem, .tangem0]
-        if AppConfiguration.FeatureToggles.burnerWallet {
-            hardwareOptions.append(.burner)
-        }
+        // Only show Ledger and Keystone
         sections = [
-            (section: "", items: hardwareOptions)
+            (section: "", items: [.ledger, .keystone])
         ]
     }
 
@@ -108,6 +112,19 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         switch sections[indexPath.section].items[indexPath.row] {
+        case .cardKey:
+            // Route by cached lead manufacturer.
+            let manufacturer = (AppSettings.leadCardManufacturer ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if manufacturer == "tangem" {
+                startTangemCardKeyFlow()
+            } else if manufacturer == "burner" {
+                startBurnerCardKeyFlow()
+            } else {
+                presentCardKeyManufacturerChoice()
+            }
+
         case .ledger:
             ledgerKeyFlow = LedgerKeyFlow { [unowned self] _ in
                 ledgerKeyFlow = nil
@@ -123,11 +140,37 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
             push(flow: connectKeystoneFlow)
 
         case .tangem:
-            tangemKeyFlow = TangemKeyFlow(service: TangemService.shared) { [unowned self] _ in
-                tangemKeyFlow = nil
-                completion()
-            }
-            push(flow: tangemKeyFlow)
+            let coordinator = TangemCardKeyProvisioningCoordinator(
+                presentIntro: { [weak self] introVC in
+                    guard let self else { return }
+                    self.show(introVC, sender: self)
+                },
+                presentActivation: { [weak self] activationVC in
+                    guard let self else { return }
+                    self.show(activationVC, sender: self)
+                },
+                presentPostActivationIntro: { [weak self] introVC in
+                    guard let self else { return }
+                    self.show(introVC, sender: self)
+                },
+                presentImportFlow: { [weak self] flow in
+                    guard let self else { return }
+                    self.tangemKeyFlow = flow
+                    self.cardKeyFlow = flow
+                    self.push(flow: flow)
+                },
+                configureImportFlow: { flow in
+                    flow.skipIntro = true
+                },
+                onImportCompletion: { [weak self] _ in
+                    self?.tangemKeyFlow = nil
+                    self?.cardKeyFlow = nil
+                    self?.tangemProvisioningCoordinator = nil
+                    self?.completion()
+                }
+            )
+            tangemProvisioningCoordinator = coordinator
+            coordinator.start()
         case .tangem0:
             tangem0KeyFlow = TangemKeyFlow(service: Tangem0Service.shared, keyType: .tangem0) { [unowned self] _ in
                 tangem0KeyFlow = nil
@@ -141,5 +184,41 @@ class ChooseHardwareWalletTableViewController: UITableViewController {
             }
             push(flow: burnerKeyFlow)
         }
+    }
+
+    private func startTangemCardKeyFlow() {
+        tangemKeyFlow = TangemKeyFlow(service: TangemService.shared) { [unowned self] _ in
+            tangemKeyFlow = nil
+            completion()
+        }
+        cardKeyFlow = tangemKeyFlow
+        push(flow: tangemKeyFlow)
+    }
+
+    private func startBurnerCardKeyFlow() {
+        burnerKeyFlow = BurnerKeyFlow { [unowned self] _ in
+            burnerKeyFlow = nil
+            completion()
+        }
+        cardKeyFlow = burnerKeyFlow
+        push(flow: burnerKeyFlow)
+    }
+
+    private func presentCardKeyManufacturerChoice() {
+        let title = NSLocalizedString("ui_card_key_connect_title", comment: "Title for connecting a card key")
+        let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: NSLocalizedString("ui_tangem_connect_card_title", comment: "Title for connecting a Tangem card"), style: .default) { [weak self] _ in
+            self?.startTangemCardKeyFlow()
+        })
+        alert.addAction(UIAlertAction(title: NSLocalizedString("ui_burner_connect_card_title", comment: "Title for the burner owner key connect flow"), style: .default) { [weak self] _ in
+            self?.startBurnerCardKeyFlow()
+        })
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        present(alert, animated: true)
     }
 }

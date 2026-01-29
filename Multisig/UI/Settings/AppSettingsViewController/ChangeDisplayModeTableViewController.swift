@@ -9,7 +9,11 @@
 import UIKit
 
 class ChangeDisplayModeTableViewController: UITableViewController {
-    private let items: [(name: String, style: UIUserInterfaceStyle)] = [("Auto", UIUserInterfaceStyle.unspecified), ("Light", UIUserInterfaceStyle.light), ("Dark", UIUserInterfaceStyle.dark)]
+    private let items: [(name: String, style: UIUserInterfaceStyle)] = [
+        (NSLocalizedString("ui_settings_display_auto", comment: "Appearance mode auto"), UIUserInterfaceStyle.unspecified),
+        (NSLocalizedString("ui_settings_display_light", comment: "Appearance mode light"), UIUserInterfaceStyle.light),
+        (NSLocalizedString("ui_settings_display_dark", comment: "Appearance mode dark"), UIUserInterfaceStyle.dark)
+    ]
 
     private var selectedDisplayMode: UIUserInterfaceStyle {
         get {
@@ -22,7 +26,7 @@ class ChangeDisplayModeTableViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Appearance"
+        navigationItem.title = NSLocalizedString("ui_settings_appearance_title", comment: "Settings title for appearance")
 
         tableView.registerCell(BasicCell.self)
         tableView.rowHeight = BasicCell.rowHeight

@@ -14,6 +14,247 @@ struct Page<T: Decodable>: Decodable {
     let results: [T]
 }
 
+/// Decodes SCG transaction pages or tx-service transaction lists into a shared shape.
+struct TransactionSummaryPage: Decodable {
+    let next: String?
+    let previous: String?
+    let results: [SCGModels.TransactionSummaryItem]
+
+    private enum CodingKeys: String, CodingKey {
+        case next
+        case previous
+        case results
+    }
+
+    init(from decoder: Decoder) throws {
+        if let container = try? decoder.container(keyedBy: CodingKeys.self) {
+            if let scgResults = try? container.decode([SCGModels.TransactionSummaryItem].self, forKey: .results) {
+                next = try? container.decodeIfPresent(String.self, forKey: .next)
+                previous = try? container.decodeIfPresent(String.self, forKey: .previous)
+                results = scgResults
+                return
+            }
+
+            if let txResults = try? container.decode([TxServiceTransaction].self, forKey: .results) {
+                next = nil
+                previous = nil
+                results = txResults.map { $0.toSummaryItem() }
+                return
+            }
+        }
+
+        var arrayContainer = try decoder.unkeyedContainer()
+        var txResults: [TxServiceTransaction] = []
+        while !arrayContainer.isAtEnd {
+            let tx = try arrayContainer.decode(TxServiceTransaction.self)
+            txResults.append(tx)
+        }
+        next = nil
+        previous = nil
+        results = txResults.map { $0.toSummaryItem() }
+    }
+}
+
+struct TransactionSummaryPagedRequest: JSONRequest {
+    var url: URL?
+
+    typealias ResponseType = TransactionSummaryPage
+
+    struct InvalidURL: LocalizedError {
+        var errorDescription: String? {
+            "Invalid next page URL"
+        }
+    }
+
+    init(_ urlString: String) throws {
+        guard let url = URL(string: urlString) else {
+            throw InvalidURL()
+        }
+        self.url = url
+    }
+}
+
+private struct TxServiceTransaction: Decodable {
+    let safe: String?
+    let safeTxHash: String?
+    let to: String?
+    let value: String?
+    let data: String?
+    let dataDecoded: TxServiceDataDecoded?
+    let confirmationsRequired: FlexibleString?
+    let confirmations: [TxServiceConfirmation]?
+    let isExecuted: Bool?
+    let isSuccessful: Bool?
+    let submissionDate: String?
+    let submittedAt: String?
+    let modified: String?
+    let executionDate: String?
+    let nonce: FlexibleString?
+
+    func toSummaryItem() -> SCGModels.TransactionSummaryItem {
+        let safeId = safe ?? AddressString.zero.description
+        let txHash = safeTxHash ?? ""
+        let txId: String = txHash.isEmpty ? UUID().uuidString : "multisig_\(safeId)_\(txHash)"
+
+        let timestamp = TxServiceParsing.parseDate(
+            submissionDate ?? submittedAt ?? modified ?? executionDate
+        ) ?? Date()
+
+        let confirmationsSubmitted = UInt64(confirmations?.count ?? 0)
+        let confirmationsRequiredValue = TxServiceParsing.parseUInt64(confirmationsRequired?.value) ?? 0
+        let status = TxServiceParsing.txStatus(
+            isExecuted: isExecuted ?? false,
+            isSuccessful: isSuccessful ?? false,
+            confirmationsRequired: confirmationsRequiredValue,
+            confirmationsSubmitted: confirmationsSubmitted
+        )
+
+        let toAddress = TxServiceParsing.addressInfo(from: to)
+        let dataSize = TxServiceParsing.dataSize(from: data)
+        let valueAmount = TxServiceParsing.uint256String(from: value)
+        let methodName = dataDecoded?.method
+
+        let txInfo = SCGModels.TxInfo.custom(
+            .init(
+                to: toAddress,
+                dataSize: dataSize,
+                value: valueAmount,
+                methodName: methodName,
+                actionCount: nil
+            )
+        )
+
+        let executionInfo = SCGModels.ExecutionInfo.multisig(
+            .init(
+                nonce: TxServiceParsing.uint256String(from: nonce?.value),
+                confirmationsRequired: confirmationsRequiredValue,
+                confirmationsSubmitted: confirmationsSubmitted,
+                confirmations: confirmations?.compactMap { $0.toSCGConfirmation() },
+                missingSigners: nil
+            )
+        )
+
+        let summary = SCGModels.TxSummary(
+            id: txId,
+            timestamp: timestamp,
+            txStatus: status,
+            txInfo: txInfo,
+            executionInfo: executionInfo,
+            safeAppInfo: nil
+        )
+
+        return .transaction(.init(transaction: summary, conflictType: .none))
+    }
+}
+
+private struct TxServiceConfirmation: Decodable {
+    let owner: String?
+    let signature: String?
+
+    func toSCGConfirmation() -> SCGModels.Confirmation? {
+        guard let owner, let signer = AddressString(owner) else { return nil }
+        let signatureValue = DataString(hex: signature ?? "0x")
+        return SCGModels.Confirmation(
+            signer: SCGModels.AddressInfo(value: signer, name: nil, logoUri: nil),
+            signature: signatureValue
+        )
+    }
+}
+
+private struct TxServiceDataDecoded: Decodable {
+    let method: String?
+}
+
+private struct FlexibleString: Decodable {
+    let value: String
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let string = try? container.decode(String.self) {
+            value = string
+        } else if let intValue = try? container.decode(Int.self) {
+            value = String(intValue)
+        } else if let uintValue = try? container.decode(UInt.self) {
+            value = String(uintValue)
+        } else {
+            value = "0"
+        }
+    }
+}
+
+private enum TxServiceParsing {
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static func parseDate(_ value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        if let date = isoFormatter.date(from: value) {
+            return date
+        }
+        return DateFormatter.networkDateFormatter.date(from: value)
+    }
+
+    static func parseUInt64(_ value: String?) -> UInt64? {
+        guard let value, !value.isEmpty else { return nil }
+        if let uint = UInt64(value) {
+            return uint
+        }
+        if value.hasPrefix("0x") {
+            let data = Data(ethHex: value)
+            return UInt64(truncatingIfNeeded: UInt256(data))
+        }
+        return nil
+    }
+
+    static func uint256String(from value: String?) -> UInt256String {
+        guard let value, !value.isEmpty else {
+            return UInt256String(0)
+        }
+        if value.hasPrefix("0x") {
+            let data = Data(ethHex: value)
+            return UInt256String(UInt256(data))
+        }
+        guard let uint256 = UInt256(value) else {
+            return UInt256String(0)
+        }
+        return UInt256String(uint256)
+    }
+
+    static func dataSize(from hexString: String?) -> UInt256String {
+        guard let hexString, !hexString.isEmpty else {
+            return UInt256String(0)
+        }
+        let cleaned = hexString.hasPrefix("0x") ? String(hexString.dropFirst(2)) : hexString
+        let bytes = UInt256(cleaned.count / 2)
+        return UInt256String(bytes)
+    }
+
+    static func addressInfo(from value: String?) -> SCGModels.AddressInfo {
+        if let value, let address = AddressString(value) {
+            return SCGModels.AddressInfo(value: address, name: nil, logoUri: nil)
+        }
+        return SCGModels.AddressInfo(value: .zero, name: nil, logoUri: nil)
+    }
+
+    static func txStatus(
+        isExecuted: Bool,
+        isSuccessful: Bool,
+        confirmationsRequired: UInt64,
+        confirmationsSubmitted: UInt64
+    ) -> SCGModels.TxStatus {
+        if isExecuted {
+            return isSuccessful ? .success : .failed
+        }
+        if confirmationsRequired > 0, confirmationsSubmitted >= confirmationsRequired {
+            return .awaitingExecution
+        }
+        return .awaitingConfirmations
+    }
+}
+
 // SCG for Safe Client Gateway
 enum SCGModels {}
 
@@ -772,6 +1013,32 @@ extension SCGModels {
         let l2: Bool
         let features: [String]
         let gasPrice: [GasPrice]
+
+        init(
+            chainId: UInt256String,
+            chainName: String,
+            rpcUri: RpcAuthentication,
+            blockExplorerUriTemplate: BlockExplorerUriTemplate,
+            nativeCurrency: Currency,
+            theme: Theme,
+            ensRegistryAddress: AddressString?,
+            shortName: String,
+            l2: Bool,
+            features: [String],
+            gasPrice: [GasPrice]
+        ) {
+            self.chainId = chainId
+            self.chainName = chainName
+            self.rpcUri = rpcUri
+            self.blockExplorerUriTemplate = blockExplorerUriTemplate
+            self.nativeCurrency = nativeCurrency
+            self.theme = theme
+            self.ensRegistryAddress = ensRegistryAddress
+            self.shortName = shortName
+            self.l2 = l2
+            self.features = features
+            self.gasPrice = gasPrice
+        }
 
         var id: String {
             chainId.description

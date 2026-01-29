@@ -72,7 +72,8 @@ class NoSafesViewController: ContainerViewController {
             }
         } catch {
             App.shared.snackbar.show(
-                error: GSError.error(description: "Failed to check loaded safes", error: error))
+                error: GSError.error(description: NSLocalizedString("ui_safe_failed_check_loaded_error", comment: "Failed to check loaded safes error"),
+                                      error: error))
         }
     }
     
@@ -121,7 +122,8 @@ class NoSafesViewController: ContainerViewController {
     private func showErrorState(error: Error) {
         if errorViewController == nil {
             errorViewController = VaultSyncErrorViewController(
-                message: "No hemos podido cargar tus bóvedas, por favor escribinos a hola@boveda.ai"
+                message: "No hemos podido cargar tus bóvedas, por favor escribinos a hola@boveda.ai",
+                showsSignOut: true
             )
         }
         viewControllers = [errorViewController!]

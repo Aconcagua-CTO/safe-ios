@@ -12,6 +12,7 @@ import Firebase
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        AppSettings.applyDebugLanguageOverrideIfNeeded()
         do {
             App.configuration.protected = try AppConfiguration.Protected()
         } catch {

@@ -21,16 +21,16 @@ class AboutGnosisSafeTableViewController: UITableViewController {
     }
     
     private var items: [Item] = [
-        .terms("Terms of use"),
-        .privacyPolicy("Privacy policy"),
-        .licenses("Licenses"),
-        .rateTheApp("Rate the app")
+        .terms(NSLocalizedString("ui_settings_about_terms_title", comment: "About item title for terms of use")),
+        .privacyPolicy(NSLocalizedString("ui_settings_about_privacy_title", comment: "About item title for privacy policy")),
+        .licenses(NSLocalizedString("ui_settings_about_licenses_title", comment: "About item title for licenses")),
+        .rateTheApp(NSLocalizedString("ui_settings_about_rate_app_title", comment: "About item title for rate the app"))
     ]
         
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        navigationItem.title = "About Safe{Wallet}"
+        navigationItem.title = NSLocalizedString("ui_settings_about_safe_title", comment: "Settings title for about Safe Wallet")
         
         tableView.registerCell(BasicCell.self)
         

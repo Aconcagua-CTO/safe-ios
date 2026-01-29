@@ -36,15 +36,16 @@ class ClaimSuccessViewController: UIViewController {
         ViewControllerFactory.makeTransparentNavigationBar(self)
         navigationItem.largeTitleDisplayMode = .never
 
-        titleLabel.text = "Congrats!"
+        titleLabel.text = NSLocalizedString("ui_claim_success_title", comment: "Claim success title")
         titleLabel.setStyle(.title1)
 
-        askLabel.text = "Share your claim on Twitter!"
+        askLabel.text = NSLocalizedString("ui_claim_success_share_prompt", comment: "Claim share prompt")
         askLabel.setStyle(.headline)
 
         let displayAmount = TokenFormatter().string(from: BigDecimal(Int256(amount!.big()), 18)) + " SAFE"
 
-        let text = "You successfully started claiming \(displayAmount) tokens! Once you have collected the necessary confirmations, the Safe tokens will be available in this Safe Account."
+        let text = String(format: NSLocalizedString("ui_claim_success_body_format", comment: "Claim success body"),
+                          displayAmount)
 
         textLabel.attributedText = text.highlightRange(
             originalStyle: .body,
@@ -54,9 +55,10 @@ class ClaimSuccessViewController: UIViewController {
 
         tweetBox.setTweet(text: tweetText, highlights: ["@Safe"])
 
-        okButton.setText("Done", .filled)
+        okButton.setText(NSLocalizedString("button_done", comment: "Done button title"), .filled)
 
-        shareButton.setText("Share transaction", .primary)
+        shareButton.setText(NSLocalizedString("ui_claim_share_transaction_action", comment: "Share transaction action"),
+                            .primary)
         shareButton.setImage(UIImage(named: "ico-share")?.withTintColor(.primary), for: .normal)
         shareButton.imageEdgeInsets.right = 16
         animationView.animation = LottieAnimation.named(isDarkMode ? "successAnimationDark" : "successAnimation",
@@ -70,11 +72,12 @@ class ClaimSuccessViewController: UIViewController {
         let text: String
 
         if hasChangedDelegate, let guardian = guardian, let ens = guardian.ens {
-            text = "I've just claimed my Safe governance tokens and delegated my voting power to \(ens) to help steward the public good that is @Safe 🔰🫡"
+            text = String(format: NSLocalizedString("ui_claim_tweet_delegate_format", comment: "Claim tweet with delegate"),
+                          ens)
         } else if hasChangedDelegate, guardian != nil {
-            text = "I've just claimed my Safe governance tokens and delegated my voting power to help steward the public good that is @Safe 🔰🫡"
+            text = NSLocalizedString("ui_claim_tweet_delegate_no_ens", comment: "Claim tweet without ENS")
         } else {
-            text = "I've just claimed my Safe governance tokens to help steward the public good that is @Safe 🔰🫡"
+            text = NSLocalizedString("ui_claim_tweet_claim_only", comment: "Claim tweet without delegation")
         }
 
         return text

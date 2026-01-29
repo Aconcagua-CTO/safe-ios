@@ -45,7 +45,7 @@ class SecuritySettingsViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Security"
+        navigationItem.title = NSLocalizedString("ui_security_title", comment: "Title for security settings screen")
 
         tableView.registerCell(SwitchTableViewCell.self)
         tableView.registerCell(SwitchDetailedTableViewCell.self)
@@ -82,7 +82,10 @@ class SecuritySettingsViewController: UITableViewController {
                 data.append((section: .passcode, rows: [.changePasscode]))
             }
 
-            data.append((section: .usePasscodeFor, rows: [.requireToOpenApp, .requireForConfirmations, .oneOptionSelectedText]))
+            // These are advanced options; keep them visible only for development builds.
+            if App.configuration.services.environment.isDevelopment {
+                data.append((section: .usePasscodeFor, rows: [.requireToOpenApp, .requireForConfirmations, .oneOptionSelectedText]))
+            }
 
             // if user disables biometry, we can't keep it enabled in app settings.
             // Having this on reloadData() works because when biometry settings changed on the device
@@ -154,7 +157,8 @@ class SecuritySettingsViewController: UITableViewController {
                     if let userCancellation = error as? GSError.CancelledByUser {
                         // do nothing
                     } else {
-                        App.shared.snackbar.show(message: "Failed to toggle usage \(error.localizedDescription)")
+                        App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_toggle_usage_failed_format", comment: "Failed to toggle usage"),
+                                                                 error.localizedDescription))
                     }
                 }
                 reloadData()
@@ -195,7 +199,7 @@ class SecuritySettingsViewController: UITableViewController {
             if success && AppSettings.passcodeOptions.contains(.useBiometry) {
 
                 AppSettings.passcodeOptions.remove(.useBiometry)
-                App.shared.snackbar.show(message: "Biometrics disabled.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_auth_biometrics_disabled_message", comment: "Biometrics disabled message"))
                 completion()
             } else if success {
                 App.shared.auth.activateBiometrics { [unowned self] result in
@@ -269,7 +273,9 @@ class SecuritySettingsViewController: UITableViewController {
                                         message: "To activate biometry, navigate to Settings.",
                                         preferredStyle: .alert)
 
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: { _ in
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: { _ in
             completion()
         })
         let settings = UIAlertAction(title: "Settings", style: .default) { _ in
@@ -354,7 +360,7 @@ class SecuritySettingsViewController: UITableViewController {
 
         case .lockMethod:
             let cell = tableView.dequeueCell(MenuTableViewCell.self, for: indexPath)
-            cell.text = "Lock method"
+            cell.text = NSLocalizedString("ui_lock_method_title", comment: "Lock method title")
             var children = [
                 UIAction(
                     title: detailText(for: .lockMethod, lock: .passcode, biometry: biometryType)!,

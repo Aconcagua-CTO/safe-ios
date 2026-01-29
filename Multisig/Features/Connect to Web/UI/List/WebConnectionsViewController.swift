@@ -28,7 +28,7 @@ class WebConnectionsViewController: UITableViewController, ExternalURLSource, We
         super.viewDidLoad()
         url = App.configuration.help.desktopPairingURL
 
-        title = "Connect to Web"
+        title = NSLocalizedString("ui_ctw_connect_to_web_title", comment: "Connect to web title")
 
         tableView.backgroundColor = .backgroundPrimary
         tableView.registerCell(WebConnectionTableViewCell.self)
@@ -87,12 +87,12 @@ class WebConnectionsViewController: UITableViewController, ExternalURLSource, We
     private func scan() {
         let vc = QRCodeScannerViewController()
         
-        let string = "Go to Safe Web and select Connect wallet." as NSString
+        let string = NSLocalizedString("ui_ctw_go_to_safe_web_instruction", comment: "Connect to web instruction") as NSString
         let textStyle = GNOTextStyle.calloutMedium.color(.white)
         let highlightStyle = GNOTextStyle.bodyMedium.color(.white)
         let label = NSMutableAttributedString(string: string as String, attributes: textStyle.attributes)
-        label.setAttributes(highlightStyle.attributes, range: string.range(of: "Safe Web"))
-        label.setAttributes(highlightStyle.attributes, range: string.range(of: "Connect wallet"))
+        label.setAttributes(highlightStyle.attributes, range: string.range(of: NSLocalizedString("safe_web_brand", comment: "Safe Web brand")))
+        label.setAttributes(highlightStyle.attributes, range: string.range(of: NSLocalizedString("connect_wallet_action", comment: "Connect wallet action")))
         vc.attributedLabel = label
 
         vc.scannedValueValidator = { value in
@@ -131,15 +131,15 @@ class WebConnectionsViewController: UITableViewController, ExternalURLSource, We
         case warningSection:
             let cell = tableView.dequeueCell(WarningTableViewCell.self, for: indexPath)
             cell.set(
-                title: "Deprecated",
-                description: "The \"Connect to web\" pairing feature will be discontinued from 15th November 2023. Please migrate to a different signer wallet before this date. Tap to learn more.",
+                title: NSLocalizedString("ui_ctw_deprecated_title", comment: "Connect to web deprecated title"),
+                description: NSLocalizedString("ui_ctw_deprecated_description", comment: "Connect to web deprecated description"),
                 backgroundColor: .warning)
             cell.backgroundConfiguration = .clear()
             return cell
         case dataSection:
             guard indexPath.row < connections.count else { return UITableViewCell() }
             let connection = connections[indexPath.row]
-            let header = connection.remotePeer?.name ?? "Connection"
+            let header = connection.remotePeer?.name ?? NSLocalizedString("ui_ctw_connection_title", comment: "Connection title")
             let peerIconUrl: URL? = connection.remotePeer?.icons.first
             let chainId = connection.chainId.map(String.init) ?? Chain.ChainID.ethereumMainnet
             let keyAddress: Address? = connection.accounts.first
@@ -200,7 +200,8 @@ class WebConnectionsViewController: UITableViewController, ExternalURLSource, We
         guard indexPath.section == dataSection else { return nil }
         let connection = connections[indexPath.row]
         let actions = [
-            UIContextualAction(style: .destructive, title: "Disconnect") {  [weak self] _, _, completion in
+            UIContextualAction(style: .destructive,
+                               title: NSLocalizedString("ui_ctw_disconnect_action", comment: "Disconnect action")) {  [weak self] _, _, completion in
                 guard let `self` = self else { return }
                 let alertController = DisconnectionConfirmationController.create(connection: connection)
                 if let popoverPresentationController = alertController.popoverPresentationController {
@@ -279,13 +280,16 @@ class DisconnectionConfirmationController: UIAlertController {
     static func create(connection: WebConnection) -> DisconnectionConfirmationController {
         let alertController = DisconnectionConfirmationController(
                 title: nil,
-                message: "Your Safe Account will be disconnected from web.",
+                message: NSLocalizedString("ui_ctw_disconnect_safe_message", comment: "Disconnect safe message"),
                 preferredStyle: .multiplatformActionSheet)
-        let remove = UIAlertAction(title: "Disconnect", style: .destructive) { _ in
+        let remove = UIAlertAction(title: NSLocalizedString("ui_ctw_disconnect_action", comment: "Disconnect action"),
+                                   style: .destructive) { _ in
             Tracker.trackEvent(.webConnectionDisconnected)
             WebConnectionController.shared.userDidDisconnect(connection)
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         return alertController
@@ -294,14 +298,17 @@ class DisconnectionConfirmationController: UIAlertController {
     static func create(key: KeyInfo) -> DisconnectionConfirmationController {
         let alertController = DisconnectionConfirmationController(
                 title: nil,
-                message: "Your owner will be disconnected from the wallet.",
+                message: NSLocalizedString("ui_ctw_disconnect_owner_message", comment: "Disconnect owner message"),
                 preferredStyle: .multiplatformActionSheet)
-        let remove = UIAlertAction(title: "Disconnect", style: .destructive) { _ in
+        let remove = UIAlertAction(title: NSLocalizedString("ui_ctw_disconnect_action", comment: "Disconnect action"),
+                                   style: .destructive) { _ in
             Tracker.trackEvent(.disconnectInstalledWallet)
             WebConnectionController.shared.disconnectConnections(account: key.address)
             NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil, userInfo: nil)
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         return alertController

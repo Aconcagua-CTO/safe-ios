@@ -42,6 +42,52 @@ struct BalancesRequest: JSONRequest {
     typealias ResponseType = SafeBalanceSummary
 }
 
+struct MultiVaultBalancesRequest: JSONRequest {
+    struct SafeEntry: Codable {
+        let chainId: String
+        let safe: String
+    }
+
+    let fiat: String
+    let userId: String?
+    let safes: [SafeEntry]?
+    let maxConcurrent: Int?
+
+    var httpMethod: String { "POST" }
+    var urlPath: String { "multivault/balances" }
+    var query: String? { nil }
+
+    typealias ResponseType = MultiVaultBalancesResponse
+}
+
+struct MultiVaultBalancesResponse: Decodable {
+    struct PerSafe: Decodable {
+        let chainId: String
+        let safe: String
+        let summary: SafeBalanceSummary
+    }
+    struct RawEntry: Decodable {
+        let chainId: String
+        let safe: String
+        let fiatTotal: String
+        let items: [SCGBalance]
+    }
+
+    let fiat: String
+    let raw: [RawEntry]?
+    let perSafe: [PerSafe]
+    let aggregated: SafeBalanceSummary?
+    let display: SafeBalanceDisplay?
+
+    private enum CodingKeys: String, CodingKey {
+        case fiat
+        case raw
+        case perSafe
+        case aggregated
+        case display
+    }
+}
+
 extension BalancesRequest {
     init(_ safeAddress: Address, chainId: String) {
         self.init(safeAddress: safeAddress.checksummed,
@@ -75,9 +121,15 @@ extension BalancesRequest {
     }
 }
 
+struct SafeBalanceDisplay: Decodable {
+    var fiatTotal: String
+    var items: [SCGBalance]
+}
+
 struct SafeBalanceSummary: Decodable {
     var fiatTotal: String
     var items: [SCGBalance]
+    var display: SafeBalanceDisplay?
     
     // Custom decoder to handle both Safe Client Gateway format and Transaction Service format
     init(from decoder: Decoder) throws {
@@ -87,6 +139,7 @@ struct SafeBalanceSummary: Decodable {
             LogService.shared.debug("[SafeBalanceSummary] Decoding as standard Safe Client Gateway format")
             #endif
             self.fiatTotal = try container.decode(String.self, forKey: .fiatTotal)
+            self.display = try? container.decodeIfPresent(SafeBalanceDisplay.self, forKey: .display)
             
             // Decode items array and log each balance structure
             var itemsContainer = try container.nestedUnkeyedContainer(forKey: .items)
@@ -165,6 +218,7 @@ struct SafeBalanceSummary: Decodable {
                 sum + (Double(balance.fiatBalance) ?? 0.0)
             }
             self.fiatTotal = String(total)
+            self.display = nil
             #if DEBUG
             LogService.shared.debug("[SafeBalanceSummary] Decoded \(balances.count) balance(s) from Transaction Service format")
             #endif
@@ -174,6 +228,7 @@ struct SafeBalanceSummary: Decodable {
     private enum CodingKeys: String, CodingKey {
         case fiatTotal
         case items
+        case display
     }
     
     private enum TransactionServiceBalanceKeys: String, CodingKey {
@@ -195,13 +250,49 @@ struct SCGBalance: Decodable {
     var balance: UInt256String
     var fiatBalance: String
     var fiatConversion: String
+    var tokenCategory: String?
+    var wrapLabel: String?
+    var priceSource: String?
+    var priceSourceParam: String?
+    var yieldSource: String?
+    var yieldChainId: String?
+    var aaveMarketPoolAddress: String?
+    var aaveUnderlyingTokenAddress: String?
+    var aaveMarketName: String?
+    var tokenSymbol: String?
+    var tokenName: String?
     
     // Memberwise initializer for manual construction (e.g., Transaction Service format)
-    init(tokenInfo: TokenInfo, balance: UInt256String, fiatBalance: String, fiatConversion: String) {
+    init(tokenInfo: TokenInfo,
+         balance: UInt256String,
+         fiatBalance: String,
+         fiatConversion: String,
+         tokenCategory: String? = nil,
+         wrapLabel: String? = nil,
+         priceSource: String? = nil,
+         priceSourceParam: String? = nil,
+         yieldSource: String? = nil,
+         yieldChainId: String? = nil,
+         aaveMarketPoolAddress: String? = nil,
+         aaveUnderlyingTokenAddress: String? = nil,
+         aaveMarketName: String? = nil,
+         tokenSymbol: String? = nil,
+         tokenName: String? = nil) {
         self.tokenInfo = tokenInfo
         self.balance = balance
         self.fiatBalance = fiatBalance
         self.fiatConversion = fiatConversion
+        self.tokenCategory = tokenCategory
+        self.wrapLabel = wrapLabel
+        self.priceSource = priceSource
+        self.priceSourceParam = priceSourceParam
+        self.yieldSource = yieldSource
+        self.yieldChainId = yieldChainId
+        self.aaveMarketPoolAddress = aaveMarketPoolAddress
+        self.aaveUnderlyingTokenAddress = aaveUnderlyingTokenAddress
+        self.aaveMarketName = aaveMarketName
+        self.tokenSymbol = tokenSymbol
+        self.tokenName = tokenName
     }
     
     enum CodingKeys: String, CodingKey {
@@ -209,6 +300,17 @@ struct SCGBalance: Decodable {
         case balance
         case fiatBalance
         case fiatConversion
+        case tokenCategory
+        case wrapLabel
+        case priceSource
+        case priceSourceParam
+        case yieldSource
+        case yieldChainId
+        case aaveMarketPoolAddress
+        case aaveUnderlyingTokenAddress
+        case aaveMarketName
+        case tokenSymbol
+        case tokenName
         case fiatBalanceSnake = "fiat_balance"
         case fiatConversionSnake = "fiat_conversion"
     }
@@ -249,6 +351,18 @@ struct SCGBalance: Decodable {
             #endif
             self.fiatConversion = "0"
         }
+
+        self.tokenCategory = try? container.decodeIfPresent(String.self, forKey: .tokenCategory)
+        self.wrapLabel = try? container.decodeIfPresent(String.self, forKey: .wrapLabel)
+        self.priceSource = try? container.decodeIfPresent(String.self, forKey: .priceSource)
+        self.priceSourceParam = try? container.decodeIfPresent(String.self, forKey: .priceSourceParam)
+        self.yieldSource = try? container.decodeIfPresent(String.self, forKey: .yieldSource)
+        self.yieldChainId = try? container.decodeIfPresent(String.self, forKey: .yieldChainId)
+        self.aaveMarketPoolAddress = try? container.decodeIfPresent(String.self, forKey: .aaveMarketPoolAddress)
+        self.aaveUnderlyingTokenAddress = try? container.decodeIfPresent(String.self, forKey: .aaveUnderlyingTokenAddress)
+        self.aaveMarketName = try? container.decodeIfPresent(String.self, forKey: .aaveMarketName)
+        self.tokenSymbol = try? container.decodeIfPresent(String.self, forKey: .tokenSymbol)
+        self.tokenName = try? container.decodeIfPresent(String.self, forKey: .tokenName)
         
         #if DEBUG
         LogService.shared.debug("[SCGBalance] Decoded - symbol: \(tokenInfo.symbol ?? "nil"), address: \(tokenInfo.address.address), fiatBalance: '\(fiatBalance)', fiatConversion: '\(fiatConversion)'")
@@ -257,9 +371,10 @@ struct SCGBalance: Decodable {
 }
 
 extension SafeBalanceSummary {
-    init(fiatTotal: String, items: [SCGBalance]) {
+    init(fiatTotal: String, items: [SCGBalance], display: SafeBalanceDisplay? = nil) {
         self.fiatTotal = fiatTotal
         self.items = items
+        self.display = display
     }
 }
 

@@ -9,30 +9,35 @@ import Foundation
 final class MarketPriceService {
     enum PriceSource: String {
         case ondo
+        case ondousdy
         case kraken
         case fixed
     }
 
     struct ResultSnapshot {
         let pricesByAddress: [String: Double] // checksummed address -> USD unit price
+        let changePct24hByAddress: [String: Double] // checksummed address -> 24h percent change
         let fetchedAt: Date
     }
 
     private let ondoClient: OndoAssetsClient
+    private let ondoUSDYClient: OndoUSDYPageClient
     private let krakenClient: KrakenTickerClient
 
     // Simple in-memory caches (avoid hammering providers)
-    private var ondoCache: (fetchedAt: Date, pricesBySymbolUpper: [String: Double])?
-    private var krakenCache: (fetchedAt: Date, pricesByPair: [String: Double])?
+    private var ondoCache: (fetchedAt: Date, pricesBySymbolUpper: [String: Double], changePctBySymbolUpper: [String: Double])?
+    private var krakenCache: (fetchedAt: Date, pricesByPair: [String: Double], changePctByPair: [String: Double])?
 
     private let ondoTTL: TimeInterval
     private let krakenTTL: TimeInterval
 
     init(ondoClient: OndoAssetsClient = OndoAssetsClient(),
+         ondoUSDYClient: OndoUSDYPageClient = OndoUSDYPageClient(),
          krakenClient: KrakenTickerClient = KrakenTickerClient(),
          ondoTTL: TimeInterval = 120,
          krakenTTL: TimeInterval = 45) {
         self.ondoClient = ondoClient
+        self.ondoUSDYClient = ondoUSDYClient
         self.krakenClient = krakenClient
         self.ondoTTL = ondoTTL
         self.krakenTTL = krakenTTL
@@ -45,14 +50,17 @@ final class MarketPriceService {
 
         // Build lookup structures.
         struct OndoNeed { let symbolUpper: String; let address: String }
+        struct OndoUSDYNeed { let address: String }
         struct KrakenNeed { let pair: String; let address: String }
 
         var fixedPrices: [String: Double] = [:]
         var ondoNeeds: [OndoNeed] = []
+        var ondoUSDYNeeds: [OndoUSDYNeed] = []
         var krakenNeeds: [KrakenNeed] = []
 
         fixedPrices.reserveCapacity(entries.count)
         ondoNeeds.reserveCapacity(entries.count)
+        ondoUSDYNeeds.reserveCapacity(entries.count)
         krakenNeeds.reserveCapacity(entries.count)
 
         let start = Date()
@@ -61,6 +69,10 @@ final class MarketPriceService {
         var debugEmptySymbolForOndo = 0
 
         for entry in entries {
+            // Do not fetch market quotes for USD-category / savings tokens.
+            if TokenCategory.isSavings(entry.tokenCategory) {
+                continue
+            }
             let normalizedAddress = Self.normalizedChecksummedAddress(from: entry.networkAddress)
 
             let sourceRaw = (entry.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -96,6 +108,8 @@ final class MarketPriceService {
                     continue
                 }
                 ondoNeeds.append(.init(symbolUpper: symbol.uppercased(), address: normalizedAddress))
+            case .ondousdy:
+                ondoUSDYNeeds.append(.init(address: normalizedAddress))
             }
         }
 
@@ -103,7 +117,7 @@ final class MarketPriceService {
         let useOndoCache = ondoNeeds.isEmpty ? true : (ondoCache.map { now.timeIntervalSince($0.fetchedAt) <= ondoTTL } ?? false)
         let useKrakenCache = krakenNeeds.isEmpty ? true : (krakenCache.map { now.timeIntervalSince($0.fetchedAt) <= krakenTTL } ?? false)
 
-        LogService.shared.debug("[MarketPriceService][START] entries=\(entries.count) split{fixed=\(fixedPrices.count), ondo=\(ondoNeeds.count), kraken=\(krakenNeeds.count)} cache{ondo=\(useOndoCache), kraken=\(useKrakenCache)} unknownSource=\(debugUnknownSource) missingParam=\(debugMissingParam) emptyOndoSymbol=\(debugEmptySymbolForOndo)")
+        LogService.shared.debug("[MarketPriceService][START] entries=\(entries.count) split{fixed=\(fixedPrices.count), ondo=\(ondoNeeds.count), ondousdy=\(ondoUSDYNeeds.count), kraken=\(krakenNeeds.count)} cache{ondo=\(useOndoCache), kraken=\(useKrakenCache)} unknownSource=\(debugUnknownSource) missingParam=\(debugMissingParam) emptyOndoSymbol=\(debugEmptySymbolForOndo)")
         if let ondoAge = ondoCache.map({ Int(now.timeIntervalSince($0.fetchedAt)) }) {
             LogService.shared.debug("[MarketPriceService] ondoCacheAgeSec=\(ondoAge) ttlSec=\(Int(ondoTTL))")
         }
@@ -113,7 +127,7 @@ final class MarketPriceService {
 
         var tasks: [URLSessionTask] = []
 
-        func finish(ondoSymbols: [String: Double]?, krakenPairs: [String: Double]?, error: Error?) {
+        func finish(ondoSymbols: [String: Double]?, ondoChanges: [String: Double]?, ondoUSDYSnapshot: OndoUSDYPageClient.Snapshot?, krakenPairs: [String: Double]?, krakenChanges: [String: Double]?, error: Error?) {
             if let error {
                 DispatchQueue.main.async {
                     completion(.failure(error))
@@ -122,10 +136,12 @@ final class MarketPriceService {
             }
 
             var prices: [String: Double] = fixedPrices
+            var changes: [String: Double] = [:]
 
             var ondoDirect = 0
             var ondoStripped = 0
             var ondoMiss = 0
+            var ondoUSDYHit = 0
             var krakenHit = 0
             var krakenMiss = 0
 
@@ -134,6 +150,9 @@ final class MarketPriceService {
                     // direct match
                     if let v = ondoSymbols[need.symbolUpper] {
                         prices[need.address] = v
+                        if let change = ondoChanges?[need.symbolUpper], change.isFinite {
+                            changes[need.address] = change
+                        }
                         ondoDirect += 1
                         continue
                     }
@@ -142,6 +161,9 @@ final class MarketPriceService {
                         let stripped = String(need.symbolUpper.dropLast(2))
                         if let v = ondoSymbols[stripped] {
                             prices[need.address] = v
+                            if let change = ondoChanges?[stripped], change.isFinite {
+                                changes[need.address] = change
+                            }
                             ondoStripped += 1
                             continue
                         }
@@ -150,18 +172,39 @@ final class MarketPriceService {
                 }
             }
 
+            if let ondoUSDYSnapshot, !ondoUSDYNeeds.isEmpty {
+                let changePct: Double? = {
+                    let history = ondoUSDYSnapshot.history
+                    guard history.count >= 2 else { return nil }
+                    let last = history[history.count - 1].priceUsd
+                    let prev = history[history.count - 2].priceUsd
+                    guard prev > 0 else { return nil }
+                    return (last / prev - 1.0) * 100.0
+                }()
+                for need in ondoUSDYNeeds {
+                    prices[need.address] = ondoUSDYSnapshot.currentPriceUsd
+                    if let changePct, changePct.isFinite {
+                        changes[need.address] = changePct
+                    }
+                    ondoUSDYHit += 1
+                }
+            }
+
             if let krakenPairs {
                 for need in krakenNeeds {
                     if let v = krakenPairs[need.pair] {
                         prices[need.address] = v
                         krakenHit += 1
+                        if let change = krakenChanges?[need.pair], change.isFinite {
+                            changes[need.address] = change
+                        }
                     } else {
                         krakenMiss += 1
                     }
                 }
             }
 
-            LogService.shared.debug("[MarketPriceService][DONE] mergedPrices=\(prices.count) fixed=\(fixedPrices.count) ondo{need=\(ondoNeeds.count),direct=\(ondoDirect),stripped=\(ondoStripped),miss=\(ondoMiss),symbolsLoaded=\(ondoSymbols?.count ?? -1)} kraken{need=\(krakenNeeds.count),hit=\(krakenHit),miss=\(krakenMiss),pairsLoaded=\(krakenPairs?.count ?? -1)} elapsedMs=\(Int(Date().timeIntervalSince(start) * 1000))")
+            LogService.shared.debug("[MarketPriceService][DONE] mergedPrices=\(prices.count) fixed=\(fixedPrices.count) ondo{need=\(ondoNeeds.count),direct=\(ondoDirect),stripped=\(ondoStripped),miss=\(ondoMiss),symbolsLoaded=\(ondoSymbols?.count ?? -1)} ondousdy{need=\(ondoUSDYNeeds.count),hit=\(ondoUSDYHit)} kraken{need=\(krakenNeeds.count),hit=\(krakenHit),miss=\(krakenMiss),pairsLoaded=\(krakenPairs?.count ?? -1)} elapsedMs=\(Int(Date().timeIntervalSince(start) * 1000))")
             if ondoMiss > 0 {
                 let missSyms = ondoNeeds.filter { need in
                     let ok = (ondoSymbols? [need.symbolUpper] != nil) || (need.symbolUpper.hasSuffix("ON") && (ondoSymbols?[String(need.symbolUpper.dropLast(2))] != nil))
@@ -175,13 +218,15 @@ final class MarketPriceService {
             }
 
             DispatchQueue.main.async {
-                completion(.success(ResultSnapshot(pricesByAddress: prices, fetchedAt: Date())))
+                completion(.success(ResultSnapshot(pricesByAddress: prices,
+                                                  changePct24hByAddress: changes,
+                                                  fetchedAt: Date())))
             }
         }
 
         // Fast path: only fixed prices.
-        if ondoNeeds.isEmpty && krakenNeeds.isEmpty {
-            finish(ondoSymbols: [:], krakenPairs: [:], error: nil)
+        if ondoNeeds.isEmpty && ondoUSDYNeeds.isEmpty && krakenNeeds.isEmpty {
+            finish(ondoSymbols: [:], ondoChanges: [:], ondoUSDYSnapshot: nil, krakenPairs: [:], krakenChanges: [:], error: nil)
             return tasks
         }
 
@@ -189,17 +234,26 @@ final class MarketPriceService {
         var pending = 0
         var capturedError: Error?
         var resolvedOndo: [String: Double]?
+        var resolvedOndoChanges: [String: Double]?
+        var resolvedOndoUSDYSnapshot: OndoUSDYPageClient.Snapshot?
         var resolvedKraken: [String: Double]?
+        var resolvedKrakenChanges: [String: Double]?
 
         func doneOne() {
             pending -= 1
             if pending == 0 {
-                finish(ondoSymbols: resolvedOndo, krakenPairs: resolvedKraken, error: capturedError)
+                finish(ondoSymbols: resolvedOndo,
+                       ondoChanges: resolvedOndoChanges,
+                       ondoUSDYSnapshot: resolvedOndoUSDYSnapshot,
+                       krakenPairs: resolvedKraken,
+                       krakenChanges: resolvedKrakenChanges,
+                       error: capturedError)
             }
         }
 
         if useOndoCache {
             resolvedOndo = ondoCache?.pricesBySymbolUpper ?? [:]
+            resolvedOndoChanges = ondoCache?.changePctBySymbolUpper ?? [:]
         } else {
             pending += 1
             let task = ondoClient.fetchAssets { [weak self] result in
@@ -207,17 +261,40 @@ final class MarketPriceService {
                 switch result {
                 case .success(let resp):
                     var map: [String: Double] = [:]
+                    var changeMap: [String: Double] = [:]
                     map.reserveCapacity(resp.assets.count)
                     for asset in resp.assets {
                         guard let sym = asset.symbol?.trimmingCharacters(in: .whitespacesAndNewlines), !sym.isEmpty else { continue }
                         guard let priceStr = asset.primaryMarket?.price, let price = Double(priceStr) else { continue }
-                        map[sym.uppercased()] = price
+                        let symbolUpper = sym.uppercased()
+                        map[symbolUpper] = price
+                        if let changeStr = asset.primaryMarket?.priceChangePct24h,
+                           let change = Double(changeStr),
+                           change.isFinite {
+                            changeMap[symbolUpper] = change
+                        }
                     }
-                    self.ondoCache = (Date(), map)
+                    self.ondoCache = (Date(), map, changeMap)
                     resolvedOndo = map
+                    resolvedOndoChanges = changeMap
                 case .failure(let error):
                     capturedError = error
                     resolvedOndo = [:]
+                    resolvedOndoChanges = [:]
+                }
+                doneOne()
+            }
+            if let task { tasks.append(task) }
+        }
+
+        if !ondoUSDYNeeds.isEmpty {
+            pending += 1
+            let task = ondoUSDYClient.fetchSnapshot { result in
+                switch result {
+                case .success(let snapshot):
+                    resolvedOndoUSDYSnapshot = snapshot
+                case .failure(let error):
+                    capturedError = error
                 }
                 doneOne()
             }
@@ -226,18 +303,21 @@ final class MarketPriceService {
 
         if useKrakenCache {
             resolvedKraken = krakenCache?.pricesByPair ?? [:]
+            resolvedKrakenChanges = krakenCache?.changePctByPair ?? [:]
         } else {
             pending += 1
             let uniquePairs = Array(Set(krakenNeeds.map { $0.pair }))
             let task = krakenClient.fetchLastPrices(pairs: uniquePairs) { [weak self] result in
                 guard let self else { return }
                 switch result {
-                case .success(let map):
-                    self.krakenCache = (Date(), map)
-                    resolvedKraken = map
+                case .success(let snapshot):
+                    self.krakenCache = (Date(), snapshot.pricesByPair, snapshot.changePctByPair)
+                    resolvedKraken = snapshot.pricesByPair
+                    resolvedKrakenChanges = snapshot.changePctByPair
                 case .failure(let error):
                     capturedError = error
                     resolvedKraken = [:]
+                    resolvedKrakenChanges = [:]
                 }
                 doneOne()
             }
@@ -246,7 +326,12 @@ final class MarketPriceService {
 
         // If both sources were cache hits, pending is still 0.
         if pending == 0 {
-            finish(ondoSymbols: resolvedOndo ?? [:], krakenPairs: resolvedKraken ?? [:], error: nil)
+            finish(ondoSymbols: resolvedOndo ?? [:],
+                   ondoChanges: resolvedOndoChanges ?? [:],
+                   ondoUSDYSnapshot: resolvedOndoUSDYSnapshot,
+                   krakenPairs: resolvedKraken ?? [:],
+                   krakenChanges: resolvedKrakenChanges ?? [:],
+                   error: nil)
         }
 
         return tasks

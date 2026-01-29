@@ -26,7 +26,7 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "Owner Keys"
+        navigationItem.title = NSLocalizedString("ui_owner_keys_title", comment: "Title for owner keys list")
         tableView.delegate = self
         tableView.dataSource = self
 
@@ -37,15 +37,12 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 200
 
-        emptyView.setTitle("There are no added owner keys")
+        emptyView.setTitle(NSLocalizedString("ui_owner_keys_empty_title", comment: "Owner keys empty title"))
         emptyView.setImage(UIImage(named: "ico-no-keys")!)
 
         addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(didTapAddButton(_:)))
         
-        // Add Tangem menu button
-        let tangemMenuButton = UIBarButtonItem(title: "Tangem", style: .plain, target: self, action: #selector(didTapTangemMenu(_:)))
-        
-        navigationItem.rightBarButtonItems = [addButton, tangemMenuButton]
+        navigationItem.rightBarButtonItem = addButton
 
         for notification in [NSNotification.Name.selectedSafeChanged,
                                 .selectedSafeUpdated,
@@ -67,68 +64,6 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
             self.dismiss(animated: true, completion: nil)
         }
         present(vc, animated: true)
-    }
-    
-    @objc private func didTapTangemMenu(_ sender: Any) {
-        let alertController = UIAlertController(title: "Tangem Card Options", message: nil, preferredStyle: .actionSheet)
-        
-        alertController.addAction(UIAlertAction(title: "Read Card", style: .default) { [weak self] _ in
-            self?.showCardReader()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "Activate Card", style: .default) { [weak self] _ in
-            self?.showCardActivation()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "Factory Reset", style: .destructive) { [weak self] _ in
-            self?.showFactoryReset()
-        })
-        
-        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        if let popover = alertController.popoverPresentationController {
-            popover.barButtonItem = sender as? UIBarButtonItem
-        }
-        
-        present(alertController, animated: true)
-    }
-    
-    private func showCardReader() {
-        let vc = TangemCardReaderViewController()
-        show(vc, sender: self)
-    }
-    
-    private func showCardActivation() {
-        let vc = TangemActivationViewController()
-        vc.onActivationComplete = { [weak self] info in
-            // Import as owner after activation
-            self?.importActivatedCardAsOwner(info)
-        }
-        show(vc, sender: self)
-    }
-    
-    private func showFactoryReset() {
-        let vc = TangemFactoryResetViewController()
-        show(vc, sender: self)
-    }
-    
-    private func importActivatedCardAsOwner(_ info: ActivatedCardInfo) {
-        let defaultName = "Tangem Card \(info.cardId.suffix(8))"
-        
-        // Directly import using OwnerKeyController
-        let success = OwnerKeyController.importKey(
-            tangemCardId: info.cardId,
-            walletPublicKey: info.wallet.publicKey,
-            address: info.ethereumAddress,
-            name: defaultName,
-            derivationPath: nil,
-            walletIndex: info.wallet.index
-        )
-        
-        if success {
-            NotificationCenter.default.post(name: .ownerKeyImported, object: nil)
-            reloadData()
-        }
     }
 
     override func reloadData() {
@@ -190,12 +125,8 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
         let keyInfo = keys[indexPath.row]
 
         var actions = [UIContextualAction]()
-        let editAction = UIContextualAction(style: .normal, title: "Rename") { [unowned self] _, _, completion in
-            let vc = EditOwnerKeyViewController(keyInfo: self.keys[indexPath.row])
-            self.show(vc, sender: self)
-            completion(true)
-        }
-        actions.append(editAction)
+        
+        // Rename action removed - users cannot change key names
 
         if keyInfo.keyType == .walletConnect {
             let isConnected = keyInfo.connectedAsDapp
@@ -222,7 +153,8 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
             actions.append(wcAction)
         }
 
-        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(style: .destructive,
+                                              title: NSLocalizedString("button_delete", comment: "Delete action title")) { [weak self] _, _, completion in
             self?.remove(key: keyInfo, sourceIndexPath: indexPath)
             completion(true)
         }
@@ -248,7 +180,9 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
         let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
             OwnerKeyController.remove(keyInfo: key)
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         

@@ -39,8 +39,11 @@ final class TransferRecipientViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "Send " + tokenBalance.symbol
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.title = String(
+            format: NSLocalizedString("ui_send_token_title_format", comment: "Title for sending a specific token, e.g. 'Send ETH'"),
+            tokenBalance.symbol
+        )
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         navigationItem.rightBarButtonItem = nil
 
         view.backgroundColor = .backgroundPrimary
@@ -88,10 +91,10 @@ final class TransferRecipientViewController: UIViewController {
         ])
 
         addressField.translatesAutoresizingMaskIntoConstraints = false
-        addressField.setPlaceholderText("Recipient's address")
+        addressField.setPlaceholderText(NSLocalizedString("ui_recipient_address_placeholder", comment: "Recipient address placeholder"))
         addressField.onTap = { [weak self] in self?.didTapAddressField() }
 
-        reviewButton.setText("Review", .filled)
+        reviewButton.setText(NSLocalizedString("ui_tx_review_action", comment: "Review transaction action"), .filled)
         reviewButton.addTarget(self, action: #selector(didTapReview), for: .touchUpInside)
 
         contentView.addSubview(addressField)
@@ -129,28 +132,31 @@ final class TransferRecipientViewController: UIViewController {
             popoverPresentationController.sourceView = addressField
         }
 
-        alertVC.addAction(UIAlertAction(title: "Paste from Clipboard", style: .default, handler: { [weak self] _ in
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_paste_from_clipboard", comment: "Paste from clipboard action"),
+                                        style: .default,
+                                        handler: { [weak self] _ in
             self?.didEnterText(Pasteboard.string)
         }))
 
-        alertVC.addAction(UIAlertAction(title: "Scan QR Code", style: .default, handler: { [weak self] _ in
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_settings_address_book_title", comment: "Address book title"),
+                                        style: .default,
+                                        handler: { [weak self] _ in
             guard let self = self else { return }
-            let vc = QRCodeScannerViewController()
-            vc.scannedValueValidator = { value in
-                if let _ = try? Address.addressWithPrefix(text: value) {
-                    return .success(value)
-                } else {
-                    return .failure(GSError.error(description: "Can’t use this QR code",
-                                                  error: GSError.SafeAddressNotValid()))
+            let addressBookVC = AddressBookListTableViewController()
+            addressBookVC.filterByChain = safe.chain
+            addressBookVC.isPickerModeEnabled = true
+            addressBookVC.onSelect = { [weak self, weak addressBookVC] address in
+                addressBookVC?.dismiss(animated: true) {
+                    self?.didEnterText(address.checksummed)
                 }
             }
-            vc.modalPresentationStyle = .overFullScreen
-            vc.delegate = self
-            vc.setup()
-            self.present(vc, animated: true, completion: nil)
+            let vc = ViewControllerFactory.modal(viewController: addressBookVC)
+            self.present(vc, animated: true)
         }))
 
-        alertVC.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                        style: .cancel,
+                                        handler: nil))
 
         present(alertVC, animated: true, completion: nil)
     }
@@ -161,7 +167,8 @@ final class TransferRecipientViewController: UIViewController {
         recipient = nil
 
         guard let text = text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
-            addressField.setError(GSError.error(description: "Address should not be empty", error: nil))
+            addressField.setError(GSError.error(description: NSLocalizedString("ui_address_empty_error", comment: "Address should not be empty error"),
+                                                error: nil))
             return
         }
 
@@ -181,21 +188,8 @@ final class TransferRecipientViewController: UIViewController {
             enableReview(true)
         } catch {
             addressField.setError(
-                GSError.error(description: "Can’t use this address",
+                GSError.error(description: NSLocalizedString("ui_address_invalid_error", comment: "Address invalid error"),
                               error: error is EthereumAddress.Error ? GSError.SafeAddressNotValid() : error))
         }
     }
 }
-
-extension TransferRecipientViewController: QRCodeScannerViewControllerDelegate {
-    func scannerViewControllerDidCancel() {
-        dismiss(animated: true, completion: nil)
-    }
-
-    func scannerViewControllerDidScan(_ code: String) {
-        didEnterText(code)
-        dismiss(animated: true, completion: nil)
-    }
-}
-
-

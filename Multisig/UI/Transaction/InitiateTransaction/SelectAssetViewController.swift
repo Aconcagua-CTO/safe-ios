@@ -8,11 +8,7 @@
 
 import UIKit
 
-class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating {
-    
-    let searchController = UISearchController(searchResultsController: nil)
-    
-    var term: String = ""
+class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
     
     enum Mode {
         case balances([TokenBalance])
@@ -32,58 +28,29 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
     
     private let tableBackgroundColor: UIColor = .backgroundPrimary
 
-    convenience init(balances: [TokenBalance]) {
+    convenience init(balances: [TokenBalance], chainId: String?) {
         self.init(namedClass: Self.superclass())
         let sorted = Self.sortBalances(balances)
         self.mode = .balances(sorted)
-        self.filteredBalances = sorted
+        self.filteredBalances = sorted.filter {
+            Self.isWhitelisted(chainId: chainId, address: $0.address)
+        }
     }
     
     convenience init(transferAssets: [TransferSelectableAsset]) {
         self.init(namedClass: Self.superclass())
         let sorted = Self.sortTransferAssets(transferAssets)
         self.mode = .transferAssets(sorted)
-        self.filteredTransferAssets = sorted
-    }
-    
-    func updateSearchResults(for searchController: UISearchController) {
-        term = searchController.searchBar.text?.lowercased() ?? ""
-        switch mode {
-        case .balances(let balances):
-            if !term.isEmpty {
-                filteredBalances = balances.filter { balance in
-                    return balance.symbol.lowercased().contains(term) || balance.name.lowercased().contains(term)
-                }
-            } else {
-                filteredBalances = balances
-            }
-            filteredBalances = Self.sortBalances(filteredBalances)
-        case .transferAssets(let assets):
-            if !term.isEmpty {
-                filteredTransferAssets = assets.filter { asset in
-                    return asset.token.symbol.lowercased().contains(term)
-                    || asset.token.name.lowercased().contains(term)
-                    || asset.chainName.lowercased().contains(term)
-                }
-            } else {
-                filteredTransferAssets = assets
-            }
-            filteredTransferAssets = Self.sortTransferAssets(filteredTransferAssets)
+        self.filteredTransferAssets = sorted.filter {
+            Self.isWhitelisted(chainId: $0.chainId, address: $0.token.address)
         }
-        if isEmpty {
-            showOnly(view: emptyView)
-        } else {
-            showOnly(view: tableView)
-        }
-        tableView.reloadData()
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.title = "¿Qué querés retirar?"
-        navigationItem.searchController = searchController
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         
         // Use a custom cell so we can show chain on the left and amount on the right (2-line layout).
         tableView.register(SelectAssetRowCell.self, forCellReuseIdentifier: SelectAssetRowCell.reuseID)
@@ -96,15 +63,13 @@ class SelectAssetViewController: LoadableViewController, UITableViewDelegate, UI
         tableView.dataSource = self
         tableView.refreshControl = nil
         
-        emptyView.setImage(UIImage(named: "ico-no-assets")!)
-        emptyView.setTitle("No assets found.")
+        emptyView.tintColor = .icon
+        emptyView.setImage(
+            UIImage(named: "tab-icon-balances")?.withRenderingMode(.alwaysTemplate)
+                ?? UIImage(named: "ico-no-assets")!
+        )
+        emptyView.setTitle(NSLocalizedString("pending_vault_activation_message", comment: "Add assets to get started"))
         emptyView.refreshControl = nil
-        
-        searchController.searchResultsUpdater = self
-        searchController.obscuresBackgroundDuringPresentation = false
-        searchController.searchBar.placeholder = "Search"
-        
-        definesPresentationContext = true
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -204,6 +169,12 @@ extension SelectAssetViewController: UITextFieldDelegate {
 
 // MARK: - Dust formatting helpers
 private extension SelectAssetViewController {
+    static func isWhitelisted(chainId: String?, address: String) -> Bool {
+        let trimmedChainId = (chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedChainId.isEmpty else { return false }
+        return TokenWhitelist.isWhitelisted(chainId: trimmedChainId, networkAddress: address)
+    }
+
     /// If token has a positive balance but rounds to 0 with our "up to 5 decimals" display, show "<0.00001".
     static func dustAwareAmountString(for token: TokenBalance) -> String {
         let formatted = token.balanceFormatted5

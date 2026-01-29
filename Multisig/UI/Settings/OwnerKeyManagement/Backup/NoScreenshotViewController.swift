@@ -27,7 +27,7 @@ class NoScreenshotViewController: UIViewController {
         backgroundView.layer.cornerRadius = 15
         titleLabel.setStyle(.headline)
         descriptionLabel.setStyle(.body)
-        okButton.setText("OK, I understand", .filled)
+        okButton.setText(NSLocalizedString("ui_ok_understand_action", comment: "OK understand action"), .filled)
     }
     
     @IBAction func didTapOk(_ sender: Any) {

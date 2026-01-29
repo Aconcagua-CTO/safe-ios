@@ -78,7 +78,7 @@ class WalletConnectKeyFlowFactory: AddKeyFlowFactory {
         ]
 
         introVC.viewTrackingEvent = .connectOwnerOnboarding
-        introVC.navigationItem.title = "Connect Owner Key"
+        introVC.navigationItem.title = NSLocalizedString("ui_walletconnect_connect_owner_key_title", comment: "Title for connecting an owner key via WalletConnect")
         introVC.navigationItem.largeTitleDisplayMode = .never
 
         return introVC

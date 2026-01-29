@@ -16,10 +16,10 @@ class ErrorViewController: UIViewController {
     @IBOutlet weak var textView: UITextView!
     @IBOutlet weak var button: UIButton!
 
-    var titleText = "Operation failed"
-    var bodyText = "Error details are below:"
+    var titleText = NSLocalizedString("ui_data_operation_failed_title", comment: "Operation failed title")
+    var bodyText = NSLocalizedString("ui_data_error_details_title", comment: "Error details title")
     var errorText = ""
-    var buttonTitle = "Done"
+    var buttonTitle = NSLocalizedString("button_done", comment: "Done button title")
     var imageName = "square.and.arrow.up.trianglebadge.exclamationmark"
     
     var completion: () -> Void = {}

@@ -137,7 +137,16 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
     }
 
     private func applyStrikethrough(_ label: UILabel, enabled: Bool) {
-        guard let text = label.text else { return }
+        // When `attributedText` is set, `label.text` can be nil, which would prevent us from
+        // clearing a previous strike-through on reused cells. Always rebuild from the current
+        // rendered string.
+        let text = label.attributedText?.string ?? label.text ?? ""
+        // Avoid allocating attributed strings for truly empty labels.
+        if text.isEmpty {
+            label.attributedText = nil
+            label.text = ""
+            return
+        }
         var attributes: [NSAttributedString.Key: Any] = [:]
         if let font = label.font {
             attributes[.font] = font

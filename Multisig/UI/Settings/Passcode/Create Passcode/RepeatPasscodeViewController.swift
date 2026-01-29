@@ -26,8 +26,8 @@ class RepeatPasscodeViewController: PasscodeViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Create Passcode"
-        promptLabel.text = "Repeat the 6-digit passcode"
+        navigationItem.title = NSLocalizedString("ui_passcode_create_title", comment: "Create passcode title")
+        promptLabel.text = NSLocalizedString("ui_passcode_repeat_prompt", comment: "Repeat passcode prompt")
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -41,7 +41,7 @@ class RepeatPasscodeViewController: PasscodeViewController {
         if text == passcode {
             completion()
         } else if text.count == passcodeLength {
-            showError("Passcodes don't match")
+            showError(NSLocalizedString("ui_passcode_mismatch_error", comment: "Passcodes don't match error"))
         }
     }
 }

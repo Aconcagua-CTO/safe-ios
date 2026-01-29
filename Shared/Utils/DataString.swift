@@ -16,13 +16,13 @@ struct DataString: Hashable, Codable {
     }
 
     init(hex: String) {
-        self.data = Data(hex: hex)
+        self.data = Data(ethHex: hex)
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let string = try container.decode(String.self)
-        data = Data(hex: string)
+        data = Data(ethHex: string)
     }
 
     func encode(to encoder: Encoder) throws {

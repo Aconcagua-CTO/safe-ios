@@ -18,12 +18,15 @@ class EditSafeNameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "Edit Safe Account Name"
+        navigationItem.title = NSLocalizedString("ui_safe_edit_name_title", comment: "Edit Safe name title")
 
-        saveButton = UIBarButtonItem(title: "Save", style: .done, target: self, action: #selector(didTapSaveButton))
+        saveButton = UIBarButtonItem(title: NSLocalizedString("button_save", comment: "Save button title"),
+                                     style: .done,
+                                     target: self,
+                                     action: #selector(didTapSaveButton))
         navigationItem.rightBarButtonItem = saveButton
 
-        textField.setPlaceholder("Enter Safe Account name")
+        textField.setPlaceholder(NSLocalizedString("ui_safe_enter_name_full_placeholder", comment: "Safe name placeholder"))
         textField.textField.becomeFirstResponder()
         textField.textField.text = name
         textField.textField.addTarget(self, action: #selector(validateName), for: .editingChanged)

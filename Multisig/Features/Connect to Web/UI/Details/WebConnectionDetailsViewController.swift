@@ -30,7 +30,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Connection Details"
+        title = NSLocalizedString("ui_ctw_connection_details_title", comment: "Connection details title")
 
         tableView.registerCell(ContainerTableViewCell.self)
         tableView.registerCell(DisclosureWithContentCell.self)
@@ -116,7 +116,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
                 cell.selectionStyle = .default
             }
 
-            cell.setText("Key")
+            cell.setText(NSLocalizedString("ui_ctw_key_title", comment: "Connection key title"))
 
             if let key = keyInfo {
                 let content = MiniAccountAndBalancePiece()
@@ -134,7 +134,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
                 cell.setContent(content)
 
             } else {
-                cell.setContent(textView("Not Set"))
+                cell.setContent(textView(NSLocalizedString("ui_ctw_not_set_title", comment: "Not set title")))
             }
             return cell
 
@@ -146,7 +146,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
                 cell.selectionStyle = .default
             }
 
-            cell.setText("Network")
+            cell.setText(NSLocalizedString("ui_ctw_network_title", comment: "Network title"))
             let content = NetworkIndicator()
             content.textStyle = .headline
             content.text = chain.name
@@ -156,21 +156,21 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
 
         case .version:
             let cell = contentCell()
-            cell.setText("Version")
-            let text = safeWebPeer?.appVersion ?? "Unknown"
+            cell.setText(NSLocalizedString("ui_ctw_version_title", comment: "Version title"))
+            let text = safeWebPeer?.appVersion ?? NSLocalizedString("ui_unknown_title", comment: "Unknown label")
             cell.setContent(textView(text))
             return cell
 
         case .browser:
             let cell = contentCell()
-            cell.setText("Browser")
-            let text = safeWebPeer?.browser ?? "Unknown"
+            cell.setText(NSLocalizedString("ui_ctw_browser_title", comment: "Browser title"))
+            let text = safeWebPeer?.browser ?? NSLocalizedString("ui_unknown_title", comment: "Unknown label")
             cell.setContent(textView(text))
             return cell
 
         case .description:
             let cell = contentCell()
-            cell.setText("Description")
+            cell.setText(NSLocalizedString("ui_ctw_description_title", comment: "Description title"))
             var text = peer.description
             if text == nil || text!.isEmpty {
                 text = peer.name
@@ -185,7 +185,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
             cell.accessoryType = .disclosureIndicator
             cell.selectionStyle = .default
 
-            cell.setText("Expires at")
+            cell.setText(NSLocalizedString("ui_ctw_expires_title", comment: "Expires title"))
             let text: String
             if let date = connection.expirationDate {
                 let formatter = DateFormatter()
@@ -193,7 +193,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
                 formatter.timeStyle = .short
                 text = formatter.string(from: date)
             } else {
-                text = "Not set"
+                text = NSLocalizedString("ui_ctw_not_set_title", comment: "Not set title")
             }
             cell.setContent(textView(text))
             return cell
@@ -204,7 +204,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
             cell.height = 56
             cell.padding = 16
             cell.backgroundColor = .clear
-            cell.setText("Disconnect", style: .filledError) { [unowned self] in
+            cell.setText(NSLocalizedString("ui_ctw_disconnect_action", comment: "Disconnect action"), style: .filledError) { [unowned self] in
                 var alertController: DisconnectionConfirmationController
                 if let keyInfo = keyInfo  {
                     alertController = DisconnectionConfirmationController.create(key: keyInfo)
@@ -279,8 +279,8 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
 
     func changeNetwork() {
         let networkVC = SelectNetworkViewController()
-        networkVC.screenTitle = "Change Network"
-        networkVC.descriptionText = "Change network of the selected wallet"
+        networkVC.screenTitle = NSLocalizedString("ui_ctw_change_network_title", comment: "Change network title")
+        networkVC.descriptionText = NSLocalizedString("ui_ctw_change_network_description", comment: "Change network description")
         networkVC.completion = { [unowned self] chain in
             self.dismiss(animated: true) {
                 guard let network = Chain.by(chain.id) else { return }
@@ -296,7 +296,7 @@ class WebConnectionDetailsViewController: UITableViewController, WebConnectionOb
         let accountVC = ChooseOwnerKeyViewController(
             owners: { keys },
             chainID: chain.id,
-            titleText: "Change owner key",
+            titleText: NSLocalizedString("ui_ctw_change_owner_key_title", comment: "Change owner key title"),
             header: .none,
             requestsPasscode: false,
             selectedKey: self.keyInfo,

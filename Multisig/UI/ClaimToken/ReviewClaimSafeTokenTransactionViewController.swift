@@ -49,7 +49,7 @@ class ReviewClaimSafeTokenTransactionViewController: ReviewSafeTransactionViewCo
         super.viewDidLoad()
         Tracker.trackEvent(.screenClaimReview)
 
-        navigationItem.title = "Review transaction"
+        navigationItem.title = NSLocalizedString("ui_tx_review_transaction_title", comment: "Review transaction title")
         confirmButtonView.set(rejectionEnabled: false)
 
         tableView.registerCell(ReviewClaimTokensHeaderCell.self)
@@ -140,13 +140,14 @@ class ReviewClaimSafeTokenTransactionViewController: ReviewSafeTransactionViewCo
 
         let description: String
         let imageName: String = "ico-custom-tx"
-        let name: String = "Contract interaction"
+        let name: String = NSLocalizedString("ui_tx_contract_interaction_title", comment: "Contract interaction title")
 
         if dataDecoded.method == "multiSend",
            let param = dataDecoded.parameters?.first,
            param.type == "bytes",
            case let SCGModels.DataDecoded.Parameter.ValueDecoded.multiSend(multiSendTxs)? = param.valueDecoded {
-            description = "Multisend (\(multiSendTxs.count) actions)"
+            description = String(format: NSLocalizedString("ui_tx_multisend_actions_title_format", comment: "Multisend actions title"),
+                                 multiSendTxs.count)
             tableCell.onCellTap = { [unowned self] _ in
                 Tracker.trackEvent(.userClaimReviewAct)
                 
@@ -158,7 +159,8 @@ class ReviewClaimSafeTokenTransactionViewController: ReviewSafeTransactionViewCo
                 show(vc, sender: self)
             }
         } else {
-            description = "Action (\(dataDecoded.method))"
+            description = String(format: NSLocalizedString("ui_tx_action_method_title_format", comment: "Action method title"),
+                                 dataDecoded.method)
             tableCell.onCellTap = { [unowned self] _ in
                 Tracker.trackEvent(.userClaimReviewAct)
 

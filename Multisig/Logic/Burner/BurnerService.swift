@@ -75,19 +75,26 @@ final class BurnerService: NSObject {
         var errorDescription: String? {
             switch self {
             case .nfcUnavailable:
-                return "NFC is unavailable on this device."
+                return NSLocalizedString("nfc_unavailable", comment: "Error when NFC is unavailable")
             case .userCancelled:
-                return "The Burner card interaction was cancelled."
+                return NSLocalizedString("ui_burner_cancelled", comment: "Error when Burner interaction is cancelled")
             case .sessionBusy:
-                return "Another Burner NFC session is already in progress."
+                return NSLocalizedString("ui_burner_session_busy", comment: "Error when another Burner NFC session is active")
             case .tagNotSupported:
-                return "The detected NFC tag is not a HaLo/Burner card."
+                return NSLocalizedString("ui_burner_tag_not_supported", comment: "Error when scanned NFC tag is not a Burner/HaLo card")
             case .invalidResponse(let reason):
-                return "Burner card returned an unexpected response: \(reason)."
+                return String(
+                    format: NSLocalizedString("ui_burner_invalid_response_format", comment: "Error when Burner card returns unexpected response; includes reason"),
+                    reason
+                )
             case .commandFailed(_, let description):
                 return description
             case .cardMismatch(let expected, let actual):
-                return "Expected Burner card \(expected) but detected \(actual)."
+                return String(
+                    format: NSLocalizedString("ui_burner_card_mismatch_format", comment: "Error when Burner card does not match expected id"),
+                    expected,
+                    actual
+                )
             case .underlying(let error):
                 return error.localizedDescription
             }
@@ -97,7 +104,7 @@ final class BurnerService: NSObject {
     // MARK: - Public API
     
     func scanCard(forceRefresh: Bool = false,
-                  alertMessage: String = "Hold your Burner (HaLo) card near the top of your iPhone.") async throws -> BurnerCardSummary {
+                  alertMessage: String = NSLocalizedString("nfc_burner_hold_to_scan", comment: "NFC prompt while scanning a Burner card")) async throws -> BurnerCardSummary {
         if !forceRefresh,
            let cached = cachedCard,
            Date().timeIntervalSince(cached.timestamp) < cacheValidity {
@@ -135,9 +142,9 @@ final class BurnerService: NSObject {
                   tagIdentifier: String? = nil,
                   slot: Int,
                   hash: Data,
-                  alertMessage: String = "Hold your Burner (HaLo) card near the top of your iPhone to sign.") async throws -> BurnerSignResult {
+                  alertMessage: String = NSLocalizedString("nfc_burner_hold_to_sign", comment: "NFC prompt while signing with a Burner card")) async throws -> BurnerSignResult {
         guard hash.count == 32 else {
-            throw BurnerServiceError.invalidResponse(reason: "Hash must be exactly 32 bytes.")
+            throw BurnerServiceError.invalidResponse(reason: NSLocalizedString("ui_burner_hash_must_be_32_bytes", comment: "Error when hash length is not 32 bytes"))
         }
         
         let requiresAttestedId = tagIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
@@ -175,7 +182,7 @@ final class BurnerService: NSObject {
     /// This matches the behavior of the LibHaLo `cfg_ndef` demo by toggling `flagUseText` only.
     /// When enabled, the tag will emit a TEXT record instead of a URI record (disables iOS background URL handling).
     func setBurnerNDEFUsesTextRecord(_ enabled: Bool,
-                                    alertMessage: String = "Hold your Burner (HaLo) card near the top of your iPhone.") async throws {
+                                    alertMessage: String = NSLocalizedString("nfc_burner_hold_to_configure", comment: "NFC prompt while configuring Burner NDEF settings")) async throws {
         try await perform("configure Burner NDEF flags", alertMessage: alertMessage) { executor in
             try await executor.ensureCoreSelected()
             try await executor.cfgNdef(flagUseText: enabled)
@@ -211,7 +218,7 @@ final class BurnerService: NSObject {
             }
         } else if normalizedExpectedTag == nil {
             BurnerLogger.warning("BurnerService ⚠️ Unable to verify Burner card identity (missing attested cardId and NFC tag identifier).")
-            throw BurnerServiceError.invalidResponse(reason: "Unable to verify Burner card identity. Please re-import your Burner card.")
+            throw BurnerServiceError.invalidResponse(reason: NSLocalizedString("ui_burner_unable_verify_reimport", comment: "Error when Burner card identity can't be verified and needs re-import"))
         } else {
             BurnerLogger.debug("BurnerService ▶️ Skipping cardId comparison because NFC tag identifier matched and attested ID is unavailable.")
         }
@@ -321,12 +328,12 @@ extension BurnerService: NFCTagReaderSessionDelegate {
     
     func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
         guard let request = pendingRequest else {
-            session.invalidate(errorMessage: "Unexpected NFC state.")
+            session.invalidate(errorMessage: NSLocalizedString("nfc_unexpected_state", comment: "Error when NFC state is unexpected"))
             return
         }
         
         guard let firstTag = tags.first else {
-            session.invalidate(errorMessage: "No NFC tag detected.")
+            session.invalidate(errorMessage: NSLocalizedString("nfc_no_tag_detected", comment: "Error when no NFC tag is detected"))
             return
         }
         
@@ -375,7 +382,7 @@ extension BurnerService: NFCTagReaderSessionDelegate {
     private func finishDueTo(error: BurnerServiceError) {
         guard let request = pendingRequest else { return }
         pendingRequest = nil
-        session?.invalidate(errorMessage: error.localizedDescription ?? "Burner interaction failed.")
+        session?.invalidate(errorMessage: error.localizedDescription ?? NSLocalizedString("ui_burner_interaction_failed", comment: "Fallback error for Burner card interaction failure"))
         session = nil
         request.fail(with: error, owner: self)
     }
@@ -447,7 +454,7 @@ private final class BurnerRequest<Result>: BurnerAnyRequest {
         Task {
             do {
                 let value = try await task(executor)
-                owner.closeSession(successMessage: "Burner card interaction completed.")
+                owner.closeSession(successMessage: NSLocalizedString("ui_burner_interaction_completed", comment: "Success message after completing Burner card interaction"))
                 continuation.resume(returning: value)
             } catch let error as BurnerCardError {
                 owner.closeSession(errorMessage: error.errorDescription)

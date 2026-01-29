@@ -15,7 +15,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     var notificationCenter = NotificationCenter.default
     var app = App.configuration.app
     var legal = App.configuration.legal
-    private static let vaultListTitle = "Bóvedas"
+    private static let vaultListTitle = NSLocalizedString("ui_settings_vaults_title", comment: "Settings list title for vaults")
 
     private let tableBackgroundColor: UIColor = .backgroundPrimary
     private let sectionHeaderHeight: CGFloat = 28
@@ -43,7 +43,6 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             case appearance(String)
             case experimental(String)
             case herencia(String)
-            case seguridad(String)
             case planes(String)
             case logout(String)
             case logoutAndReset(String)
@@ -102,52 +101,54 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         
         appSection.items.append(contentsOf: [
             Section.App.vaultList(Self.vaultListTitle),
-            Section.App.ownerKeys("Llaves", !KeyInfo.keysWithoutBackup().isEmpty, "\(KeyInfo.count())"),
-            Section.App.addressBook("Agenda"),
-            Section.App.herencia("Herencia"),
-            Section.App.seguridad("Seguridad"),
-            Section.App.planes("Planes")
+            Section.App.ownerKeys(NSLocalizedString("ui_settings_keys_title", comment: "Settings list title for keys"),
+                                  !KeyInfo.keysWithoutBackup().isEmpty,
+                                  "\(KeyInfo.count())"),
+            Section.App.addressBook(NSLocalizedString("ui_settings_address_book_title", comment: "Settings list title for address book")),
+            Section.App.herencia(NSLocalizedString("ui_settings_inheritance_title", comment: "Settings list title for inheritance")),
+            Section.App.passcode(NSLocalizedString("ui_settings_security_title", comment: "Settings list title for security")),
+            Section.App.planes(NSLocalizedString("ui_settings_plans_title", comment: "Settings list title for plans"))
         ])
 
-        appSection.items.append(Section.Support.chatWithUs("Ayuda"))
+        appSection.items.append(Section.Support.chatWithUs(NSLocalizedString("ui_settings_help_title", comment: "Settings list title for help")))
         if FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
-            appSection.items.append(Section.App.desktopPairing("Wallet connect"))
+            appSection.items.append(Section.App.desktopPairing(NSLocalizedString("ui_settings_wallet_connect_title", comment: "Settings list title for WalletConnect")))
         }
         
         // Show these settings in Development environment only (Debug + Release)
         if App.configuration.services.environment.isDevelopment {
             appSection.items.append(contentsOf: [
-                Section.App.passcode("Security"),
-                Section.App.fiat("Fiat currency", AppSettings.selectedFiatCode),
-                Section.App.chainPrefix("Chain prefix"),
-                Section.App.appearance("Appearance")
+                Section.App.fiat(NSLocalizedString("ui_settings_fiat_currency_title", comment: "Settings list title for fiat currency"),
+                                 AppSettings.selectedFiatCode),
+                Section.App.chainPrefix(NSLocalizedString("ui_settings_chain_prefix_title", comment: "Settings list title for chain prefix")),
+                Section.App.appearance(NSLocalizedString("ui_settings_appearance_title", comment: "Settings list title for appearance"))
             ])
         }
         
         // Add logout option if user is authenticated
         if App.shared.authRepository.isAuthenticated() {
-            appSection.items.append(Section.App.logout("Sign Out"))
+            appSection.items.append(Section.App.logout(NSLocalizedString("ui_settings_sign_out_title", comment: "Settings list title for sign out")))
             if App.configuration.services.environment.isDevelopment {
-                appSection.items.append(Section.App.logoutAndReset("Sign Out & Reset"))
+                appSection.items.append(Section.App.logoutAndReset(NSLocalizedString("ui_settings_sign_out_reset_title", comment: "Settings list title for sign out and reset")))
             }
         }
         
-        let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support("Support & Feedback"), items: [])
-        var advancedSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .advanced("Advanced"), items: [
-            Section.Advanced.advanced("Advanced"),
-            Section.Advanced.dataExport("Export data"),
-            Section.Advanced.dataImport("Import data")
+        let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support(NSLocalizedString("ui_settings_support_feedback_title", comment: "Settings section title for support & feedback")), items: [])
+        var advancedSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .advanced(NSLocalizedString("ui_settings_advanced_title", comment: "Settings section title for advanced")), items: [
+            Section.Advanced.advanced(NSLocalizedString("ui_settings_advanced_title", comment: "Settings item title for advanced")),
+            Section.Advanced.dataExport(NSLocalizedString("ui_settings_export_data_title", comment: "Settings item title for export data")),
+            Section.Advanced.dataImport(NSLocalizedString("ui_settings_import_data_title", comment: "Settings item title for import data"))
         ])
         
         if App.configuration.services.environment.isDevelopment {
             advancedSection.items.append(
-                Section.Advanced.toggles("Feature Toggles")
+                Section.Advanced.toggles(NSLocalizedString("ui_settings_feature_toggles_title", comment: "Settings item title for feature toggles"))
             )
         }
 
-        let aboutSectionTitle = App.configuration.services.environment.isDevelopment ? "About" : "Acerca de"
-        let aboutSafeTitle = App.configuration.services.environment.isDevelopment ? "About Safe{Wallet}" : "Acerca de Bóveda"
-        let appVersionTitle = App.configuration.services.environment.isDevelopment ? "App version" : "Versión"
+        let aboutSectionTitle = NSLocalizedString("ui_settings_about_title", comment: "Settings section title for about")
+        let aboutSafeTitle = NSLocalizedString("ui_settings_about_safe_title", comment: "Settings item title for about Safe Wallet")
+        let appVersionTitle = NSLocalizedString("ui_settings_app_version_title", comment: "Settings item title for app version")
         let aboutSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .about(aboutSectionTitle), items: [
             Section.About.aboutGnosisSafe(aboutSafeTitle),
             Section.About.appVersion(appVersionTitle, "\(app.marketingVersion) (\(app.buildVersion))"),
@@ -302,9 +303,6 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.herencia(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-herencia", indexPath: indexPath)
             
-        case Section.App.seguridad(let name):
-            return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
-            
         case Section.App.planes(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-desktop-pairing", indexPath: indexPath)
             
@@ -394,10 +392,6 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             let comingSoonVC = ComingSoonViewController()
             show(comingSoonVC, sender: self)
             
-        case Section.App.seguridad:
-            let comingSoonVC = ComingSoonViewController()
-            show(comingSoonVC, sender: self)
-            
         case Section.App.planes:
             let comingSoonVC = ComingSoonViewController()
             show(comingSoonVC, sender: self)
@@ -410,7 +404,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             
         case Section.Support.chatWithUs:
             Tracker.trackEvent(.userOpenIntercom)
-            IntercomConfig.startChat()
+            openWhatsAppSupportChat()
             break
             
         case Section.Support.getSupport:
@@ -460,6 +454,16 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             })
             self.present(flow: self.importFlow)
         }
+    }
+
+    private func openWhatsAppSupportChat() {
+        // Keep consistent with the "Ingresar" WhatsApp support link (ContactRequiredViewController).
+        let phoneNumber = "5491134120450"
+        let message = "Consulta desde boveda.ai"
+        let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
+
+        guard let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") else { return }
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
@@ -595,7 +599,7 @@ extension AppSettingsViewController: NavigationRouter {
             preferredStyle: .alert
         )
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
         alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive) { [weak self] _ in
             self?.performLogout()
         })
@@ -638,7 +642,7 @@ extension AppSettingsViewController: NavigationRouter {
             preferredStyle: .alert
         )
 
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
         alert.addAction(UIAlertAction(title: "Sign Out & Reset", style: .destructive) { [weak self] _ in
             self?.performLogoutAndReset()
         })

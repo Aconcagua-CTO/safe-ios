@@ -139,7 +139,7 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
             if !self.showedNotificationsSessionTopics.contains(topic) {
                 self.showedNotificationsSessionTopics.append(topic)
                 DispatchQueue.main.async {
-                    App.shared.snackbar.show(message: "WalletConnect session created! Please return back to the browser.")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_session_created_message", comment: "WalletConnect session created message"))
                 }
             }
         }
@@ -291,7 +291,7 @@ extension DappsViewController: QRCodeScannerViewControllerDelegate {
                 }
             } else {
                 // Connect-to-Web is development-only; don't allow scanning to route into it in staging/production.
-                App.shared.snackbar.show(message: "Connect to Web is only available in development builds.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_ctw_dev_build_only_message", comment: "Connect to web dev builds only message"))
                 dismiss(animated: true, completion: nil)
             }
         } else {

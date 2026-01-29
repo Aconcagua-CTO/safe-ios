@@ -90,7 +90,7 @@ class SafeSettingsFlowFactory {
             titleText: "Your transaction is submitted!",
             bodyText: bodyText,
             primaryAction: "View transaction details",
-            secondaryAction: "Done",
+            secondaryAction: NSLocalizedString("button_done", comment: "Done button title"),
             trackingEvent: trackingEvent)
         successVC.onDone = completion
         return successVC

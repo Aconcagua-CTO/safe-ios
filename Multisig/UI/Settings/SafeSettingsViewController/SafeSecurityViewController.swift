@@ -57,7 +57,7 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Account security"
+        title = NSLocalizedString("ui_account_security_title", comment: "Title for account security screen")
         tableView.delegate = self
         tableView.dataSource = self
         tableView.backgroundColor = tableBackgroundColor
@@ -109,7 +109,8 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
             safe = selectedSafe
             updateSections()
         } catch {
-            onError(GSError.error(description: "Failed to load Safe Account settings", error: error))
+            onError(GSError.error(description: NSLocalizedString("ui_safe_settings_load_failed_error", comment: "Failed to load Safe settings error"),
+                                  error: error))
         }
         tableView.reloadData()
     }
@@ -136,7 +137,8 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
                             (error as NSError).domain == NSURLErrorDomain {
                             return
                         }
-                        self.onError(GSError.error(description: "Failed to load Safe Account settings", error: GSError.detailedError(from: error)))
+                        self.onError(GSError.error(description: NSLocalizedString("ui_safe_settings_load_failed_error", comment: "Failed to load Safe settings error"),
+                                                   error: GSError.detailedError(from: error)))
                     }
                 case .success(let safeInfo):
                     DispatchQueue.main.async { [weak self] in
@@ -149,7 +151,8 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
                 }
             }
         } catch {
-            onError(GSError.error(description: "Failed to load Safe Account settings", error: GSError.detailedError(from: error)))
+            onError(GSError.error(description: NSLocalizedString("ui_safe_settings_load_failed_error", comment: "Failed to load Safe settings error"),
+                                  error: GSError.detailedError(from: error)))
         }
     }
 
@@ -169,7 +172,8 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
                     (error as NSError).domain == NSURLErrorDomain {
                     return
                 }
-                self.onError(GSError.error(description: "Failed to load Safe Account owners", error: GSError.detailedError(from: error)))
+                self.onError(GSError.error(description: NSLocalizedString("ui_safe_owners_load_failed_error", comment: "Failed to load Safe owners error"),
+                                           error: GSError.detailedError(from: error)))
             case .success(let owners):
                 self.safeOwners = owners.compactMap { owner in
                     AddressInfo.init(address: owner)
@@ -484,11 +488,11 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
         switch section {
         case Section.requiredConfirmations(_):
             view = tableView.dequeueHeaderFooterView(InfoTableFooterView.self)
-            view!.titleLabel.text = "Use a threshold higher than one to prevent losing access to your Safe Account. Also, keep it lower than the total number of owners."
+            view!.titleLabel.text = NSLocalizedString("ui_safe_threshold_guidance", comment: "Safe threshold guidance")
 
         case Section.ownerAddresses(_):
             view = tableView.dequeueHeaderFooterView(InfoTableFooterView.self)
-            view!.titleLabel.text = "We recommend to add more than 1 owner."
+            view!.titleLabel.text = NSLocalizedString("ui_safe_recommend_add_owner", comment: "Recommend add owner")
         default:
             break
         }

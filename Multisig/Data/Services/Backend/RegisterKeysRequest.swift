@@ -9,11 +9,19 @@ struct RegisterKey: Codable {
     /// Matches backend schema: "deviceGenerated" | "tangem"
     let keyType: String
     /// Ethereum address (0x...) - backend will validate and normalize.
-    let address: String
+    let publicAddress: String
     /// Tangem card id (optional, used as stable serialNumber server-side)
     let cardId: String?
     /// Tangem wallet index (optional)
     let walletIndex: Int?
+    /// Burner tag identifier (optional)
+    let tagIdentifier: String?
+    /// Burner slot index (optional)
+    let slot: Int?
+    /// Burner attestation validity (optional)
+    let attestationValid: Bool?
+    /// Optional state override (1 = active, 0 = inactive)
+    let state: Int?
 }
 
 struct RegisterKeysPayload: Codable {
@@ -31,9 +39,13 @@ struct RegisteredKeyItem: Codable {
     let serialNumber: String?
     let userId: String?
     let keyType: String?
-    let address: String?
+    let publicAddress: String?
     let cardId: String?
     let walletIndex: Int?
+    let tagIdentifier: String?
+    let slot: Int?
+    let attestationValid: Bool?
+    let state: Int?
 }
 
 struct RegisterKeysRequest: HTTPRequest {

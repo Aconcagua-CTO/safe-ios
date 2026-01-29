@@ -22,7 +22,7 @@ class CollectibleDetailViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Collectible Details"
+        navigationItem.title = NSLocalizedString("ui_collectible_details_title", comment: "Collectible details title")
         titleLabel.setStyle(.headline)
         detailLabel.setStyle(.callout)
         descriptionLabel.setStyle(.body)

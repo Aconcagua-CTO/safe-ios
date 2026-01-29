@@ -22,21 +22,23 @@ class BackupIntroViewController: UIViewController, UIGestureRecognizerDelegate {
         super.viewDidLoad()
         
         navigationController?.interactivePopGestureRecognizer?.delegate = self
-        navigationItem.title = "Back up key"
+        navigationItem.title = NSLocalizedString("ui_backup_key_title", comment: "Title for backing up an owner key")
         
         titleLabel.setStyle(.title3)
+        titleLabel.text = NSLocalizedString("ui_backup_key_now_title", comment: "Backup key intro title")
         messageLabel.setStyle(.body)
+        messageLabel.text = NSLocalizedString("ui_backup_key_message", comment: "Backup key intro message")
         tipsView.setContent(
-            title: "Security tips",
+            title: NSLocalizedString("ui_backup_tips_title", comment: "Backup tips title"),
             tips: [
-                "Never share your seed phrase with anyone!",
-                "Write it down on paper or keep it in a vault.",
-                "Store it in a secret place or multiple places that you trust."
+                NSLocalizedString("ui_backup_tip_1", comment: "Backup tip 1"),
+                NSLocalizedString("ui_backup_tip_2", comment: "Backup tip 2"),
+                NSLocalizedString("ui_backup_tip_3", comment: "Backup tip 3")
             ]
         )
         
-        backupButton.setText("Back up manually", .filled)
-        cancelButton.setText("Not now", .plain)
+        backupButton.setText(NSLocalizedString("ui_backup_do_now", comment: "Backup do now button title"), .filled)
+        cancelButton.setText(NSLocalizedString("ui_backup_do_later", comment: "Backup do later button title"), .plain)
     }
 
     override func viewDidAppear(_ animated: Bool) {

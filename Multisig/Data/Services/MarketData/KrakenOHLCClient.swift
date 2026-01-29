@@ -94,7 +94,8 @@ final class KrakenOHLCClient {
                       completion: @escaping (Result<Response, Error>) -> Void) -> URLSessionDataTask? {
         let normalizedPair = pair.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedPair.isEmpty else {
-            completion(.failure(GSError.error(description: "Kraken OHLC: empty pair", error: nil)))
+            completion(.failure(GSError.error(description: NSLocalizedString("ui_kraken_ohlc_empty_pair", comment: "Kraken OHLC empty pair"),
+                                              error: nil)))
             return nil
         }
 
@@ -108,7 +109,8 @@ final class KrakenOHLCClient {
         }
         components?.queryItems = queryItems
         guard let url = components?.url else {
-            completion(.failure(GSError.error(description: "Kraken OHLC: invalid URL", error: nil)))
+            completion(.failure(GSError.error(description: NSLocalizedString("ui_kraken_ohlc_invalid_url", comment: "Kraken OHLC invalid URL"),
+                                              error: nil)))
             return nil
         }
 
@@ -127,7 +129,8 @@ final class KrakenOHLCClient {
             }
             guard let data else {
                 LogService.shared.error("[KrakenOHLCClient] empty response body", error: nil)
-                completion(.failure(GSError.error(description: "Kraken OHLC: empty response", error: nil)))
+                completion(.failure(GSError.error(description: NSLocalizedString("ui_kraken_ohlc_empty_response", comment: "Kraken OHLC empty response"),
+                                                  error: nil)))
                 return
             }
             let code = (response as? HTTPURLResponse)?.statusCode
@@ -137,7 +140,9 @@ final class KrakenOHLCClient {
                 let decoded = try decoder.decode(Response.self, from: data)
                 if let errs = decoded.error, !errs.isEmpty {
                     LogService.shared.error("[KrakenOHLCClient] api error: \(errs.joined(separator: ", "))", error: nil)
-                    completion(.failure(GSError.error(description: "Kraken OHLC error: \(errs.joined(separator: ", "))", error: nil)))
+                    completion(.failure(GSError.error(description: String(format: NSLocalizedString("ui_kraken_ohlc_error_format", comment: "Kraken OHLC error"),
+                                                                           errs.joined(separator: ", ")),
+                                                  error: nil)))
                     return
                 }
                 completion(.success(decoded))

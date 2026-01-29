@@ -1,0 +1,9 @@
+"ui_backup_key_now_title" = "Hacé un backup de tu llave ahora";
+"ui_backup_key_message" = "Te servirá si perdés o te roban el celular. Tus fondos siguen seguros con múltiples llaves aún si te roban o perdés también el backup físico.";
+"ui_backup_tips_title" = "Tips para el backup";
+"ui_backup_tip_1" = "No te recomendamos guardarlo en una nota digital como Apple Notes aunque tenga clave";
+"ui_backup_tip_2" = "Te recomendamos escribir las 12 palabras físicamente en un libro en una página que recuerdes";
+"ui_backup_tip_3" = "Si se pierde igualmente tendrás tu Card Key y la llave de recupero de BOVEDA";
+"ui_backup_do_now" = "Hacer backup ahora";
+"ui_backup_do_later" = "Hacerlo más tarde";
+"ui_tx_conflict_warning" = "Tenés una transacción y un rechazo. Ejecutar una reemplazará la otra";

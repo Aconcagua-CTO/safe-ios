@@ -76,10 +76,10 @@ class LedgerPendingConfirmationViewController: UIViewController {
 
         case .rawTx:
             safeTxHashLabel.text = nil
-            descriptionLabel.text = "Please confirm the transaction on your Ledger Nano X."
+            descriptionLabel.text = NSLocalizedString("ui_ledger_pending_confirmation_detail", comment: "Ledger pending confirmation detail")
         }
 
-        cancelButton.setText("Cancel", .plain)
+        cancelButton.setText(NSLocalizedString("cancel", comment: "Cancel button title"), .plain)
 
         sign()
     }

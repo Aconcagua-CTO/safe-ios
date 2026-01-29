@@ -49,7 +49,9 @@ class ReviewReplaceOwnerTxViewController: ReviewSafeTransactionViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: stepLabel)
 
         stepLabel.setStyle(.calloutTertiary)
-        stepLabel.text = "\(stepNumber) of \(maxSteps)"
+        stepLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                stepNumber,
+                                maxSteps)
 
         tableView.registerCell(ReplaceOwnerTableViewCell.self)
     }

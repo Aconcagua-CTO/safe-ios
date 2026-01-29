@@ -79,10 +79,10 @@ class ChangePasscodeFlow: UIFlow {
                 if AppConfiguration.FeatureToggles.securityCenter {
                     precondition(oldPasscode != nil, "Old passcode should be set before")
                     try App.shared.securityCenter.changePasscode(oldPasscode: oldPasscode!, newPasscode: newPasscode!)
-                    App.shared.snackbar.show(message: "Passcode changed")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_passcode_changed_message", comment: "Passcode changed message"))
                 } else {
                     try App.shared.auth.changePasscode(newPasscodeInPlaintext: newPasscode!)
-                    App.shared.snackbar.show(message: "Passcode changed")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_passcode_changed_message", comment: "Passcode changed message"))
                 }
             } catch let userCancellationError as GSError.CancelledByUser {
                 // do nothing

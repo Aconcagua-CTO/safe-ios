@@ -22,11 +22,21 @@ class SelectAddressViewController: UIAlertController {
         self.chain = chain
         self.completion = completion
 
-        addAction(UIAlertAction(title: "Paste from Clipboard", style: .default, handler: handlePaste(_:)))
-        addAction(UIAlertAction(title: "Scan QR Code", style: .default, handler: handleScan(_:)))
-        addAction(UIAlertAction(title: "Address Book", style: .default, handler: handleAddressBook(_:)))
-        addAction(UIAlertAction(title: "Owner Keys", style: .default, handler: handleOwnerKeys(_:)))
-        addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        addAction(UIAlertAction(title: NSLocalizedString("ui_paste_from_clipboard", comment: "Paste from clipboard action"),
+                                style: .default,
+                                handler: handlePaste(_:)))
+        addAction(UIAlertAction(title: NSLocalizedString("ui_scan_qr_code", comment: "Scan QR code action"),
+                                style: .default,
+                                handler: handleScan(_:)))
+        addAction(UIAlertAction(title: NSLocalizedString("ui_settings_address_book_title", comment: "Address book title"),
+                                style: .default,
+                                handler: handleAddressBook(_:)))
+        addAction(UIAlertAction(title: NSLocalizedString("ui_owner_keys_title", comment: "Owner keys title"),
+                                style: .default,
+                                handler: handleOwnerKeys(_:)))
+        addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                style: .cancel,
+                                handler: nil))
     }
 
     func handlePaste(_ action: UIAlertAction) {
@@ -187,7 +197,8 @@ class SelectAddressViewController: UIAlertController {
             completion(address)
         } catch {
             onError(error, text)
-            App.shared.snackbar.show(message: "Can't use this address. \(error.localizedDescription)")
+            App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_address_invalid_with_reason_format", comment: "Invalid address with reason"),
+                                                     error.localizedDescription))
         }
     }
 
@@ -205,11 +216,11 @@ class SelectAddressViewController: UIAlertController {
             return result
         }
 
-        static let empty = ValidationError(errorCode: -1, message: "Addres should not be empty")
-        static let invalid = ValidationError(errorCode: -2, message: "Value is not a valid address")
-        static let unsupported = ValidationError(errorCode: -3, message: "Address is not supported")
-        static let wrongChecksum = ValidationError(errorCode: -4, message: "Address checksum is not correct")
-        static let invalidChain = ValidationError(errorCode: -5, message: "Address has invalid chain")
+        static let empty = ValidationError(errorCode: -1, message: NSLocalizedString("ui_address_empty_error", comment: "Address empty error"))
+        static let invalid = ValidationError(errorCode: -2, message: NSLocalizedString("ui_address_invalid_message", comment: "Invalid address message"))
+        static let unsupported = ValidationError(errorCode: -3, message: NSLocalizedString("ui_address_not_supported_error", comment: "Address not supported error"))
+        static let wrongChecksum = ValidationError(errorCode: -4, message: NSLocalizedString("ui_address_checksum_error", comment: "Address checksum error"))
+        static let invalidChain = ValidationError(errorCode: -5, message: NSLocalizedString("ui_address_invalid_chain_error", comment: "Address invalid chain error"))
     }
 }
 

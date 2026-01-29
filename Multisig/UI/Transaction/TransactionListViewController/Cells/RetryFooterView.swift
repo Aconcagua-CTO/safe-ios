@@ -17,7 +17,7 @@ class RetryFooterView: UITableViewHeaderFooterView {
     override func awakeFromNib() {
         super.awakeFromNib()
         titleLabel.setStyle(.callout)
-        retryButton.setText("Retry", .plain)
+        retryButton.setText(NSLocalizedString("button_retry", comment: "Retry button title"), .plain)
     }
 
     @IBAction func didTapRetry(_ sender: Any) {

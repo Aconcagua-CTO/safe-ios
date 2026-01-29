@@ -43,7 +43,7 @@ class PendingWalletActionViewController: ContainerViewController, UIAdaptivePres
             failedImage: placeholder
         )
         titleLabel.setStyle(.title2)
-        cancelButton.setText("Cancel", .plain)
+        cancelButton.setText(NSLocalizedString("cancel", comment: "Cancel button title"), .plain)
     }
 
     override func willMove(toParent parent: UIViewController?) {
@@ -120,7 +120,10 @@ class PendingWalletActionViewController: ContainerViewController, UIAdaptivePres
         // to override
         guard checkNetwork() else {
             let walletName = keyInfo?.displayName ?? connection.remotePeer?.name ?? wallet?.name ?? ""
-            App.shared.snackbar.show(message: "Please change \(walletName) wallet network to \(chain.name!)")
+            let message = String(format: NSLocalizedString("ui_wallet_change_network_format", comment: "Wallet change network message"),
+                                 walletName,
+                                 chain.name ?? "")
+            App.shared.snackbar.show(message: message)
             doCancel()
             return
         }
@@ -174,12 +177,12 @@ class PendingWalletActionViewController: ContainerViewController, UIAdaptivePres
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(500)) {
                 UIApplication.shared.open(link, options: [:]) { success in
                     if !success {
-                        App.shared.snackbar.show(message: "Failed to open the wallet automatically. Please open it manually or try again.")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_wallet_open_failed_error", comment: "Wallet open failed error"))
                     }
                 }
             }
         } else {
-            App.shared.snackbar.show(message: "Please open your wallet to complete this operation.")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_wallet_open_prompt", comment: "Wallet open prompt"))
         }
     }
     

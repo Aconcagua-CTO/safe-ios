@@ -21,12 +21,12 @@ class DatePickerViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Select Date"
+        title = NSLocalizedString("ui_ctw_select_date_title", comment: "Select date title")
         datePicker.date = date ?? Date()
         datePicker.minimumDate = minimum
         datePicker.maximumDate = maximum
 
-        confirmButton.setText("Confirm", .filled)
+        confirmButton.setText(NSLocalizedString("ui_tx_confirm_action", comment: "Confirm action"), .filled)
     }
 
     @IBAction func didChangeValue(_ sender: Any) {

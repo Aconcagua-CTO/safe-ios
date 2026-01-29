@@ -67,7 +67,7 @@ class ClaimTokensViewController: LoadableViewController {
         super.viewDidLoad()
         Tracker.trackEvent(.screenClaimForm)
 
-        title = "Your allocation"
+        title = NSLocalizedString("ui_claim_allocation_title", comment: "Claim allocation title")
         navigationItem.largeTitleDisplayMode = .always
 
         view.backgroundColor = .backgroundSecondary
@@ -113,7 +113,7 @@ class ClaimTokensViewController: LoadableViewController {
 
     fileprivate func addClaimButton() {
         claimButton = UIButton(type: .custom)
-        claimButton.setText("Claim & Delegate", .filled)
+        claimButton.setText(NSLocalizedString("ui_claim_action", comment: "Claim and delegate action"), .filled)
         claimButton.translatesAutoresizingMaskIntoConstraints = false
         claimButton.addTarget(self, action: #selector(didTapClaimButton), for: .touchUpInside)
 
@@ -217,14 +217,16 @@ class ClaimTokensViewController: LoadableViewController {
                 let data = try result.get()
 
                 if let error = data.findError() {
-                    self.onError(GSError.error(description: "Internal data error: \(error)"))
+                    self.onError(GSError.error(description: String(format: NSLocalizedString("ui_claim_internal_data_error_format", comment: "Internal data error"),
+                                                                   "\(error)")))
                     return
                 }
 
                 self.claimData = data
                 self.onSuccess()
             } catch {
-                self.onError(GSError.error(description: "Failed to load data", error: error))
+                self.onError(GSError.error(description: NSLocalizedString("ui_claim_load_data_failed_error", comment: "Failed to load data error"),
+                                           error: error))
             }
         }
     }
@@ -275,8 +277,8 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
         switch row {
         case .claimableNow:
             let cell = tableView.dequeueCell(AllocationBoxCell.self)
-            cell.headerText = "Claim now"
-            cell.titleText = "Total"
+            cell.headerText = NSLocalizedString("ui_claim_now_header", comment: "Claim now header")
+            cell.titleText = NSLocalizedString("ui_claim_total_title", comment: "Claim total title")
             cell.tooltipHostView = view
             cell.valueText = "..."
             cell.titleTooltipText = nil
@@ -287,8 +289,8 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
             return cell
         case .claimableFuture:
             let cell = tableView.dequeueCell(AllocationBoxCell.self)
-            cell.headerText = "Claim in the future (vesting)"
-            cell.titleText = "Total"
+            cell.headerText = NSLocalizedString("ui_claim_future_header", comment: "Claim in the future header")
+            cell.titleText = NSLocalizedString("ui_claim_total_title", comment: "Claim total title")
             cell.tooltipHostView = view
 
             cell.valueText = "..."
@@ -300,7 +302,7 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
             return cell
         case .claimableTotal:
             let cell = tableView.dequeueCell(AllocationTotalCell.self)
-            cell.text = "Awarded total allocation ..."
+            cell.text = NSLocalizedString("ui_claim_awarded_total_placeholder", comment: "Awarded total allocation placeholder")
             return cell
         case .claimingAmount:
             let cell = tableView.dequeueCell(ClaimedAmountInputCell.self)
@@ -330,8 +332,8 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
         switch row {
         case .claimableNow:
             let cell = tableView.dequeueCell(AllocationBoxCell.self)
-            cell.headerText = "Claim now"
-            cell.titleText = "Total"
+            cell.headerText = NSLocalizedString("ui_claim_now_header", comment: "Claim now header")
+            cell.titleText = NSLocalizedString("ui_claim_total_title", comment: "Claim total title")
             cell.tooltipHostView = view
 
             cell.valueText = data.vestedValue
@@ -343,8 +345,8 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
 
         case .claimableFuture:
             let cell = tableView.dequeueCell(AllocationBoxCell.self)
-            cell.headerText = "Claim in the future (vesting)"
-            cell.titleText = "Total"
+            cell.headerText = NSLocalizedString("ui_claim_future_header", comment: "Claim in the future header")
+            cell.titleText = NSLocalizedString("ui_claim_total_title", comment: "Claim total title")
             cell.tooltipHostView = view
 
             cell.headerTooltipText = data.unvestedDurationTooltip
@@ -464,7 +466,7 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
 
         // INFO: this is incorrect for a general case,
         // but for this version of the code we assume all vestings are linear and started on the same date
-        let template = "SAFE vesting is vested linearly over $YEARS starting on $START"
+        let template = NSLocalizedString("ui_claim_vesting_template", comment: "Vesting tooltip template")
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .short
@@ -477,7 +479,7 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
         let durationTooltip = attributedString(
             template: template,
             replacements: [
-                "$YEARS": "4 years",
+                "$YEARS": NSLocalizedString("ui_claim_vesting_years_value", comment: "Vesting years value"),
                 "$START": startDateText
             ])
 
@@ -485,7 +487,8 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
         // Total allocated amount
         let allocatedTotal: Sol.UInt128 = claimData.totalAllocatedAmount(of: claimData.allocationsData, at: timestamp)
         let allocatedValue = formatted(amount: allocatedTotal)
-        let allocationText = "Awarded total allocation is \(allocatedValue)."
+        let allocationText = String(format: NSLocalizedString("ui_claim_awarded_total_format", comment: "Awarded total allocation format"),
+                                    allocatedValue)
 
         return DisplayValues(
             vestedValue: vestedValue,
@@ -510,42 +513,50 @@ extension ClaimTokensViewController: UITableViewDelegate, UITableViewDataSource 
 
         // user != nil, eco != nil, other = empty
         if userAllocation != nil, ecosystemAllocation != nil, otherAllocations.isEmpty {
-            template = "This includes user allocation of $USER and Safe guardian allocation of $ECO."
+            template = NSLocalizedString("ui_claim_allocation_user_eco_template",
+                                         comment: "Allocation template for user and guardian")
             isGuardian = true
         }
         // user != nil, eco != nil, other = not empty
         else if userAllocation != nil, ecosystemAllocation != nil, !otherAllocations.isEmpty {
-            template = "This includes user allocation of $USER, Safe guardian allocation of $ECO, and other allocation of $OTHER."
+            template = NSLocalizedString("ui_claim_allocation_user_eco_other_template",
+                                         comment: "Allocation template for user, guardian, other")
             isGuardian = true
         }
         // user != nil, eco = nil, other = empty
         else if userAllocation != nil, ecosystemAllocation == nil, otherAllocations.isEmpty {
-            template = "Not eligible for Safe Guardian allocation. Contribute to the community to become a Safe Guardian."
+            template = NSLocalizedString("ui_claim_allocation_user_no_guardian_template",
+                                         comment: "Allocation template for user only")
             isGuardian = false
         }
         // user != nil, eco = nil, other = not empty
         else if userAllocation != nil, ecosystemAllocation == nil, !otherAllocations.isEmpty {
-            template = "This includes user allocation of $USER and other allocation of $OTHER."
+            template = NSLocalizedString("ui_claim_allocation_user_other_template",
+                                         comment: "Allocation template for user and other")
             isGuardian = false
         }
         // user = nil, eco != nil, other = empty
         else if userAllocation == nil, ecosystemAllocation != nil, otherAllocations.isEmpty {
-            template = "This includes Safe guardian allocation of $ECO."
+            template = NSLocalizedString("ui_claim_allocation_guardian_template",
+                                         comment: "Allocation template for guardian only")
             isGuardian = true
         }
         // user = nil, eco != nil, other = not empty
         else if userAllocation == nil, ecosystemAllocation != nil, !otherAllocations.isEmpty {
-            template = "This includes Safe guardian allocation of $ECO and other allocation of $OTHER."
+            template = NSLocalizedString("ui_claim_allocation_guardian_other_template",
+                                         comment: "Allocation template for guardian and other")
             isGuardian = true
         }
         // user = nil, eco = nil, other = empty
         else if userAllocation == nil, ecosystemAllocation == nil, otherAllocations.isEmpty {
-            template = "Not eligible for SAFE allocations."
+            template = NSLocalizedString("ui_claim_allocation_not_eligible_template",
+                                         comment: "Allocation template for not eligible")
             isGuardian = false
         }
         // user = nil, eco = nil, other = not empty
         else if userAllocation == nil, ecosystemAllocation == nil, !otherAllocations.isEmpty {
-            template = "Not eligible for user or Safe Guardian allocation. Use Safe and contribute to the community to become a Safe Guardian."
+            template = NSLocalizedString("ui_claim_allocation_not_eligible_user_guardian_template",
+                                         comment: "Allocation template for not eligible user or guardian")
             isGuardian = false
         } else {
             preconditionFailure("Not reachable state")

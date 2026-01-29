@@ -55,7 +55,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
 
         initExecutionBuilder()
 
-        title = "Create Safe Account"
+        title = NSLocalizedString("ui_safe_create_account_title", comment: "Title for creating Safe account")
 
         cellBuilder = SafeCellBuilder(viewController: self, tableView: tableView)
 
@@ -80,10 +80,10 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
         refreshControl.addTarget(self, action: #selector(didPullToRefresh), for: .valueChanged)
         tableView.refreshControl = refreshControl
 
-        createButton.setText("Create Safe Account", .filled)
+        createButton.setText(NSLocalizedString("ui_safe_create_button_title", comment: "Create Safe account button title"), .filled)
 
         captionLabel.setStyle(.footnote)
-        captionLabel.text = "Creating a Safe Account may take a few minutes."
+        captionLabel.text = NSLocalizedString("ui_safe_creating_caption", comment: "Safe creation caption")
 
         uiModel.delegate = self
 
@@ -182,7 +182,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
                 return tableView.basicCell(name: name, indexPath: indexPath)
             } else {
                 let cell = tableView.basicCell(name: "", indexPath: indexPath)
-                cell.setTitle("Enter name", style: .body)
+                cell.setTitle(NSLocalizedString("ui_safe_enter_name_title", comment: "Enter name title"), style: .body)
                 return cell
             }
         case .network:
@@ -214,7 +214,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
         guard isValid(indexPath: indexPath) else { return nil }
         let id = uiModel.sectionHeaders[indexPath.section].id
         guard id == .owners else { return nil }
-        return "Remove owner"
+        return NSLocalizedString("ui_safe_remove_owner_title", comment: "Remove owner title")
     }
 
     // MARK: - Table View Events
@@ -272,8 +272,8 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
     func selectNetwork() {
         // show network selection screen
         let selectNetworkVC = SelectNetworkViewController()
-        selectNetworkVC.screenTitle = "Select Network"
-        selectNetworkVC.descriptionText = "Choose a network on which to create your Safe Account"
+        selectNetworkVC.screenTitle = NSLocalizedString("ui_safe_create_select_network_title", comment: "Select network title")
+        selectNetworkVC.descriptionText = NSLocalizedString("ui_safe_create_select_network_description", comment: "Select network description")
         selectNetworkVC.trackingEvent = .createSafeSelectNetwork
         // get the selected network back
         selectNetworkVC.completion = { [weak self] chain in
@@ -342,8 +342,8 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
         let keyPickerVC = ChooseOwnerKeyViewController(
             owners:  { keys },
             chainID: uiModel.chain.id,
-            titleText: "Deployer Account",
-            header: .text(description: "The selected account will be used to deploy the Safe."),
+            titleText: NSLocalizedString("ui_safe_deployer_account_title", comment: "Deployer account title"),
+            header: .text(description: NSLocalizedString("ui_safe_deployer_account_description", comment: "Deployer account description")),
             requestsPasscode: false,
             selectedKey: uiModel.selectedKey,
             balancesLoader: balancesLoader
@@ -515,7 +515,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             })
         }
 
-        formVC.navigationItem.title = "Edit transaction fee"
+        formVC.navigationItem.title = NSLocalizedString("ui_fee_edit_title", comment: "Title for editing the transaction fee")
         let ribbon = RibbonViewController(rootViewController: formVC)
         ribbon.storedChain = uiModel.chain
         let nav = UINavigationController(rootViewController: ribbon)
@@ -536,7 +536,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             cell.selectionStyle = .none
             return cell
         case 1:
-            let cell = helpTextCell("Safe Account will only exist on the selected network.", indexPath: indexPath)
+            let cell = helpTextCell(NSLocalizedString("ui_safe_network_exists_notice", comment: "Safe network exists notice"), indexPath: indexPath)
             return cell
         default:
             assertionFailure("Developer error: row count should be only two")
@@ -564,11 +564,11 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             case buttonCellIndex:
                 let cell = tableView.dequeueCell(IconButtonTableViewCell.self, for: indexPath)
                 cell.setImage(UIImage(systemName: "plus.circle"))
-                cell.setText("Add Owner")
+                cell.setText(NSLocalizedString("ui_safe_add_owner_title", comment: "Add owner title"))
                 return cell
 
             case helpTextIndex:
-                return helpTextCell("Add an owner by pasting or scanning an Ethereum address.", indexPath: indexPath)
+                return helpTextCell(NSLocalizedString("ui_safe_add_owner_help", comment: "Add owner help text"), indexPath: indexPath)
 
             default:
                 return UITableViewCell()
@@ -756,7 +756,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
 
     private func deployerAccountCell(tableView: UITableView) -> UITableViewCell {
         let cell = tableView.dequeueCell(DisclosureWithContentCell.self)
-        cell.setText("Pay with")
+        cell.setText(NSLocalizedString("ui_safe_pay_with_title", comment: "Pay with title"))
 
         if uiModel.isLoadingDeployer {
             let view = loadingView()
@@ -766,7 +766,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             view.setModel(model)
             cell.setContent(view)
         } else {
-            let view = textView("Key not set")
+            let view = textView(NSLocalizedString("ui_safe_key_not_set", comment: "Key not set text"))
             cell.setContent(view)
         }
         return cell
@@ -850,11 +850,11 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
                             s: Sol.UInt256(Data(signature.s))
                         )
                     } else {
-                        App.shared.snackbar.show(message: "Private key not available")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_tx_private_key_not_available_error", comment: "Private key not available error"))
                         return
                     }
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -864,7 +864,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
 
         case .walletConnect:
             guard let clientTx = walletConnectTransaction() else {
-                let gsError = GSError.error(description: "Unsupported transaction type")
+                let gsError = GSError.error(description: NSLocalizedString("ui_tx_unsupported_transaction_type_error", comment: "Unsupported transaction type error"))
                 App.shared.snackbar.show(error: gsError)
                 return
             }
@@ -887,7 +887,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             let chainId = Int(uiModel.chain.id!)!
             let isLegacy = uiModel.transaction is Eth.TransactionLegacy
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action" : "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -904,7 +904,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
                         s: Sol.UInt256(Data(Array(signature.s)))
                     )
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -919,7 +919,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             let chainId = Int(uiModel.chain.id!)!
             let isLegacy = uiModel.transaction is Eth.TransactionLegacy
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action": "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -937,7 +937,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
                         s: Sol.UInt256(Data(Array(signature.s)))
                     )
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -951,7 +951,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             let chainId = Int(uiModel.chain.id!)!
             let isLegacy = uiModel.transaction is Eth.TransactionLegacy
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action": "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -968,7 +968,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
                         s: Sol.UInt256(Data(Array(signature.s)))
                     )
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -1008,7 +1008,7 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
                     )
                     self?.localSignerSubmit()
                 } catch {
-                    App.shared.snackbar.show(error: GSError.error(description: "Signing failed", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error))
                 }
             }
             present(flow: keystoneSignFlow)

@@ -8,16 +8,28 @@
 
 import Foundation
 import CoreData
+import ObjectiveC
 
 extension AppSettings {
     static func current() -> AppSettings {
-        do {
-            let fr = AppSettings.fetchRequest().all()
-            let result = try App.shared.coreDataStack.viewContext.fetch(fr)
-            return result.first ?? AppSettings(context: App.shared.coreDataStack.viewContext)
-        } catch {
-            fatalError("Error fetching: \(error)")
+        let context = App.shared.coreDataStack.viewContext
+        let fr = AppSettings.fetchRequest().all()
+
+        var settings: AppSettings?
+        context.performAndWait {
+            do {
+                settings = try context.fetch(fr).first
+            } catch {
+                LogService.shared.error("[AppSettings] Failed to fetch current settings: \(error)")
+            }
+
+            if settings == nil {
+                settings = AppSettings(context: context)
+            }
         }
+
+        // `settings` is always set inside the `performAndWait` block.
+        return settings!
     }
 
     @AppSetting(\.termsAccepted)
@@ -70,12 +82,21 @@ extension AppSettings {
 
     @UserDefault(key: "io.gnosis.multisig.relayBannerWasShown")
     static var relayBannerWasShown: Bool?
+
+    @UserDefault(key: "io.gnosis.multisig.postSignupInstructionsShown")
+    private static var _postSignupInstructionsShown: Bool?
+
+    @UserDefault(key: "io.gnosis.multisig.pendingPostSignupInstructions")
+    private static var _pendingPostSignupInstructions: Bool?
     
     @UserDefault(key: "io.gnosis.multisig.useLocalVaults")
     private static var _useLocalVaults: Bool?
     
     @UserDefault(key: "io.gnosis.multisig.multiVaultBalancesEnabled")
     private static var _multiVaultBalancesEnabled: Bool?
+
+    @UserDefault(key: "io.gnosis.multisig.multiVaultTransactionsEnabled")
+    private static var _multiVaultTransactionsEnabled: Bool?
 
     @UserDefault(key: "io.gnosis.multisig.selfHostedExecuteEnabled")
     private static var _selfHostedExecuteEnabled: Bool?
@@ -94,6 +115,13 @@ extension AppSettings {
         set { _multiVaultBalancesEnabled = newValue }
     }
 
+    /// Feature flag: Aggregate transactions across all vaults
+    /// Default: true (aggregate)
+    static var multiVaultTransactionsEnabled: Bool {
+        get { _multiVaultTransactionsEnabled ?? true }
+        set { _multiVaultTransactionsEnabled = newValue }
+    }
+
     /// Feature flag: Execute Safe transactions via backend instead of gateway
     /// Default: true (self-hosted)
     static var selfHostedExecuteEnabled: Bool {
@@ -101,10 +129,25 @@ extension AppSettings {
         set { _selfHostedExecuteEnabled = newValue }
     }
 
+    /// When true, the post-signup Comencemos instructions were already shown.
+    static var didShowPostSignupInstructions: Bool {
+        get { _postSignupInstructionsShown ?? false }
+        set { _postSignupInstructionsShown = newValue }
+    }
+
+    /// When true, show post-signup instructions on next post-login gate.
+    static var pendingPostSignupInstructions: Bool {
+        get { _pendingPostSignupInstructions ?? false }
+        set { _pendingPostSignupInstructions = newValue }
+    }
+
     // MARK: - Onboarding key registration (Aconcagua)
 
     @UserDefault(key: "io.gnosis.multisig.pendingOwnerKeysRegistration")
     private static var _pendingOwnerKeysRegistration: Bool?
+
+    @UserDefault(key: "io.gnosis.multisig.ownerKeysBackendRegistryMigrated")
+    static var didMigrateOwnerKeysBackendRegistry: Bool?
 
     // MARK: - Aconcagua session (company context)
 
@@ -116,6 +159,10 @@ extension AppSettings {
     /// Cached enterprise roles from Firebase token claims or backend profile.
     @UserDefault(key: "io.gnosis.multisig.enterpriseRols")
     static var enterpriseRolsData: Data?
+
+    /// Cached lead card manufacturer used to route card key flows (e.g. "tangem", "burner").
+    @UserDefault(key: "io.gnosis.multisig.leadCardManufacturer")
+    static var leadCardManufacturer: String?
 
     /// When true, the app should retry registering onboarding owner keys (deviceGenerated + tangem) with backend.
     static var pendingOwnerKeysRegistration: Bool {
@@ -190,6 +237,93 @@ extension AppSettings {
 
     @AppSetting(\.walletAppRegistryMigrationCompleted)
     static var walletAppRegistryMigrationCompleted: Bool
+
+    // MARK: - Language override
+
+    @UserDefault(key: "io.gnosis.multisig.debug.forceSpanishLanguage")
+    private static var _debugForceSpanishLanguage: Bool?
+
+    static var debugForceSpanishLanguageEnabled: Bool {
+        get { _debugForceSpanishLanguage ?? true }  // Default to ON for development
+        set { _debugForceSpanishLanguage = newValue }
+    }
+
+    static func applyDebugLanguageOverrideIfNeeded() {
+        // Log this regardless of DEBUG to verify it's being called
+        LogService.shared.info("[LANG] 🌐 applyDebugLanguageOverrideIfNeeded() called")
+        
+        let enabled = debugForceSpanishLanguageEnabled
+        LogService.shared.info("[LANG] 🌐 debugForceSpanishLanguageEnabled = \(enabled)")
+        
+        if enabled {
+            LogService.shared.info("[LANG] 🌐 Forcing Spanish (es-AR)")
+            UserDefaults.standard.set(["es-AR"], forKey: "AppleLanguages")
+            UserDefaults.standard.set("es_AR", forKey: "AppleLocale")
+            UserDefaults.standard.synchronize()
+            Bundle.swizzleLocalizationIfNeeded()
+            Bundle.setLanguage("es")
+            
+            // Verify the bundle path exists
+            if let path = Bundle.main.path(forResource: "es", ofType: "lproj") {
+                LogService.shared.info("[LANG] 🌐 Found es.lproj at: \(path)")
+            } else {
+                LogService.shared.error("[LANG] ❌ Could not find es.lproj bundle!")
+            }
+        } else {
+            LogService.shared.info("[LANG] 🌐 Language override disabled (not forcing Spanish)")
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            UserDefaults.standard.removeObject(forKey: "AppleLocale")
+            UserDefaults.standard.synchronize()
+            Bundle.setLanguage(nil)
+        }
+    }
+}
+
+private var bundleLanguageKey: UInt8 = 0
+private var hasSwizzled = false
+
+extension Bundle {
+    static func swizzleLocalizationIfNeeded() {
+        guard !hasSwizzled else { return }
+        hasSwizzled = true
+        
+        let originalSelector = #selector(localizedString(forKey:value:table:))
+        let swizzledSelector = #selector(swizzled_localizedString(forKey:value:table:))
+        
+        guard let originalMethod = class_getInstanceMethod(Bundle.self, originalSelector),
+              let swizzledMethod = class_getInstanceMethod(Bundle.self, swizzledSelector) else {
+            LogService.shared.error("[LANG] ❌ Failed to get methods for swizzling")
+            return
+        }
+        
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+        LogService.shared.debug("[LANG] 🌐 Swizzled Bundle.localizedString")
+    }
+    
+    @objc func swizzled_localizedString(forKey key: String, value: String?, table tableName: String?) -> String {
+        // Check if we have a forced language
+        if let language = objc_getAssociatedObject(Bundle.main, &bundleLanguageKey) as? String,
+           self == Bundle.main {
+            // Try to load from the language-specific bundle
+            if let bundlePath = Bundle.main.path(forResource: language, ofType: "lproj"),
+               let languageBundle = Bundle(path: bundlePath) {
+                let result = languageBundle.swizzled_localizedString(forKey: key, value: value, table: tableName)
+                return result
+            }
+        }
+        
+        // Call the original implementation (now swizzled)
+        return self.swizzled_localizedString(forKey: key, value: value, table: tableName)
+    }
+    
+    static func setLanguage(_ language: String?) {
+        objc_setAssociatedObject(Bundle.main, &bundleLanguageKey, language, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        if let lang = language {
+            LogService.shared.debug("[LANG] 🌐 Set language to: \(lang)")
+        } else {
+            LogService.shared.debug("[LANG] 🌐 Cleared language override")
+        }
+    }
 }
 
 extension AppSettings {

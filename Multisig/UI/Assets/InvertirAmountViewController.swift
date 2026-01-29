@@ -50,7 +50,7 @@ final class InvertirAmountViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "¿Cuánto querés invertir?"
+        navigationItem.title = NSLocalizedString("ui_invertir_amount_title", comment: "Invertir amount title")
         navigationItem.backButtonTitle = "Back"
         view.backgroundColor = .backgroundPrimary
 
@@ -108,7 +108,7 @@ final class InvertirAmountViewController: UIViewController {
         tooltipSource?.message = tokenBalance.fullBalanceWithSymbol
         tooltipSource?.aboveTarget = false
 
-        maxButton.setText("Send max", .primary)
+        maxButton.setText(NSLocalizedString("ui_tx_send_max_action", comment: "Send max action"), .primary)
         maxButton.contentHorizontalAlignment = .right
         maxButton.addTarget(self, action: #selector(maxButtonTouched), for: .touchUpInside)
 
@@ -123,7 +123,7 @@ final class InvertirAmountViewController: UIViewController {
         amountField.delegate = self
 
         // Bottom button
-        nextButton.setText("Siguiente", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
         nextButton.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
 
         let stack = UIStackView(arrangedSubviews: [balanceRow, amountField])

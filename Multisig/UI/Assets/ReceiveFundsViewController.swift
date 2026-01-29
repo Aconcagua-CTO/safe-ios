@@ -18,9 +18,7 @@ final class ReceiveFundsViewController: UIViewController {
 
         view.backgroundColor = .backgroundSecondary
 
-        navigationItem.title = "Ingresar"
-        // Subtitle directly under the title (consistent with other nav-modals).
-        navigationItem.prompt = "Hacé una transferencia a la siguiente dirección"
+        navigationItem.title = NSLocalizedString("ui_balance_deposit_action", comment: "Deposit title")
 
         let swiftUIView = SafeInfoView()
             .environment(\.managedObjectContext, App.shared.coreDataStack.viewContext)

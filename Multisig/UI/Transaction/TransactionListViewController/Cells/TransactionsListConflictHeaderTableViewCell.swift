@@ -8,27 +8,21 @@
 
 import UIKit
 
-class TransactionsListConflictHeaderTableViewCell: UITableViewCell, ExternalURLSource {
+class TransactionsListConflictHeaderTableViewCell: UITableViewCell {
     @IBOutlet private weak var nonceLabel: UILabel!
     @IBOutlet weak var descriptionLabel: UILabel!
-    @IBOutlet weak var learnMoreButton: UIButton!
-
-    private(set) var url: URL? = {
-        App.configuration.help.conflictURL
-    }()
 
     override func awakeFromNib() {
         super.awakeFromNib()
         nonceLabel.setStyle(.footnoteSecondary)
         descriptionLabel.setStyle(.footnoteSecondary)
-        learnMoreButton.setText("Learn more", .plain)
+        descriptionLabel.text = NSLocalizedString(
+            "ui_tx_conflict_warning",
+            comment: "Warning text shown when multiple queued transactions share the same nonce."
+        )
     }
 
     func set(nonce: String) {
         nonceLabel.text = nonce
-    }
-
-    @IBAction func learnMoreButtonTouched(_ sender: Any) {
-        openExternalURL()
     }
 }

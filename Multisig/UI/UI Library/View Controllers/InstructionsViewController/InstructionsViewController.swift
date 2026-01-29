@@ -20,13 +20,14 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
     }
 
     var onClose: () -> Void = {}
+    var onPrimaryAction: (() -> Void)?
     var steps: [Step] = []
     var chain: Chain?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        title = "How does it work?"
+        title = NSLocalizedString("ui_instructions_how_it_works_title", comment: "Title for the instructions screen")
 
         tableView.registerCell(InstructionHeaderTableViewCell.self)
         tableView.registerCell(FinalStepInstructionTableViewCell.self)
@@ -43,6 +44,10 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
     }
     
     @IBAction func didTapButton(_ sender: Any) {
+        if let onPrimaryAction = onPrimaryAction {
+            onPrimaryAction()
+            return
+        }
         let createSafeVC = CreateSafeViewController()
         createSafeVC.onClose = onClose
         if let chain = chain {

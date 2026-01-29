@@ -32,13 +32,14 @@ class EnterCustomAddressViewController: UIViewController {
         super.viewDidLoad()
 
         ViewControllerFactory.removeNavigationBarBorder(self)
-        navigationItem.title = "Custom address or ENS"
+        navigationItem.title = NSLocalizedString("ui_claim_custom_address_title", comment: "Custom address title")
         navigationItem.largeTitleDisplayMode = .never
 
-        addressField.setPlaceholderText("Address or ENS")
+        addressField.setPlaceholderText(NSLocalizedString("ui_claim_custom_address_placeholder", comment: "Custom address placeholder"))
         addressField.onTap = { [weak self] in self?.didTapAddressField() }
 
-        continueButton.setText("Select & Continue", .filled)
+        continueButton.setText(NSLocalizedString("ui_claim_select_continue_action", comment: "Select and continue action"),
+                               .filled)
         continueButton.isEnabled = false
 
         descriptionLabel.setStyle(.body)
@@ -62,12 +63,16 @@ class EnterCustomAddressViewController: UIViewController {
     private func didTapAddressField() {
         let alertVC = UIAlertController(title: nil, message: nil, preferredStyle: .multiplatformActionSheet)
 
-        alertVC.addAction(UIAlertAction(title: "Paste from Clipboard", style: .default, handler: { [weak self] _ in
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_paste_from_clipboard", comment: "Paste from clipboard action"),
+                                        style: .default,
+                                        handler: { [weak self] _ in
             let text = Pasteboard.string
             self?.didEnterText(text)
         }))
 
-        alertVC.addAction(UIAlertAction(title: "Scan QR Code", style: .default, handler: { [weak self] _ in
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_scan_qr_code", comment: "Scan QR code action"),
+                                        style: .default,
+                                        handler: { [weak self] _ in
             guard let self = self else { return }
             let vc = QRCodeScannerViewController()
             vc.trackingParameters = self.trackingParameters
@@ -75,7 +80,7 @@ class EnterCustomAddressViewController: UIViewController {
                 if let _ = try? Address.addressWithPrefix(text: value) {
                     return .success(value)
                 } else {
-                    return .failure(GSError.error(description: "Can’t use this QR code",
+                    return .failure(GSError.error(description: NSLocalizedString("ui_qr_code_invalid_error", comment: "QR code invalid error"),
                                                   error: GSError.SafeAddressNotValid()))
                 }
             }
@@ -89,7 +94,9 @@ class EnterCustomAddressViewController: UIViewController {
                                                               chainId: chain.id,
                                                               ensRegistryAddress: chain.ensRegistryAddress)
         if blockchainDomainManager.ens != nil {
-            alertVC.addAction(UIAlertAction(title: "Enter ENS Name", style: .default, handler: { [weak self] _ in
+            alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_safe_enter_ens_title", comment: "Enter ENS name title"),
+                                            style: .default,
+                                            handler: { [weak self] _ in
                 guard let self = self else { return }
                 let ensNameVC = EnterENSNameViewController(manager: blockchainDomainManager, chain: self.chain)
                 ensNameVC.trackingParameters = self.trackingParameters
@@ -105,7 +112,9 @@ class EnterCustomAddressViewController: UIViewController {
         }
 
         if blockchainDomainManager.unstoppableDomainResolution != nil {
-            alertVC.addAction(UIAlertAction(title: "Enter Unstoppable Name", style: .default, handler: { [weak self] _ in
+            alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_safe_enter_unstoppable_title", comment: "Enter unstoppable name title"),
+                                            style: .default,
+                                            handler: { [weak self] _ in
                 guard let self = self else { return }
                 let udNameVC = EnterUnstoppableNameViewController(manager: blockchainDomainManager, chain: self.chain)
                 udNameVC.trackingParameters = self.trackingParameters
@@ -120,7 +129,9 @@ class EnterCustomAddressViewController: UIViewController {
             }))
         }
 
-        alertVC.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                        style: .cancel,
+                                        handler: nil))
         
         if let popoverPresentationController = alertVC.popoverPresentationController {
             popoverPresentationController.sourceView = addressField
@@ -136,7 +147,7 @@ class EnterCustomAddressViewController: UIViewController {
         }
 
         guard !text.isEmpty else {
-            addressField.setError("Address should not be empty")
+            addressField.setError(NSLocalizedString("ui_address_empty_error", comment: "Address empty error"))
             return
         }
         addressField.setInputText(text)
@@ -162,7 +173,7 @@ class EnterCustomAddressViewController: UIViewController {
 
         } catch {
             addressField.setError(
-                GSError.error(description: "Can’t use this address",
+                GSError.error(description: NSLocalizedString("ui_address_invalid_error", comment: "Address invalid error"),
                               error: error is EthereumAddress.Error ? GSError.AddressNotValid() : error))
         }
     }

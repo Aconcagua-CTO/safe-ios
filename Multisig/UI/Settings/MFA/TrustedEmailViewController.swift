@@ -46,7 +46,7 @@ class TrustedEmailViewController: LoadableViewController, UITableViewDelegate, U
         tableView.tableFooterView = UIView()
         tableView.separatorStyle = .none
 
-        title = "Email address"
+        title = NSLocalizedString("ui_trusted_email_title", comment: "Title for trusted email address screen")
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0

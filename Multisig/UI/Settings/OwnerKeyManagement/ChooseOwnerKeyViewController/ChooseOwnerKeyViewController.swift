@@ -245,7 +245,8 @@ class ChooseOwnerKeyViewController: UIViewController, PasscodeProtecting {
                     return
                 }
                 LogService.shared.error("Balances loading failed: \(error)")
-                let gsError = GSError.error(description: "Failed to load account balances", error: error)
+                let gsError = GSError.error(description: NSLocalizedString("ui_account_balances_load_failed_error", comment: "Failed to load account balances error"),
+                                            error: error)
                 App.shared.snackbar.show(error: gsError)
 
             case .success(let balances):

@@ -43,7 +43,10 @@ class AddKeyOnboardingViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        nextButton = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(didTapNextButton(_:)))
+        nextButton = UIBarButtonItem(title: NSLocalizedString("button_next", comment: "Next button title"),
+                                     style: .done,
+                                     target: self,
+                                     action: #selector(didTapNextButton(_:)))
         navigationItem.rightBarButtonItem = nextButton
 
         tableView.registerCell(CardTableViewCell.self)

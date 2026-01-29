@@ -25,7 +25,8 @@ enum ChainGatewayServiceFactory {
 
             let service = SafeClientGatewayService(
                 url: chain.gatewayURL,
-                logger: LogService.shared
+                logger: LogService.shared,
+                authRepository: App.shared.authRepository
             )
             cache[chainId] = service
             return service

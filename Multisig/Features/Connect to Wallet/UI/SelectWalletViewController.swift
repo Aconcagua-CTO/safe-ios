@@ -35,7 +35,7 @@ class SelectWalletViewController: LoadableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Connect Wallet"
+        title = NSLocalizedString("ui_wallet_connect_title", comment: "Connect wallet title")
 
         tableView.backgroundColor = .backgroundPrimary
         tableView.registerCell(BasicCell.self)
@@ -43,11 +43,11 @@ class SelectWalletViewController: LoadableViewController {
         tableView.rowHeight = 60
 
         navigationItem.searchController = searchController
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         navigationItem.hidesSearchBarWhenScrolling = false
 
         emptyView.setImage(UIImage(named: "ico-wallet-placeholder")!)
-        emptyView.setTitle("No wallets found")
+        emptyView.setTitle(NSLocalizedString("ui_wallets_empty_title", comment: "No wallets found title"))
 
         tableView.delegate = self
         tableView.dataSource = self
@@ -55,7 +55,7 @@ class SelectWalletViewController: LoadableViewController {
 
         searchController.searchResultsUpdater = self
         searchController.obscuresBackgroundDuringPresentation = false
-        searchController.searchBar.placeholder = "Search"
+        searchController.searchBar.placeholder = NSLocalizedString("ui_wallet_search_placeholder", comment: "Wallet search placeholder")
         searchController.hidesNavigationBarDuringPresentation = false
 
         walletsSource.delegate = self
@@ -97,7 +97,7 @@ extension SelectWalletViewController: UITableViewDelegate, UITableViewDataSource
         switch sections[indexPath.section].type {
         case.qrCode:
             return tableView.basicCell(
-                name: "Show QR Code",
+                name: NSLocalizedString("ui_wallet_show_qr_code", comment: "Show QR code option"),
                 icon: "qrcode",
                 indexPath: indexPath,
                 disclosureImage: nil,
@@ -130,7 +130,7 @@ extension SelectWalletViewController: UITableViewDelegate, UITableViewDataSource
             } else if let url = wallet.appStoreLink ?? wallet.homepage {
                 open(url: url)
             } else {
-                App.shared.snackbar.show(message: "Wallet is not installed and store link is missing")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_wallet_not_installed_error", comment: "Wallet not installed error"))
             }
         }
     }
@@ -173,8 +173,12 @@ extension SelectWalletViewController: UITableViewDelegate, UITableViewDataSource
         wallets = walletsSource.wallets(searchTerm)
         if searchTerm == nil {
             sections = [.init(type: .qrCode, title: "", rows: []),
-                        .init(type: .installedWallets, title: "ON THIS DEVICE", rows: wallets.filter { $0.installed }),
-                        .init(type: .otherWallets, title: "OTHER WALLETS", rows: wallets.filter { !$0.installed })]
+                        .init(type: .installedWallets,
+                              title: NSLocalizedString("ui_wallet_section_on_device", comment: "Wallet section on device"),
+                              rows: wallets.filter { $0.installed }),
+                        .init(type: .otherWallets,
+                              title: NSLocalizedString("ui_wallet_section_other", comment: "Wallet section other"),
+                              rows: wallets.filter { !$0.installed })]
         } else {
             sections = [.init(type: .all, title: "", rows: wallets)]
         }
@@ -201,7 +205,7 @@ extension SelectWalletViewController: WCRegistryControllerDelegate {
     }
 
     func didFailToLoad(controller: WCRegistryController, error: Error) {
-        App.shared.snackbar.show(error: GSError.error(description: "Failed to load wallets",
+        App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_wallets_load_failed_error", comment: "Failed to load wallets error"),
                                                       error: error.localizedDescription))
         bindData()
     }

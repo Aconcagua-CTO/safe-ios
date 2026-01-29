@@ -151,7 +151,9 @@ class WalletConnectManager {
             } catch {
                 print("DAPP: Respond Error: \(error.localizedDescription)")
                 Task { @MainActor in
-                    App.shared.snackbar.show(error: GSError.error(description: "Respond Error: ", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: String(format: NSLocalizedString("ui_walletconnect_response_error_format", comment: "WalletConnect response error"),
+                                                                                      error.localizedDescription),
+                                                             error: error))
                 }
             }
         }
@@ -168,7 +170,9 @@ class WalletConnectManager {
             } catch {
                 print("DAPP: Respond Error: \(error.localizedDescription)")
                 Task { @MainActor in
-                    App.shared.snackbar.show(error: GSError.error(description: "Respond Error: ", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: String(format: NSLocalizedString("ui_walletconnect_response_error_format", comment: "WalletConnect response error"),
+                                                                                      error.localizedDescription),
+                                                             error: error))
                 }
             }
         }
@@ -320,7 +324,8 @@ class WalletConnectManager {
             } catch {
                 LogService.shared.error("DAPP: disconnecting Session error: \(error)")
                 Task { @MainActor in
-                    App.shared.snackbar.show(error: GSError.error(description: "Disconnecting Session error", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_walletconnect_disconnect_error", comment: "WalletConnect disconnect error"),
+                                                             error: error))
                 }
                 
                 
@@ -377,7 +382,7 @@ class WalletConnectManager {
                     request.chainId == safeChainId
                 else {
                     DispatchQueue.main.async {
-                        App.shared.snackbar.show(message: "Please select dApp chain matching with the safe's chain")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_chain_mismatch_error", comment: "WalletConnect chain mismatch error"))
                     }
                     reject(request: request, 
                            error: JSONRPCError(code: -33012, message: "Please select a different chain"))
@@ -403,7 +408,7 @@ class WalletConnectManager {
                 
                 guard !safe.isReadOnly else {
                     DispatchQueue.main.async {
-                        App.shared.snackbar.show(message: "Please import Safe Owner Key to initiate WalletConnect transactions")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_owner_key_required_error", comment: "WalletConnect owner key required error"))
                     }
                     reject(request: request)
                     return
@@ -438,7 +443,8 @@ class WalletConnectManager {
                     } catch {
                         DispatchQueue.main.async {
                             App.shared.snackbar.show(
-                                error: GSError.error(description: "Could not handle WalletConnect request", error: error)
+                                error: GSError.error(description: NSLocalizedString("ui_walletconnect_request_failed_error", comment: "WalletConnect request failed error"),
+                                                     error: error)
                             )
                         }
                     }

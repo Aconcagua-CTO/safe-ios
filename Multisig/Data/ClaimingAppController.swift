@@ -215,19 +215,19 @@ class ClaimingAppController {
             let OK: String? = nil
 
             if account.isZero {
-                return "Incorrect data configuration"
+                return NSLocalizedString("ui_claim_error_incorrect_config", comment: "Claim incorrect config error")
             }
 
             if allocations.isEmpty {
-                return "No allocations found in the data"
+                return NSLocalizedString("ui_claim_error_no_allocations", comment: "Claim no allocations error")
             }
 
             if allocations.count != vestings.count {
-                return "Vestings do not match allocations"
+                return NSLocalizedString("ui_claim_error_vestings_mismatch", comment: "Claim vestings mismatch error")
             }
 
             if allocationsData.count != allocations.count {
-                return "Allocation data is missing some allocations"
+                return NSLocalizedString("ui_claim_error_allocation_missing", comment: "Claim allocation missing error")
             }
 
             return OK

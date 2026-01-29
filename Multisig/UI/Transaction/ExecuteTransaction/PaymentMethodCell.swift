@@ -37,12 +37,15 @@ class PaymentMethodCell: UITableViewCell {
                 ]
             )
         )
-        let paymentMethodLabelString = NSMutableAttributedString(string: "Sponsored by ", attributes: GNOTextStyle.headline.attributes)
+        let paymentMethodLabelString = NSMutableAttributedString(
+            string: NSLocalizedString("ui_tx_sponsored_by_prefix", comment: "Sponsored by prefix"),
+            attributes: GNOTextStyle.headline.attributes
+        )
         paymentMethodLabelString.append(gnosisSymbolString)
 
         paymentMethodLabel.attributedText = paymentMethodLabelString
 
-        descriptionLabel.text = "Transactions per hour:"
+        descriptionLabel.text = NSLocalizedString("ui_tx_transactions_per_hour_title", comment: "Transactions per hour title")
         descriptionLabel.numberOfLines = 1
 
         backgroundView = UIView()
@@ -59,7 +62,11 @@ class PaymentMethodCell: UITableViewCell {
 
             remainingRelaysString.append(
                 NSAttributedString(
-                    string: "\u{00a0}\(remaining) of \(total)",
+                    string: "\u{00a0}" + String(
+                        format: NSLocalizedString("ui_tx_remaining_of_format", comment: "Remaining relays format"),
+                        "\(remaining)",
+                        "\(total)"
+                    ),
                     attributes: [
                         NSAttributedString.Key.foregroundColor: UIColor.error,
                         NSAttributedString.Key.font: UIFont.gnoFont(forTextStyle: GNOTextStyle.headlinePrimary)
@@ -70,15 +77,17 @@ class PaymentMethodCell: UITableViewCell {
 
         } else {
             remainingRelaysLabel.textColor = .labelPrimary
-            remainingRelaysLabel.text = "\(remaining) of \(total)"
+            remainingRelaysLabel.text = String(format: NSLocalizedString("ui_tx_remaining_of_format", comment: "Remaining relays format"),
+                                               "\(remaining)",
+                                               "\(total)")
         }
         remainingRelaysLabel.isHidden = false
     }
 
     func setSignerAccount() {
         paymentMethodIcon.image = UIImage(named: "ico-payment-key")
-        paymentMethodLabel.text = "With an owner account"
-        descriptionLabel.text = "Select one of the added keys to interact with the transaction"
+        paymentMethodLabel.text = NSLocalizedString("ui_tx_with_owner_account_title", comment: "With an owner account title")
+        descriptionLabel.text = NSLocalizedString("ui_tx_select_key_to_interact_description", comment: "Select key to interact description")
         descriptionLabel.numberOfLines = 0
         remainingRelaysLabel.isHidden = true
     }

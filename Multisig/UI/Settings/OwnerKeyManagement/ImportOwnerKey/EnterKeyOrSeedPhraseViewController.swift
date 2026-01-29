@@ -34,11 +34,14 @@ class EnterKeyOrSeedPhraseViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Import Owner Key"
+        title = NSLocalizedString("ui_owner_key_import_title", comment: "Title for importing an owner key")
 
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
 
-        nextButton = UIBarButtonItem(title: "Next", style: .done, target: self, action: #selector(didTapNextButton(_:)))
+        nextButton = UIBarButtonItem(title: NSLocalizedString("button_next", comment: "Next button title"),
+                                     style: .done,
+                                     target: self,
+                                     action: #selector(didTapNextButton(_:)))
         secureButton = UIBarButtonItem(image: secureButtonImage, style: .plain, target: self, action: #selector(didTapSecureButton(_:)))
 
         navigationItem.rightBarButtonItems = [nextButton, secureButton]
@@ -60,7 +63,7 @@ class EnterKeyOrSeedPhraseViewController: UIViewController {
         textView.becomeFirstResponder()
 
         placeholderLabel.setStyle(.bodyTertiary)
-        placeholderLabel.text = "Enter private key or seed phrase"
+        placeholderLabel.text = NSLocalizedString("ui_import_key_placeholder", comment: "Import key placeholder")
     }
 
     override func viewWillAppear(_ animated: Bool) {

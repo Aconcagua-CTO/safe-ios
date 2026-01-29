@@ -34,13 +34,12 @@ class ReviewSendFundsTransactionHeaderTableViewCell: UITableViewCell {
     }
 
     func setToAddress(_ address: Address, label: String?, imageUri: URL?, prefix: String?) {
-        // To section should show only the address in white (no secondary line), without identicon.
-        toAddressInfoView.setAddressOneLine(address,
-                                            hideAddress: true,
-                                            label: label,
-                                            imageUri: imageUri,
-                                            showIdenticon: false,
-                                            prefix: prefix)
+        // To section: agenda name (white) + abbreviated address (grey), without identicon.
+        toAddressInfoView.setAddress(address,
+                                     label: label,
+                                     imageUri: imageUri,
+                                     showIdenticon: false,
+                                     prefix: prefix)
     }
 
     /// Configure the Amount block:

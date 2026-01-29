@@ -33,53 +33,68 @@ class InvertirViewController: AssetsViewController {
 
         // Invertir: "+ Comprar" should start the Invest buy flow (not the receive/address modal).
         totalBalanceView.onReceivedClicked = { [weak self] in
-            guard let self else { return }
-            // IMPORTANT: retain coordinator; otherwise callbacks won't navigate beyond screen 1.
-            let flow = InvestBuyFlowCoordinator(presenter: self)
-            flow.onDismiss = { [weak self] in
-                self?.investBuyFlow = nil
-            }
-            self.investBuyFlow = flow
-            flow.start()
+            self?.launchBuyFlow()
         }
 
-        // Invertir: "- Vender" should start the Invest sell flow (not the generic Retirar/Send flow).
+        // Invertir: "- Vender" should start the Invest sell flow.
         totalBalanceView.onSendClicked = { [weak self] in
-            guard let self else { return }
-            guard let safe = try? Safe.getSelected() else { return }
-
-            if safe.isReadOnly {
-                let vc = AddOwnerFirstViewController()
-                vc.onSuccess = { [weak self] in
-                    guard let self else { return }
-                    if (try? Safe.getSelected())?.isReadOnly == false {
-                        self.startSellFlow()
-                    }
-                    self.dismiss(animated: true)
-                }
-                let navigationController = UINavigationController(rootViewController: vc)
-                self.present(navigationController, animated: true)
-            } else {
-                self.startSellFlow()
-            }
+            self?.launchSellFlow()
         }
+
     }
 
-    private func startSellFlow() {
-        // IMPORTANT: retain coordinator; otherwise callbacks won't navigate beyond screen 1.
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // Invertir lists "markets" (no balances), so reuse the exact total computed by Assets tab.
+        // This avoids extra network calls + avoids showing 0.00 when prices are missing.
+        updateHeaderFromAssetsCacheIfAvailable()
+    }
+
+    private func launchBuyFlow() {
+        let flow = InvestBuyFlowCoordinator(presenter: self)
+        flow.onDismiss = { [weak self] in
+            self?.investBuyFlow = nil
+        }
+        investBuyFlow = flow
+        investBuyFlow?.start()
+    }
+
+    private func launchSellFlow() {
         let flow = InvestSellFlowCoordinator(presenter: self)
         flow.onDismiss = { [weak self] in
             self?.investSellFlow = nil
         }
         investSellFlow = flow
-        flow.start()
+        investSellFlow?.start()
+    }
+
+    private var invertirBalancesViewController: InvertirBalancesViewController? {
+        if let current = selectedViewController as? InvertirBalancesViewController {
+            return current
+        }
+        return viewControllers.first { $0 is InvertirBalancesViewController } as? InvertirBalancesViewController
+    }
+
+    // MARK: - Header balance (same as Assets tab)
+
+    private func updateHeaderFromAssetsCacheIfAvailable() {
+        guard let safe = try? Safe.getSelected() else { return }
+        let chainId = safe.chain?.id
+        if let cachedTotal = LatestBalancesCache.shared.retrieveTotalFiat(chainId: chainId) {
+            totalBalanceView.amount = cachedTotal
+            totalBalanceView.loading = false
+        }
+
+        // Keep Vender enabled/disabled consistent with Assets (non-zero owned balances).
+        let cachedBalances = LatestBalancesCache.shared.retrieve(chainId: chainId) ?? []
+        if !cachedBalances.isEmpty {
+            totalBalanceView.sendEnabled = cachedBalances.contains(where: { $0.balanceValue.value > 0 })
+        }
     }
 }
 
-// MARK: - Invest (Comprar) Flow - Screen 1
+// MARK: - InvestSelectTokenViewController (Buy token picker)
 
-/// Screen 1: token selection list for the Invertir "Comprar" flow.
-/// Shows the same token list style as the Invertir tab, but excludes Savings (Ahorros) and allows selecting rows.
 final class InvestSelectTokenViewController: UIViewController {
     struct BalanceCategorySection {
         let id: String
@@ -87,24 +102,24 @@ final class InvestSelectTokenViewController: UIViewController {
         let items: [TokenBalance]
     }
 
-    var onTokenSelected: ((TokenBalance) -> Void)?
+    var onTokenSelected: ((TokenBalance, Double?) -> Void)?
     var onLoadedBalances: (([TokenBalance]) -> Void)?
 
     private let tableView = UITableView(frame: .zero, style: .plain)
-
+    private let searchController = UISearchController(searchResultsController: nil)
+    
     private var currentTask: URLSessionTask?
     private var sections: [BalanceCategorySection] = []
     private var isWhitelistSyncInProgress = false
+    /// Prevent an infinite loop when backend returns an empty whitelist (`[]`).
+    private var didReceiveEmptyWhitelistFromBackend = false
 
-    // Bottom-sticky search UI (same as main Invertir screen)
-    private let searchContainerView = UIView()
-    private let searchFieldBackgroundView = UIView()
-    private let searchTextField = UITextField()
-    private var searchBottomConstraint: NSLayoutConstraint?
-    private let searchContainerHeight: CGFloat = 64
     private var searchTerm: String = ""
-
     private var allMarketItems: [TokenBalance] = []
+    private var tokenChangePct24h: [String: Double] = [:] // token address -> 24h % change
+    private var tokenPrices: [String: Double] = [:] // token address -> unit price (USD)
+    private var marketPriceTasks: [URLSessionTask] = []
+    private let marketPriceService = MarketPriceService()
 
     private var clientGatewayService: BalancesAPI {
         guard let chain = try? Safe.getSelected()?.chain else {
@@ -118,11 +133,11 @@ final class InvestSelectTokenViewController: UIViewController {
 
         view.backgroundColor = .backgroundPrimary
 
-        navigationItem.title = "¿Qué querés comprar?"
+        navigationItem.title = NSLocalizedString("ui_invertir_select_asset_title", comment: "Invertir select asset title")
         ViewControllerFactory.addCloseButton(self)
 
         configureTable()
-        configureBottomSearch()
+        configureSearch()
 
         loadBalances()
     }
@@ -131,6 +146,8 @@ final class InvestSelectTokenViewController: UIViewController {
         super.viewDidDisappear(animated)
         // Avoid leaking a running request if the modal is dismissed.
         currentTask?.cancel()
+        marketPriceTasks.forEach { $0.cancel() }
+        marketPriceTasks = []
     }
 
     private func configureTable() {
@@ -162,91 +179,18 @@ final class InvestSelectTokenViewController: UIViewController {
         ])
     }
 
-    // MARK: - Search (sticky bottom)
+    // MARK: - Search
 
-    private func configureBottomSearch() {
-        searchContainerView.translatesAutoresizingMaskIntoConstraints = false
-        searchContainerView.backgroundColor = .backgroundPrimary
-
-        searchFieldBackgroundView.translatesAutoresizingMaskIntoConstraints = false
-        searchFieldBackgroundView.backgroundColor = .backgroundSecondary
-        searchFieldBackgroundView.layer.cornerRadius = 12
-        searchFieldBackgroundView.layer.masksToBounds = true
-        searchFieldBackgroundView.layer.borderWidth = 1
-        searchFieldBackgroundView.layer.borderColor = UIColor.border.cgColor
-
-        searchTextField.translatesAutoresizingMaskIntoConstraints = false
-        searchTextField.borderStyle = .none
-        searchTextField.setStyle(.bodyPrimary)
-        searchTextField.clearButtonMode = .whileEditing
-        searchTextField.autocorrectionType = .no
-        searchTextField.autocapitalizationType = .none
-        searchTextField.returnKeyType = .done
-        searchTextField.addTarget(self, action: #selector(searchTextDidChange), for: .editingChanged)
-
-        // Left icon
-        let icon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
-        icon.tintColor = .labelSecondary
-        icon.contentMode = .scaleAspectFit
-        icon.frame = CGRect(x: 0, y: 0, width: 18, height: 18)
-        let iconContainer = UIView(frame: CGRect(x: 0, y: 0, width: 34, height: 18))
-        icon.center = CGPoint(x: 17, y: 9)
-        iconContainer.addSubview(icon)
-        searchTextField.leftView = iconContainer
-        searchTextField.leftViewMode = .always
-
-        searchTextField.attributedPlaceholder = NSAttributedString(
-            string: "Search tokens",
-            attributes: GNOTextStyle.bodyTertiary.attributes
-        )
-
-        view.addSubview(searchContainerView)
-        searchContainerView.addSubview(searchFieldBackgroundView)
-        searchFieldBackgroundView.addSubview(searchTextField)
-
-        let bottom = searchContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-        searchBottomConstraint = bottom
-
-        NSLayoutConstraint.activate([
-            searchContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            searchContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            bottom,
-            searchContainerView.heightAnchor.constraint(equalToConstant: searchContainerHeight),
-
-            searchFieldBackgroundView.leadingAnchor.constraint(equalTo: searchContainerView.leadingAnchor, constant: 16),
-            searchFieldBackgroundView.trailingAnchor.constraint(equalTo: searchContainerView.trailingAnchor, constant: -16),
-            searchFieldBackgroundView.topAnchor.constraint(equalTo: searchContainerView.topAnchor, constant: 10),
-            searchFieldBackgroundView.bottomAnchor.constraint(equalTo: searchContainerView.bottomAnchor, constant: -10),
-
-            searchTextField.leadingAnchor.constraint(equalTo: searchFieldBackgroundView.leadingAnchor, constant: 12),
-            searchTextField.trailingAnchor.constraint(equalTo: searchFieldBackgroundView.trailingAnchor, constant: -12),
-            searchTextField.topAnchor.constraint(equalTo: searchFieldBackgroundView.topAnchor, constant: 8),
-            searchTextField.bottomAnchor.constraint(equalTo: searchFieldBackgroundView.bottomAnchor, constant: -8)
-        ])
-
-        // Ensure table content is not hidden behind the sticky search.
-        let inset = searchContainerHeight + 8
-        tableView.contentInset.bottom += inset
-        tableView.scrollIndicatorInsets.bottom += inset
-
-        // Move search bar above keyboard
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(keyboardWillShow(_:)),
-                                               name: UIResponder.keyboardWillShowNotification,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(keyboardWillHide(_:)),
-                                               name: UIResponder.keyboardWillHideNotification,
-                                               object: nil)
-
-        // Dismiss keyboard when scrolling/tapping list
-        tableView.keyboardDismissMode = .onDrag
-    }
-
-    @objc private func searchTextDidChange() {
-        searchTerm = (searchTextField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        sections = makeSections(items: filteredItems(from: allMarketItems, term: searchTerm))
-        tableView.reloadData()
+    private func configureSearch() {
+        searchController.searchResultsUpdater = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = NSLocalizedString("ui_assets_search_tokens_placeholder", comment: "Search tokens placeholder")
+        searchController.hidesNavigationBarDuringPresentation = false
+        searchController.searchBar.autocapitalizationType = .none
+        
+        navigationItem.searchController = searchController
+        navigationItem.hidesSearchBarWhenScrolling = false
+        definesPresentationContext = true
     }
 
     private func filteredItems(from items: [TokenBalance], term: String) -> [TokenBalance] {
@@ -256,28 +200,6 @@ final class InvestSelectTokenViewController: UIViewController {
             item.symbol.lowercased().contains(t)
             || item.name.lowercased().contains(t)
             || item.category.lowercased().contains(t)
-        }
-    }
-
-    @objc private func keyboardWillShow(_ notification: NSNotification) {
-        guard let view = view,
-              let screenValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue,
-              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber
-        else { return }
-        let keyboardScreen = screenValue.cgRectValue
-        let keyboardFrame = view.convert(keyboardScreen, from: UIScreen.main.coordinateSpace)
-        let overlap = max(0, keyboardFrame.height - view.safeAreaInsets.bottom)
-        searchBottomConstraint?.constant = -overlap
-        UIView.animate(withDuration: duration.doubleValue) {
-            self.view.layoutIfNeeded()
-        }
-    }
-
-    @objc private func keyboardWillHide(_ notification: NSNotification) {
-        guard let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber else { return }
-        searchBottomConstraint?.constant = 0
-        UIView.animate(withDuration: duration.doubleValue) {
-            self.view.layoutIfNeeded()
         }
     }
 
@@ -292,33 +214,26 @@ final class InvestSelectTokenViewController: UIViewController {
         let chainId = chain.id ?? ""
         let totalWhitelist = TokenWhitelist.all.count
 
-        #if DEBUG
-        do {
-            let all = TokenWhitelist.all
-            let enabledFalse = all.filter { $0.enabled == false }.count
-            let enabledNil = all.filter { $0.enabled == nil }.count
-            let missingChainId = all.filter { (($0.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty }.count
-            let missingNetwork = all.filter { (($0.network ?? "").trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty }.count
-            let uniqueSymbols = Set(all.compactMap { ($0.tokenSymbol ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }.filter { !$0.isEmpty }).count
-            LogService.shared.debug("[InvestMarkets] rawWhitelist total=\(all.count) uniqueSymbols=\(uniqueSymbols) enabledFalse=\(enabledFalse) enabledNil=\(enabledNil) missing(chainId=\(missingChainId), network=\(missingNetwork)) chainId=\(chainId) network=\(chain.shortName ?? "nil")")
-        }
-        #endif
-
         if totalWhitelist == 0, !isWhitelistSyncInProgress {
+            if didReceiveEmptyWhitelistFromBackend {
+                sections = []
+                tableView.reloadData()
+                return
+            }
             isWhitelistSyncInProgress = true
-            #if DEBUG
-            LogService.shared.debug("[InvestMarkets] Whitelist empty locally; triggering sync (chainId=\(chainId), network=\(chain.shortName ?? "nil"))")
-            #endif
             App.shared.tokenWhitelistRepository.syncWhitelist(force: false, network: nil) { [weak self] result in
                 guard let self else { return }
                 self.isWhitelistSyncInProgress = false
                 switch result {
                 case .success:
-                    #if DEBUG
-                    LogService.shared.debug("[InvestMarkets] Whitelist sync completed; reloading markets")
-                    #endif
+                    if TokenWhitelist.all.count == 0 {
+                        self.didReceiveEmptyWhitelistFromBackend = true
+                    } else {
+                        self.didReceiveEmptyWhitelistFromBackend = false
+                    }
                     self.loadBalances()
                 case .failure(let error):
+                    self.didReceiveEmptyWhitelistFromBackend = false
                     LogService.shared.error("[InvestMarkets] Whitelist sync failed: \(error.localizedDescription)")
                     self.sections = []
                     self.tableView.reloadData()
@@ -335,32 +250,16 @@ final class InvestSelectTokenViewController: UIViewController {
             TokenBalance(whitelist: entry)
         }
 
-        #if DEBUG
-        do {
-            let catCounts = Dictionary(grouping: balances) { $0.category.lowercased() }
-                .mapValues { $0.count }
-                .sorted { $0.value > $1.value }
-                .prefix(12)
-                .map { "\($0.key)=\($0.value)" }
-                .joined(separator: ", ")
-            let sample = balances.prefix(20).map { "\($0.symbol){cat=\($0.category)}" }.joined(separator: ", ")
-            LogService.shared.debug("[InvestMarkets] afterMarkets grouped=\(entries.count) afterSavings=\(balances.count) categories{\(catCounts)} sample[\(min(balances.count, 20))]=[\(sample)] chainId=\(chainId) network=\(chain.shortName ?? "nil")")
-        }
-        #endif
-
         self.onLoadedBalances?(balances)
         self.allMarketItems = balances
         self.sections = self.makeSections(items: filteredItems(from: balances, term: searchTerm))
-
-        #if DEBUG
-        do {
-            let sectionCounts = self.sections.map { "\($0.id)=\($0.items.count)" }.joined(separator: ", ")
-            let investSample = self.sections.first(where: { $0.id == "invest" })?.items.prefix(20).map { $0.symbol }.joined(separator: ", ") ?? ""
-            LogService.shared.debug("[InvestMarkets] final sections{\(sectionCounts)} investSample[\(min(20, self.sections.first(where: { $0.id == "invest" })?.items.count ?? 0))]=[\(investSample)]")
-        }
-        #endif
-
         self.tableView.reloadData()
+
+        let shownEntries = entries.filter { entry in
+            !TokenCategory.isSavings(entry.tokenCategory)
+                && TokenCategory.isAllowedInvestTarget(entry.tokenCategory)
+        }
+        fetchPricesForMarketTokens(entries: shownEntries)
     }
 }
 
@@ -368,48 +267,28 @@ extension InvestSelectTokenViewController {
     private var sectionOrder: [(id: String, title: String)] {
         [
             // Match the main Invertir screen ordering (`InvertirBalancesViewController.balanceSectionOrder`)
-            (id: "moneymarket", title: "Money market"),
-            (id: "cripto", title: "Cripto"),
-            (id: "gold", title: "Oro"),
-            (id: "invest", title: "ETF y acciones"),
-            (id: "otros", title: "Otros"),
-            (id: "blacktoken", title: "blackToken")
+            (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            (id: TokenCategory.sectionCripto, title: "Cripto"),
+            (id: TokenCategory.sectionOro, title: "Oro"),
+            (id: TokenCategory.sectionOtros, title: "Otros"),
+            (id: TokenCategory.sectionBlackToken, title: "blackToken")
         ]
     }
 
     private func isSavings(_ item: TokenBalance) -> Bool {
-        switch item.category.lowercased() {
-        case "stablecoin", "stablecoins", "savings":
-            return true
-        default:
-            return false
-        }
+        TokenCategory.isSavings(item.category)
     }
 
     /// Allowed categories for the *target* (what the user buys) in v1.
     private func isAllowedTarget(_ item: TokenBalance) -> Bool {
-        let normalized = item.category
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-        return ["cripto", "oro", "moneymarket", "invest", "token"].contains(normalized)
+        TokenCategory.isAllowedInvestTarget(item.category)
     }
 
     private func mapCategoryToSectionId(_ item: TokenBalance) -> String {
-        switch item.category.lowercased() {
-        case "moneymarket":
-            return "moneymarket"
-        case "invest":
-            return "invest"
-        case "token", "cripto":
-            return "cripto"
-        case "oro", "gold":
-            return "gold"
-        case "blacktoken":
-            return "blacktoken"
-        default:
-            return "otros"
-        }
+        TokenCategory.sectionId(for: item.category)
     }
 
     private func makeSections(items: [TokenBalance]) -> [BalanceCategorySection] {
@@ -436,29 +315,59 @@ extension InvestSelectTokenViewController {
 
     private func configureBadge(for cell: BalanceTableViewCell, item: TokenBalance, section: BalanceCategorySection) {
         // Keep the exact same badge logic as `InvertirBalancesViewController`.
-        let normalizedCategory = item.category
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-
-        if section.id == "savings" {
+        if section.id == TokenCategory.sectionUSD {
             cell.setBadge(text: "3.75%")
-        } else if section.id == "moneymarket" || normalizedCategory == "moneymarket" {
+        } else if section.id == TokenCategory.sectionMoneyMarket || TokenCategory.isMoneyMarket(item.category) {
             cell.setBadge(text: "3.75%", backgroundColor: .success)
-        } else if ["cripto", "invest", "gold"].contains(section.id) {
-            let firstChar = item.symbol.uppercased().first
-            let isAscending = firstChar.map { $0 >= "A" && $0 <= "M" } ?? false
-            let triangle = isAscending ? "▲" : "▼"
-            let color: UIColor = isAscending ? .success : .error
-            let text = isAscending ? "5%" : "3%"
-            cell.setBadge(text: text,
-                          backgroundColor: .clear,
-                          textColor: color,
-                          prefix: triangle,
-                          prefixColor: color)
+        } else if [
+            TokenCategory.sectionCripto,
+            TokenCategory.sectionAcciones,
+            TokenCategory.sectionEtfIndices,
+            TokenCategory.sectionEtfOtros,
+            TokenCategory.sectionOro
+        ].contains(section.id) {
+            if let change = tokenChangePct24h[item.address], change.isFinite {
+                let isAscending = change >= 0
+                let triangle = isAscending ? "▲" : "▼"
+                let color: UIColor = isAscending ? .success : .error
+                let text = formatChangePct(change)
+                cell.setBadge(text: text,
+                              backgroundColor: .clear,
+                              textColor: color,
+                              prefix: triangle,
+                              prefixColor: color)
+            } else {
+                cell.setBadge(text: nil)
+            }
         } else {
             cell.setBadge(text: nil)
         }
+    }
+
+    private func fetchPricesForMarketTokens(entries: [TokenWhitelist]) {
+        marketPriceTasks.forEach { $0.cancel() }
+        marketPriceTasks = []
+
+        marketPriceTasks = marketPriceService.fetchPrices(entries: entries) { [weak self] result in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let snapshot):
+                    self.tokenChangePct24h = snapshot.changePct24hByAddress
+                    self.tokenPrices = snapshot.pricesByAddress
+                    self.tableView.reloadData()
+                case .failure:
+                    break
+                }
+            }
+        }
+    }
+
+    private func formatChangePct(_ value: Double) -> String {
+        let sign = value >= 0 ? "+" : "-"
+        let absValue = abs(value)
+        let formatted = String(format: "%.2f", absValue)
+        return "\(sign)\(formatted)%"
     }
 }
 
@@ -507,7 +416,300 @@ extension InvestSelectTokenViewController: UITableViewDataSource, UITableViewDel
         tableView.deselectRow(at: indexPath, animated: true)
         let section = sections[indexPath.section]
         let item = section.items[indexPath.row]
+        let unitPrice = tokenPrices[item.address]
+        onTokenSelected?(item, unitPrice)
+    }
+}
+
+extension InvestSelectTokenViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        let raw = searchController.searchBar.text ?? ""
+        searchTerm = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        sections = makeSections(items: filteredItems(from: allMarketItems, term: searchTerm))
+        tableView.reloadData()
+    }
+}
+
+// MARK: - Sell token picker
+
+final class InvestSellSourceSelectViewController: UIViewController {
+    struct BalanceCategorySection {
+        let id: String
+        let title: String
+        let items: [TokenBalance]
+    }
+
+    var onTokenSelected: ((TokenBalance) -> Void)?
+
+    private let tableView = UITableView(frame: .zero, style: .plain)
+    private let searchController = UISearchController(searchResultsController: nil)
+    
+    private var currentTask: URLSessionTask?
+    private var sections: [BalanceCategorySection] = []
+
+    private var searchTerm: String = ""
+    private var allBalances: [TokenBalance] = []
+
+    private var clientGatewayService: BalancesAPI {
+        guard let chain = try? Safe.getSelected()?.chain else {
+            return App.shared.clientGatewayService
+        }
+        return chain.gatewayService()
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        view.backgroundColor = .backgroundPrimary
+
+        navigationItem.title = NSLocalizedString("ui_invertir_sell_select_source_title", comment: "Invertir sell select source title")
+        ViewControllerFactory.addCloseButton(self)
+
+        configureTable()
+        configureSearch()
+
+        loadBalances()
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        // Avoid leaking a running request if the modal is dismissed.
+        currentTask?.cancel()
+    }
+
+    private func configureTable() {
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.backgroundColor = .backgroundPrimary
+        tableView.separatorColor = .separator
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 76
+        if #available(iOS 15.0, *) {
+            tableView.sectionHeaderTopPadding = 0
+        }
+
+        tableView.register(
+            UINib(nibName: "InvertirBalanceTableViewCell", bundle: nil),
+            forCellReuseIdentifier: "BalanceTableViewCell"
+        )
+        tableView.registerHeaderFooterView(BasicHeaderView.self)
+
+        tableView.dataSource = self
+        tableView.delegate = self
+
+        view.addSubview(tableView)
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+
+    private func configureSearch() {
+        searchController.searchResultsUpdater = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = NSLocalizedString("ui_assets_search_tokens_placeholder", comment: "Search tokens placeholder")
+        searchController.hidesNavigationBarDuringPresentation = false
+        searchController.searchBar.autocapitalizationType = .none
+        
+        navigationItem.searchController = searchController
+        navigationItem.hidesSearchBarWhenScrolling = false
+        definesPresentationContext = true
+    }
+
+    private func filteredItems(from items: [TokenBalance], term: String) -> [TokenBalance] {
+        let t = term.lowercased()
+        guard !t.isEmpty else { return items }
+        return items.filter { item in
+            item.symbol.lowercased().contains(t)
+            || item.name.lowercased().contains(t)
+            || item.category.lowercased().contains(t)
+        }
+    }
+
+    private func loadBalances() {
+        guard let safe = try? Safe.getSelected(), let chain = safe.chain else {
+            sections = []
+            tableView.reloadData()
+            return
+        }
+
+        let chainId = chain.id ?? ""
+
+        // Sell: show all balances with non-zero holdings and that are allowed for selling.
+        let cachedBalances = LatestBalancesCache.shared.retrieve(chainId: chainId) ?? []
+        let available = cachedBalances.filter { item in
+            item.balanceValue.value > 0 && TokenCategory.isAllowedInvestSource(item.category)
+        }
+
+        self.allBalances = available
+        self.sections = makeSections(items: filteredItems(from: available, term: searchTerm))
+        self.tableView.reloadData()
+    }
+}
+
+extension InvestSellSourceSelectViewController {
+    private var sectionOrder: [(id: String, title: String)] {
+        [
+            (id: TokenCategory.sectionUSD, title: ""),
+            (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            (id: TokenCategory.sectionCripto, title: "Cripto"),
+            (id: TokenCategory.sectionOro, title: "Oro"),
+            (id: TokenCategory.sectionOtros, title: "Otros"),
+            (id: TokenCategory.sectionBlackToken, title: "blackToken")
+        ]
+    }
+
+    private func mapCategoryToSectionId(_ item: TokenBalance) -> String {
+        TokenCategory.sectionId(for: item.category)
+    }
+
+    private func makeSections(items: [TokenBalance]) -> [BalanceCategorySection] {
+        var grouped: [String: [TokenBalance]] = [:]
+        for item in items {
+            grouped[mapCategoryToSectionId(item), default: []].append(item)
+        }
+
+        return sectionOrder.compactMap { entry in
+            guard let balances = grouped[entry.id], !balances.isEmpty else { return nil }
+            let sorted = balances.sorted { lhs, rhs in
+                if lhs.fiatValue == rhs.fiatValue {
+                    return lhs.symbol.localizedCaseInsensitiveCompare(rhs.symbol) == .orderedAscending
+                }
+                return lhs.fiatValue > rhs.fiatValue
+            }
+            return BalanceCategorySection(id: entry.id, title: entry.title, items: sorted)
+        }
+    }
+
+    private func configureBadge(for cell: BalanceTableViewCell, item: TokenBalance, section: BalanceCategorySection) {
+        if section.id == TokenCategory.sectionUSD {
+            cell.setBadge(text: "3.75%")
+        } else if section.id == TokenCategory.sectionMoneyMarket || TokenCategory.isMoneyMarket(item.category) {
+            cell.setBadge(text: "3.75%", backgroundColor: .success)
+        } else {
+            cell.setBadge(text: nil)
+        }
+    }
+}
+
+extension InvestSellSourceSelectViewController: UITableViewDataSource, UITableViewDelegate {
+    func numberOfSections(in tableView: UITableView) -> Int {
+        sections.count
+    }
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        sections[section].items.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let section = sections[indexPath.section]
+        let item = section.items[indexPath.row]
+        let cell = tableView.dequeueReusableCell(withIdentifier: "BalanceTableViewCell", for: indexPath) as! BalanceTableViewCell
+
+        cell.setMainText(item.symbol)
+        // Show balance in detail and fiat in sub-detail
+        cell.setDetailText(item.balance)
+        cell.setSubDetailText(item.fiatBalance)
+        configureBadge(for: cell, item: item, section: section)
+
+        if let image = item.image {
+            cell.setImage(image)
+        } else {
+            cell.setImage(with: item.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
+        }
+
+        cell.selectionStyle = .default
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, viewForHeaderInSection sectionIndex: Int) -> UIView? {
+        let section = sections[sectionIndex]
+        if section.title.isEmpty { return nil }
+        let view = tableView.dequeueHeaderFooterView(BasicHeaderView.self)
+        view.setName(section.title)
+        return view
+    }
+
+    func tableView(_ tableView: UITableView, heightForHeaderInSection sectionIndex: Int) -> CGFloat {
+        let section = sections[sectionIndex]
+        if section.title.isEmpty { return 0 }
+        return BasicHeaderView.headerHeight
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        let section = sections[indexPath.section]
+        let item = section.items[indexPath.row]
         onTokenSelected?(item)
+    }
+}
+
+extension InvestSellSourceSelectViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        let raw = searchController.searchBar.text ?? ""
+        searchTerm = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        sections = makeSections(items: filteredItems(from: allBalances, term: searchTerm))
+        tableView.reloadData()
+    }
+}
+
+// MARK: - Shared balances cache
+
+final class LatestBalancesCache {
+    static let shared = LatestBalancesCache()
+    private init() {}
+
+    private let queue = DispatchQueue(label: "io.gnosis.multisig.latestbalancescache")
+    private var balancesByChainId: [String: [TokenBalance]] = [:]
+    private var totalFiatByChainId: [String: String] = [:]
+    private let defaultKey = "default"
+
+    func update(balances: [TokenBalance], allowAllZero: Bool = false, chainId: String? = nil) {
+        if !allowAllZero {
+            guard balances.contains(where: { $0.balanceValue.value > 0 }) else { return }
+        }
+        let key = (chainId ?? defaultKey).trimmingCharacters(in: .whitespacesAndNewlines)
+        queue.sync {
+            balancesByChainId[key.isEmpty ? defaultKey : key] = balances
+        }
+    }
+
+    func updateTotalFiat(totalFiat: String?, chainId: String? = nil) {
+        let trimmed = (totalFiat ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let key = (chainId ?? defaultKey).trimmingCharacters(in: .whitespacesAndNewlines)
+        queue.sync {
+            // Always store a "global" last total so other tabs can reuse it even when their chain differs.
+            totalFiatByChainId[defaultKey] = trimmed
+            totalFiatByChainId[key.isEmpty ? defaultKey : key] = trimmed
+        }
+    }
+
+    func retrieve(chainId: String?) -> [TokenBalance]? {
+        let key = (chainId ?? defaultKey).trimmingCharacters(in: .whitespacesAndNewlines)
+        return queue.sync {
+            if let stored = balancesByChainId[key], !stored.isEmpty {
+                return stored
+            }
+            return balancesByChainId[defaultKey]
+        }
+    }
+
+    func retrieveTotalFiat(chainId: String?) -> String? {
+        let key = (chainId ?? defaultKey).trimmingCharacters(in: .whitespacesAndNewlines)
+        return queue.sync {
+            if let value = totalFiatByChainId[key], !value.isEmpty {
+                return value
+            }
+            return totalFiatByChainId[defaultKey]
+        }
     }
 }
 
@@ -533,6 +735,7 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
     private let fiatCode: String
     private var paymentBalances: [TokenBalance]
     private var selectedPaymentToken: TokenBalance?
+    private var unitPriceFiatPerToken: Double?
 
     private let scrollView = UIScrollView()
     private let contentView = UIView()
@@ -555,14 +758,22 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
 
     private let continueButton = UIButton(type: .system)
 
+    private var keyboardBehavior: KeyboardAvoidingBehavior!
+    private var keyboardToolbar: UIToolbar!
+
     private var debounceTimer: Timer?
     private let debounceDuration: TimeInterval = 0.15
 
-    init(selectedToken: TokenBalance, paymentTotalFiat _: Double, fiatCode: String, paymentBalances: [TokenBalance]) {
+    init(selectedToken: TokenBalance,
+         paymentTotalFiat _: Double,
+         fiatCode: String,
+         paymentBalances: [TokenBalance],
+         unitPriceFiatPerToken: Double?) {
         self.selectedToken = selectedToken
         self.fiatCode = fiatCode
         self.paymentBalances = paymentBalances
         self.selectedPaymentToken = paymentBalances.first
+        self.unitPriceFiatPerToken = unitPriceFiatPerToken
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -574,16 +785,27 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
 
-        title = "¿Con qué querés pagar?"
+        title = NSLocalizedString("ui_invertir_payment_method_title", comment: "Invertir payment method title")
 
         configureLayout()
+        configureKeyboardBehavior()
         configureInitialValues()
         recompute()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        keyboardBehavior.start()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        keyboardBehavior.stop()
+        TooltipSource.hideAll()
+    }
+
     func updatePaymentBalances(_ balances: [TokenBalance], totalFiat _: Double) {
         paymentBalances = balances
-        // Preserve current selection if possible; otherwise default to first item.
         if let current = selectedPaymentToken,
            let match = balances.first(where: { $0.address == current.address }) {
             selectedPaymentToken = match
@@ -595,8 +817,6 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         paymentAssetsTableHeightConstraint?.constant = max(0, height)
         paymentAssetsTableView.reloadData()
         applySelectedPaymentSelection(animated: false)
-
-        // Re-validate amount if user already typed.
         recompute()
     }
 
@@ -605,6 +825,7 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         contentView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
+        scrollView.keyboardDismissMode = .interactive
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -691,19 +912,18 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
 
         quantityTitleLabel.setStyle(.caption1Medium)
         quantityTitleLabel.textColor = .labelSecondary
-        quantityTitleLabel.text = "Vas a comprar"
+        quantityTitleLabel.text = NSLocalizedString("ui_invertir_quantity_title", comment: "Invertir quantity title")
 
         quantityValueLabel.setStyle(.title3)
         quantityValueLabel.textColor = .labelPrimary
 
-        continueButton.setText("Continuar", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
         continueButton.isEnabled = false
         continueButton.addTarget(self, action: #selector(didTapContinue), for: .touchUpInside)
         NSLayoutConstraint.activate([
             continueButton.heightAnchor.constraint(equalToConstant: 48)
         ])
 
-        // Payment balances (Savings + Money market)
         stack.addArrangedSubview(paymentAssetsTableView)
         stack.addArrangedSubview(spacer(12))
 
@@ -725,6 +945,19 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         stack.addArrangedSubview(continueButton)
     }
 
+    private func configureKeyboardBehavior() {
+        keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
+
+        keyboardToolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 100, height: 60))
+        let done = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(didTapKeyboardDone))
+        keyboardToolbar.items = [
+            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+            done
+        ]
+        keyboardToolbar.sizeToFit()
+        amountField.inputAccessoryView = keyboardToolbar
+    }
+
     private func configurePaymentAssetsTable() {
         paymentAssetsTableView.translatesAutoresizingMaskIntoConstraints = false
         paymentAssetsTableView.backgroundColor = .backgroundPrimary
@@ -737,11 +970,6 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         paymentAssetsTableView.register(SelectAssetRowCell.self, forCellReuseIdentifier: SelectAssetRowCell.reuseID)
         paymentAssetsTableView.dataSource = self
         paymentAssetsTableView.delegate = self
-#if DEBUG
-        if paymentAssetsTableView.allowsSelection == false || paymentAssetsTableView.delegate == nil {
-            LogService.shared.error("[InvestBuy] Payment assets table must be selectable (regression guard)")
-        }
-#endif
 
         let height = CGFloat(paymentBalances.count) * paymentAssetsTableView.rowHeight
         paymentAssetsTableHeightConstraint = paymentAssetsTableView.heightAnchor.constraint(equalToConstant: max(0, height))
@@ -776,9 +1004,16 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         }
     }
 
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        keyboardBehavior.activeTextField = textField
+    }
+
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        // Allow all changes; we validate and compute on debounce.
         return true
+    }
+
+    @objc private func didTapKeyboardDone() {
+        keyboardBehavior.hideKeyboard()
     }
 
     @objc private func didTapContinue() {
@@ -814,7 +1049,6 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
             return nil
         }
 
-        // Validate against the selected payment token's available fiat value (not the sum of all tokens).
         if amountFiat > paymentToken.fiatValue + 0.000_000_1 {
             amountErrorLabel.text = "Saldo insuficiente"
             amountErrorLabel.isHidden = false
@@ -842,7 +1076,12 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
 
 extension InvestEnterAmountViewController {
     private func deriveUnitPriceFiatPerToken(_ token: TokenBalance) -> Double? {
-        // Unit price derived from (totalFiatValue / totalTokenAmount).
+        if let override = unitPriceFiatPerToken, override > 0 {
+            return override
+        }
+        if token.fiatConversion > 0 {
+            return token.fiatConversion
+        }
         let totalTokenAmount = decimalValue(from: token.balanceValue)
         guard totalTokenAmount > 0 else { return nil }
         let unit = token.fiatValue / totalTokenAmount
@@ -850,7 +1089,6 @@ extension InvestEnterAmountViewController {
     }
 
     private func decimalValue(from amount: BigDecimal) -> Double {
-        // Convert BigDecimal to Decimal string without grouping, then to Double.
         let decimalString = TokenFormatter().string(from: amount,
                                                     decimalSeparator: ".",
                                                     thousandSeparator: "")
@@ -869,13 +1107,11 @@ extension InvestEnterAmountViewController {
         if let number = formatter.number(from: raw) {
             return number.doubleValue
         }
-        // Fallback: normalize comma to dot.
         let normalized = raw.replacingOccurrences(of: ",", with: ".")
         return Double(normalized)
     }
 
     private func formatFiat(_ value: Double, code: String) -> String {
-        // `displayCurrency` expects an en_US numeric string.
         let fiatString = String(format: "%.6f", max(0, value))
         return TokenBalance.displayCurrency(from: fiatString, code: code)
     }
@@ -931,7 +1167,7 @@ extension InvestEnterAmountViewController: UITableViewDataSource {
 extension InvestEnterAmountViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         selectedPaymentToken = paymentBalances[indexPath.row]
-        tableView.reloadData() // update checkmarks
+        tableView.reloadData()
         recompute()
     }
 }
@@ -976,7 +1212,7 @@ final class InvestConfirmViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = "Confirmar"
+        title = NSLocalizedString("ui_invertir_confirm_title", comment: "Invertir confirm title")
         configureLayout()
         configureValues()
     }
@@ -1030,7 +1266,7 @@ final class InvestConfirmViewController: UIViewController {
             label.numberOfLines = 0
         }
 
-        buyButton.setText("Comprar", .filled)
+        buyButton.setText(NSLocalizedString("ui_invertir_buy_action", comment: "Invertir buy action"), .filled)
         buyButton.addTarget(self, action: #selector(didTapBuy), for: .touchUpInside)
         NSLayoutConstraint.activate([
             buyButton.heightAnchor.constraint(equalToConstant: 48)
@@ -1092,7 +1328,8 @@ final class InvestConfirmViewController: UIViewController {
     }
 }
 
-/// Stage-1 execution stub screen.
+// MARK: - Stage-1 execution stub screen
+
 final class InvestPurchaseInProgressViewController: UIViewController {
     var onFinish: (() -> Void)?
 
@@ -1102,7 +1339,7 @@ final class InvestPurchaseInProgressViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = "Comprar"
+        title = NSLocalizedString("ui_invertir_buy_action", comment: "Invertir buy title")
 
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.setStyle(.title3)
@@ -1112,7 +1349,7 @@ final class InvestPurchaseInProgressViewController: UIViewController {
         titleLabel.text = "Compra en progreso"
 
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setText("Volver a Invertir", .filled)
+        button.setText(NSLocalizedString("ui_invertir_back_to_invertir_action", comment: "Invertir again action"), .filled)
         button.addTarget(self, action: #selector(didTapFinish), for: .touchUpInside)
 
         view.addSubview(titleLabel)
@@ -1156,13 +1393,11 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
 
     func start() {
         let s1 = InvestSelectTokenViewController()
-        s1.onLoadedBalances = { [weak self] balances in
-            guard let self else { return }
-            // NOTE: these are *market* tokens (from whitelist) and have 0 balances.
-            // Payment balances are loaded from the gateway separately.
+        s1.onLoadedBalances = { _ in
+            // Markets list is provided by whitelist; payment balances are loaded separately.
         }
-        s1.onTokenSelected = { [weak self] token in
-            self?.showEnterAmount(selectedToken: token)
+        s1.onTokenSelected = { [weak self] token, unitPrice in
+            self?.showEnterAmount(selectedToken: token, unitPriceFiatPerToken: unitPrice)
         }
 
         let nav = UINavigationController(rootViewController: s1)
@@ -1174,20 +1409,17 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         presenter?.present(nav, animated: true)
         navigationController = nav
 
-        // Reuse the same balances payload that powers the Assets tab (single-safe or multivault aggregated).
-        // This avoids reloading balances and keeps the buy flow consistent with what the user sees elsewhere.
         subscribeToBalances()
-
-        // Try to use cached balances immediately; if none exist yet, do a one-time fetch mirroring Assets logic.
         applyFromCacheOrFetchIfNeeded()
     }
 
-    private func showEnterAmount(selectedToken: TokenBalance) {
+    private func showEnterAmount(selectedToken: TokenBalance, unitPriceFiatPerToken: Double?) {
         let fiatCode = AppSettings.selectedFiatCode
         let s2 = InvestEnterAmountViewController(selectedToken: selectedToken,
                                                  paymentTotalFiat: paymentTotalFiat,
                                                  fiatCode: fiatCode,
-                                                 paymentBalances: paymentBalances)
+                                                 paymentBalances: paymentBalances,
+                                                 unitPriceFiatPerToken: unitPriceFiatPerToken)
         enterAmountViewController = s2
         s2.onContinue = { [weak self] draft in
             self?.showConfirm(draft: draft)
@@ -1252,7 +1484,6 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func subscribeToBalances() {
-        // Avoid double-subscribe.
         if balancesObserver != nil { return }
 
         balancesObserver = NotificationCenter.default.addObserver(
@@ -1262,50 +1493,30 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         ) { [weak self] notification in
             guard let self else { return }
             guard let balances = notification.userInfo?["balances"] as? [TokenBalance] else { return }
-
-            // Ignore "market" updates (Invertir tab posts zero-balance rows) — we only care about real balances.
-            guard balances.contains(where: { $0.balanceValue.value > 0 }) else {
-                #if DEBUG
-                LogService.shared.debug("[InvestBuy][PaymentBalances] ignored balanceUpdated (no non-zero balances)")
-                #endif
-                return
-            }
+            guard balances.contains(where: { $0.balanceValue.value > 0 }) else { return }
 
             LatestBalancesCache.shared.update(balances: balances)
             let payments = self.paymentBalancesFromAllBalances(balances)
             self.paymentBalances = payments
             self.paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
             self.enterAmountViewController?.updatePaymentBalances(payments, totalFiat: self.paymentTotalFiat)
-
-            #if DEBUG
-            let sample = payments.prefix(25).map {
-                "\($0.symbol){cat=\($0.category), amt=\($0.balanceFormatted5), fiat=\($0.fiatBalance)}"
-            }.joined(separator: ", ")
-            LogService.shared.debug("[InvestBuy][PaymentBalances] source=balanceUpdated payments=\(payments.count) sample[\(min(25, payments.count))]=[\(sample)]")
-            #endif
         }
     }
 
     private func applyFromCacheOrFetchIfNeeded() {
-        let cached = LatestBalancesCache.shared.balances
+        let cached = LatestBalancesCache.shared.retrieve(chainId: nil) ?? []
         if !cached.isEmpty {
             let payments = paymentBalancesFromAllBalances(cached)
             paymentBalances = payments
             paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
             enterAmountViewController?.updatePaymentBalances(payments, totalFiat: paymentTotalFiat)
-            #if DEBUG
-            LogService.shared.debug("[InvestBuy][PaymentBalances] source=cache balances=\(cached.count) payments=\(payments.count)")
-            #endif
             return
         }
-
-        // No cache yet: trigger a one-time load using the same data source as Assets.
         fetchBalancesForCache()
     }
 
     private func fetchBalancesForCache() {
         cancelFallbackLoads()
-
         if AppSettings.multiVaultBalancesEnabled {
             fetchMultiVaultBalancesForCache()
         } else {
@@ -1330,9 +1541,6 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
                 self.paymentBalances = payments
                 self.paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
                 self.enterAmountViewController?.updatePaymentBalances(payments, totalFiat: self.paymentTotalFiat)
-                #if DEBUG
-                LogService.shared.debug("[InvestBuy][PaymentBalances] source=fallbackSingle balances=\(balances.count) payments=\(payments.count)")
-                #endif
             }
         }
     }
@@ -1379,9 +1587,6 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
             self.paymentBalances = payments
             self.paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
             self.enterAmountViewController?.updatePaymentBalances(payments, totalFiat: self.paymentTotalFiat)
-            #if DEBUG
-            LogService.shared.debug("[InvestBuy][PaymentBalances] source=fallbackMulti balances=\(aggregated.balances.count) payments=\(payments.count)")
-            #endif
         }
     }
 
@@ -1394,38 +1599,18 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
 
     private func paymentBalancesFromAllBalances(_ balances: [TokenBalance]) -> [TokenBalance] {
         let nonZero = balances.filter { $0.balanceValue.value > 0 }
-
         let filtered = nonZero.filter { item in
-            let sectionId = mapCategoryToSectionId(item)
-            return sectionId == "savings" || sectionId == "moneymarket"
+            let sectionId = TokenCategory.sectionId(for: item.category)
+            return sectionId == TokenCategory.sectionUSD || sectionId == TokenCategory.sectionMoneyMarket
         }
-
-        // Savings first, then money market, then by fiat desc and symbol.
         return filtered.sorted { lhs, rhs in
             func rank(_ item: TokenBalance) -> Int {
-                mapCategoryToSectionId(item) == "moneymarket" ? 1 : 0
+                TokenCategory.sectionId(for: item.category) == TokenCategory.sectionMoneyMarket ? 1 : 0
             }
             let lr = rank(lhs), rr = rank(rhs)
             if lr != rr { return lr < rr }
             if lhs.fiatValue != rhs.fiatValue { return lhs.fiatValue > rhs.fiatValue }
             return lhs.symbol.localizedCaseInsensitiveCompare(rhs.symbol) == .orderedAscending
-        }
-    }
-
-    private func mapCategoryToSectionId(_ item: TokenBalance) -> String {
-        let normalized = item.category
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: "_", with: "")
-
-        switch normalized {
-        case "stablecoin", "stablecoins", "savings":
-            return "savings"
-        case "moneymarket":
-            return "moneymarket"
-        default:
-            return "otros"
         }
     }
 
@@ -1438,22 +1623,3 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         onDismiss?()
     }
 }
-
-// MARK: - Shared balances cache (latest real balances, ignoring "market" lists)
-
-final class LatestBalancesCache {
-    static let shared = LatestBalancesCache()
-    private init() {}
-
-    private(set) var balances: [TokenBalance] = []
-
-    func update(balances: [TokenBalance], allowAllZero: Bool = false) {
-        // By default, only store if it looks like real balances (at least one non-zero amount),
-        // to avoid accidentally caching "market" lists.
-        if !allowAllZero {
-            guard balances.contains(where: { $0.balanceValue.value > 0 }) else { return }
-        }
-        self.balances = balances
-    }
-}
-

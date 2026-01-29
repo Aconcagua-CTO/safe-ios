@@ -129,8 +129,8 @@ class AddSafeFlowFactory {
     func selectNetwork(chainId: String?, completion: @escaping (SCGModels.Chain) -> Void) -> UIViewController {
         let selectNetworkVC = SelectNetworkViewController()
         selectNetworkVC.preselectedChainId = chainId
-        selectNetworkVC.screenTitle = "Load Safe Account"
-        selectNetworkVC.descriptionText = "Select network on which your Safe Account was created:"
+        selectNetworkVC.screenTitle = NSLocalizedString("ui_safe_load_account_title", comment: "Title for loading Safe account")
+        selectNetworkVC.descriptionText = NSLocalizedString("ui_safe_select_network_load_description", comment: "Description for selecting Safe network")
         selectNetworkVC.completion = completion
         return selectNetworkVC
     }
@@ -155,10 +155,10 @@ class AddSafeFlowFactory {
         enterNameVC.address = address
         enterNameVC.prefix = chain.shortName
         enterNameVC.trackingEvent = .safeAddName
-        enterNameVC.screenTitle = "Load Safe Account"
-        enterNameVC.descriptionText = "Choose a name for the Safe Account. The name is only stored locally and will not be shared with us or any third parties"
-        enterNameVC.actionTitle = "Next"
-        enterNameVC.placeholder = "Enter name"
+        enterNameVC.screenTitle = NSLocalizedString("ui_safe_load_account_title", comment: "Title for loading Safe account")
+        enterNameVC.descriptionText = NSLocalizedString("ui_safe_choose_name_description", comment: "Choose Safe name description")
+        enterNameVC.actionTitle = NSLocalizedString("button_next", comment: "Next button title")
+        enterNameVC.placeholder = NSLocalizedString("ui_safe_enter_name_placeholder", comment: "Safe name placeholder")
 
         enterNameVC.completion = completion
         return enterAddressWrapperVC

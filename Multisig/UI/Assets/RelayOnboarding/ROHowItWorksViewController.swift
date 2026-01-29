@@ -45,7 +45,7 @@ class ROHowItWorksViewController: UIViewController {
         sec3TitleLabel.setStyle(.headline)
         sec3Par1Label.setStyle(.subheadlineSecondary)
 
-        nextButton.setText("Next", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
     }
 
     override func viewDidAppear(_ animated: Bool) {

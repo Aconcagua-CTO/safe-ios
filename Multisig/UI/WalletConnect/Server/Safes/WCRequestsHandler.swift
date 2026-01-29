@@ -70,7 +70,7 @@ class WCRequestsHandler: RequestHandler {
 
             guard !safe.isReadOnly else {
                 DispatchQueue.main.async {
-                    App.shared.snackbar.show(message: "Please import Safe Owner Key to initiate WalletConnect transactions")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_owner_key_required_error", comment: "WalletConnect owner key required error"))
                 }
                 server.send(try! Response(request: request, error: .requestRejected))
                 return
@@ -105,7 +105,8 @@ class WCRequestsHandler: RequestHandler {
             } catch {
                 DispatchQueue.main.async {
                     App.shared.snackbar.show(
-                        error: GSError.error(description: "Could not handle WalletConnect request", error: error)
+                        error: GSError.error(description: NSLocalizedString("ui_walletconnect_request_failed_error", comment: "WalletConnect request failed error"),
+                                             error: error)
                     )
                 }
             }

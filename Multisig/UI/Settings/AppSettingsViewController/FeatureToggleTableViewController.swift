@@ -20,7 +20,7 @@ class FeatureToggleTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Toggles"
+        title = NSLocalizedString("ui_settings_feature_toggles_title", comment: "Settings title for feature toggles")
 
         tableView.registerCell(SwitchDetailedTableViewCell.self)
         tableView.registerCell(ButtonTableViewCell.self)
@@ -44,8 +44,8 @@ class FeatureToggleTableViewController: UITableViewController {
         switch rowID {
         case .securityCenter:
             let cell = tableView.dequeueCell(SwitchDetailedTableViewCell.self, for: indexPath)
-            cell.text = "Security v2"
-            cell.detailText = "This will switch passcode functionality to use the new key security infrastructure."
+            cell.text = NSLocalizedString("ui_settings_feature_security_v2_title", comment: "Feature toggle title for Security v2")
+            cell.detailText = NSLocalizedString("ui_settings_feature_security_v2_detail", comment: "Feature toggle detail for Security v2")
             cell.setOn(AppConfiguration.FeatureToggles.securityCenter, animated: false)
 
             return cell
@@ -53,7 +53,7 @@ class FeatureToggleTableViewController: UITableViewController {
         case .halt:
             let cell = tableView.dequeueCell(ButtonTableViewCell.self, for: indexPath)
 
-            cell.setText("Shtudown the app") {
+            cell.setText(NSLocalizedString("ui_settings_feature_shutdown_title", comment: "Feature toggle button to shut down the app")) {
                 exit(0)
             }
 

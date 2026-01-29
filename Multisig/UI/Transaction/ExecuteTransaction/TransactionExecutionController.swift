@@ -406,7 +406,9 @@ class TransactionExecutionController {
             return
         }
 
-        if relaysRemaining <= ReviewExecutionViewController.MIN_RELAY_TXS_LEFT {
+        // Self-hosted execution is broadcast by the backend ("Bóveda"), so the local owner key
+        // does not need native token balance to pay for network fees.
+        if relaysRemaining <= ReviewExecutionViewController.MIN_RELAY_TXS_LEFT && !AppSettings.selfHostedExecuteEnabled {
             guard let key = selectedKey,
                   let keyBalance = key.balance.amount,
                   let requiredBalance = requiredBalance,

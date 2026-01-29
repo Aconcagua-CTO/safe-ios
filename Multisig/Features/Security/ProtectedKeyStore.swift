@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Security
 
 class ProtectedKeyStore: EncryptedStore {
 
@@ -49,7 +50,13 @@ class ProtectedKeyStore: EncryptedStore {
         if let password = derivedPassword {
             rawPassword = password.data(using: .utf8)
         } else {
-            let derivedPasswordItem = KeychainItem.generic(account: ProtectedKeyStore.derivedPasswordTag, service: protectionClass.service())
+            let derivedPasswordItem = KeychainItem.generic(
+                account: ProtectedKeyStore.derivedPasswordTag,
+                service: protectionClass.service(),
+                data: nil,
+                access: nil,
+                authPrompt: "Unlock with biometrics"
+            )
             rawPassword = try store.find(derivedPasswordItem) as! Data?
         }
 
@@ -57,7 +64,15 @@ class ProtectedKeyStore: EncryptedStore {
         let sensitiveKEK = try store.find(KeychainItem.enclaveKey(tag: ProtectedKeyStore.privateKEKTag, service: protectionClass.service(), password: rawPassword)) as! SecKey
 
         // Get access to encrypted sensitive key
-        let encryptedSensitiveKey = try store.find(KeychainItem.generic(account: ProtectedKeyStore.encryptedPrivateKeyTag, service: protectionClass.service())) as? Data
+        let encryptedSensitiveKey = try store.find(
+            KeychainItem.generic(
+                account: ProtectedKeyStore.encryptedPrivateKeyTag,
+                service: protectionClass.service(),
+                data: nil,
+                access: nil,
+                authPrompt: nil
+            )
+        ) as? Data
         let decryptedSensitiveKeyData = try encryptedSensitiveKey?.decrypt(privateKey: sensitiveKEK)
         var error: Unmanaged<CFError>?
         guard let decryptedSensitiveKey: SecKey = SecKeyCreateWithData(decryptedSensitiveKeyData! as CFData, try KeychainItem.ecKeyPair.creationAttributes(), &error) else {
@@ -72,21 +87,90 @@ class ProtectedKeyStore: EncryptedStore {
         sensitiveKey = nil
     }
 
+    func hasBiometricUnlockCredential() -> Bool {
+        let item = KeychainItem.generic(
+            account: ProtectedKeyStore.derivedPasswordTag,
+            service: protectionClass.service(),
+            data: nil,
+            access: nil,
+            authPrompt: nil
+        )
+        do {
+            return try store.find(item) != nil
+        } catch let error as NSError {
+            if error.domain == NSOSStatusErrorDomain {
+                return error.code == errSecInteractionNotAllowed || error.code == errSecAuthFailed
+            }
+            return false
+        }
+    }
+
+    func storeBiometricUnlockCredential(passwordData: Data?) throws {
+        guard let passwordData else { return }
+        let item = KeychainItem.generic(
+            account: ProtectedKeyStore.derivedPasswordTag,
+            service: protectionClass.service(),
+            data: passwordData,
+            access: [.biometryCurrentSet],
+            authPrompt: nil
+        )
+        try store.create(item)
+    }
+
+    func clearBiometricUnlockCredential() throws {
+        let item = KeychainItem.generic(
+            account: ProtectedKeyStore.derivedPasswordTag,
+            service: protectionClass.service(),
+            data: nil,
+            access: nil,
+            authPrompt: nil
+        )
+        try store.delete(item)
+    }
+
     func `import`(id: DataID, data: Data) throws {
         let pubKey = try store.find(.ecPubKey(tag: ProtectedKeyStore.publicKeyTag, service: protectionClass.service())) as! SecKey
         let encryptedSigningKey = try data.encrypt(publicKey: pubKey)
-        let item = KeychainItem.generic(account: id.id, service: protectionClass.service(), data: encryptedSigningKey)
+        let item = KeychainItem.generic(
+            account: id.id,
+            service: protectionClass.service(),
+            data: encryptedSigningKey,
+            access: nil,
+            authPrompt: nil
+        )
         try store.create(item)
     }
 
     func delete(id: DataID) throws {
-        let item = KeychainItem.generic(account: id.id, service: protectionClass.service())
+        let item = KeychainItem.generic(
+            account: id.id,
+            service: protectionClass.service(),
+            data: nil,
+            access: nil,
+            authPrompt: nil
+        )
         try store.delete(item)
     }
 
     func authenticate(password userPassword: String? = nil) throws {
-        let encryptedSensitiveKey = try store.find(KeychainItem.generic(account: ProtectedKeyStore.encryptedPrivateKeyTag, service: protectionClass.service())) as? Data
-        let passwordData = userPassword != nil ? userPassword?.data(using: .utf8) : try store.find(KeychainItem.generic(account: ProtectedKeyStore.derivedPasswordTag, service: protectionClass.service())) as! Data?
+        let encryptedSensitiveKey = try store.find(
+            KeychainItem.generic(
+                account: ProtectedKeyStore.encryptedPrivateKeyTag,
+                service: protectionClass.service(),
+                data: nil,
+                access: nil,
+                authPrompt: nil
+            )
+        ) as? Data
+        let passwordData = userPassword != nil ? userPassword?.data(using: .utf8) : try store.find(
+            KeychainItem.generic(
+                account: ProtectedKeyStore.derivedPasswordTag,
+                service: protectionClass.service(),
+                data: nil,
+                access: nil,
+                authPrompt: nil
+            )
+        ) as! Data?
         let sensitiveKEK = try store.find(KeychainItem.enclaveKey(tag: ProtectedKeyStore.privateKEKTag, service: protectionClass.service(), password: passwordData)) as! SecKey
 
         // Decrypt sensitive key
@@ -99,7 +183,15 @@ class ProtectedKeyStore: EncryptedStore {
     }
 
     func find(dataID: DataID, password derivedPassword: String?, forceUnlock: Bool = false) throws -> Data? {
-        guard let encryptedData = try store.find(KeychainItem.generic(account: dataID.id, service: protectionClass.service())) as? Data else {
+        guard let encryptedData = try store.find(
+            KeychainItem.generic(
+                account: dataID.id,
+                service: protectionClass.service(),
+                data: nil,
+                access: nil,
+                authPrompt: nil
+            )
+        ) as? Data else {
             return nil
         }
 
@@ -137,18 +229,21 @@ class ProtectedKeyStore: EncryptedStore {
         if newPasswordData == nil {
             let passwordData = createRandomBytes(32)
             let passItem = KeychainItem.generic(
-                    account: ProtectedKeyStore.derivedPasswordTag,
-                    service: protectionClass.service(),
-                    data: passwordData
+                account: ProtectedKeyStore.derivedPasswordTag,
+                service: protectionClass.service(),
+                data: passwordData,
+                access: nil,
+                authPrompt: nil
             )
             try store.create(passItem)
             newPasswordData = passwordData
+        } else if useBiometry {
+            try storeBiometricUnlockCredential(passwordData: newPasswordData)
+        } else {
+            try? clearBiometricUnlockCredential()
         }
 
-        var accessFlags: SecAccessControlCreateFlags = [.applicationPassword]
-        if useBiometry {
-            accessFlags = [.applicationPassword, .userPresence]
-        }
+        let accessFlags: SecAccessControlCreateFlags = [.applicationPassword]
 
         // create new KEK with new app password
         let kekItem = KeychainItem.enclaveKey(
@@ -165,9 +260,12 @@ class ProtectedKeyStore: EncryptedStore {
         // store sensitive key
         // store encrypted private key
         let encryptedPrivateKeyItem = KeychainItem.generic(
-                account: ProtectedKeyStore.encryptedPrivateKeyTag,
-                service: protectionClass.service(),
-                data: encryptedPK)
+            account: ProtectedKeyStore.encryptedPrivateKeyTag,
+            service: protectionClass.service(),
+            data: encryptedPK,
+            access: nil,
+            authPrompt: nil
+        )
         try store.create(encryptedPrivateKeyItem)
 
         // store public key
@@ -188,9 +286,11 @@ class ProtectedKeyStore: EncryptedStore {
         let passwordData = createRandomBytes(32)
         // store password
         let passItem = KeychainItem.generic(
-                account: ProtectedKeyStore.derivedPasswordTag,
-                service: protectionClass.service(),
-                data: passwordData
+            account: ProtectedKeyStore.derivedPasswordTag,
+            service: protectionClass.service(),
+            data: passwordData,
+            access: nil,
+            authPrompt: nil
         )
         try store.create(passItem)
 
@@ -215,9 +315,12 @@ class ProtectedKeyStore: EncryptedStore {
         // store key pair
         // store encrypted private key
         let encryptedPrivateKeyItem = KeychainItem.generic(
-                account: ProtectedKeyStore.encryptedPrivateKeyTag,
-                service: protectionClass.service(),
-                data: encryptedPK)
+            account: ProtectedKeyStore.encryptedPrivateKeyTag,
+            service: protectionClass.service(),
+            data: encryptedPK,
+            access: nil,
+            authPrompt: nil
+        )
         try store.create(encryptedPrivateKeyItem)
 
         // store public key
@@ -239,8 +342,20 @@ class ProtectedKeyStore: EncryptedStore {
     }
 
     func deleteAllKeys() throws {
-        try store.delete(.generic(account: ProtectedKeyStore.derivedPasswordTag, service: protectionClass.service()))
-        try store.delete(.generic(account: ProtectedKeyStore.encryptedPrivateKeyTag, service: protectionClass.service()))
+        try store.delete(.generic(
+            account: ProtectedKeyStore.derivedPasswordTag,
+            service: protectionClass.service(),
+            data: nil,
+            access: nil,
+            authPrompt: nil
+        ))
+        try store.delete(.generic(
+            account: ProtectedKeyStore.encryptedPrivateKeyTag,
+            service: protectionClass.service(),
+            data: nil,
+            access: nil,
+            authPrompt: nil
+        ))
         try store.delete(.ecPubKey(tag: ProtectedKeyStore.publicKeyTag, service: protectionClass.service()))
         try store.delete(.enclaveKey(tag: ProtectedKeyStore.privateKEKTag, service: protectionClass.service()))
     }

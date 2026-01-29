@@ -77,7 +77,10 @@ class FormViewController: UITableViewController {
             navigationItem.leftBarButtonItem = closeButton
         }
 
-        saveButton = UIBarButtonItem(title: "Save", style: .done, target: self, action: #selector(didTapSaveButton))
+        saveButton = UIBarButtonItem(title: NSLocalizedString("button_save", comment: "Save button title"),
+                                     style: .done,
+                                     target: self,
+                                     action: #selector(didTapSaveButton))
         navigationItem.rightBarButtonItem = saveButton
         saveButton.isEnabled = false
 

@@ -17,18 +17,21 @@ class ImportDataFlow: UIFlow {
     
     func instructions() {
         let vc = CommonInstructionsViewController()
-        vc.title = "Import Data"
+        vc.title = NSLocalizedString("ui_data_import_title", comment: "Import data title")
         vc.trackingEvent = .screenImportInstructions
         
         vc.steps = [
             .header,
-            .step(number: "1", title: "Select the data file",
-                  description: "Choose a *.safedata file that was exported before"),
-            .step(number: "2", title: "Enter file password",
-                  description: "Enter the password to access the data from the file"),
-            .step(number: "3", title: "Import the data",
-                  description: "The imported data includes private keys, safes and address book. Duplicates will be skipped."),
-            .finalStep(title: "Import of data completed!")
+            .step(number: "1",
+                  title: NSLocalizedString("ui_data_import_step1_title", comment: "Import step 1 title"),
+                  description: NSLocalizedString("ui_data_import_step1_description", comment: "Import step 1 description")),
+            .step(number: "2",
+                  title: NSLocalizedString("ui_data_import_step2_title", comment: "Import step 2 title"),
+                  description: NSLocalizedString("ui_data_import_step2_description", comment: "Import step 2 description")),
+            .step(number: "3",
+                  title: NSLocalizedString("ui_data_import_step3_title", comment: "Import step 3 title"),
+                  description: NSLocalizedString("ui_data_import_step3_description", comment: "Import step 3 description")),
+            .finalStep(title: NSLocalizedString("ui_data_import_complete_title", comment: "Import complete title"))
         ]
         
         vc.onClose = { [unowned self] in
@@ -52,9 +55,9 @@ class ImportDataFlow: UIFlow {
     
     func enterPassword(_ fileURL: URL) {
         let vc = CreateExportPasswordViewController(nibName: nil, bundle: nil)
-        vc.title = "Enter password"
-        vc.placeholder = "Enter password"
-        vc.prompt = "Enter the password for the selected data file."
+        vc.title = NSLocalizedString("ui_data_enter_password_title", comment: "Enter password title")
+        vc.placeholder = NSLocalizedString("ui_data_password_placeholder", comment: "Password placeholder")
+        vc.prompt = NSLocalizedString("ui_data_enter_password_prompt", comment: "Enter password prompt")
         vc.completion = { [unowned self] password in
             importData(fileURL, password)
         }
@@ -74,9 +77,9 @@ class ImportDataFlow: UIFlow {
     func results(_ logs: [String]) {
         if logs.isEmpty {
             let vc = SuccessViewController(
-                titleText: "Import completed",
-                bodyText: "Data import was successful.",
-                primaryAction: "Done",
+                titleText: NSLocalizedString("ui_data_import_completed_title", comment: "Import completed title"),
+                bodyText: NSLocalizedString("ui_data_import_success_body", comment: "Import success body"),
+                primaryAction: NSLocalizedString("button_done", comment: "Done button title"),
                 secondaryAction: nil
             )
             vc.reenablesNavBar = false
@@ -90,11 +93,11 @@ class ImportDataFlow: UIFlow {
         } else {
             let vc = ErrorViewController(nibName: nil, bundle: nil)
             vc.imageName = "checkmark.circle.trianglebadge.exclamationmark"
-            vc.titleText = "Import completed"
-            vc.bodyText = "Some issues encountered during the import:"
+            vc.titleText = NSLocalizedString("ui_data_import_completed_title", comment: "Import completed title")
+            vc.bodyText = NSLocalizedString("ui_data_import_partial_body", comment: "Import partial body")
             vc.errorText = logs.joined(separator: "\n")
             if vc.errorText.isEmpty {
-                vc.errorText = "No error messages"
+                vc.errorText = NSLocalizedString("ui_data_no_error_messages", comment: "No error messages")
             }
             vc.completion = { [weak self] in
                 self?.stop(success: false)

@@ -36,7 +36,9 @@ class ReviewChangeConfirmationsTxViewController: ReviewSafeTransactionViewContro
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: stepLabel)
 
         stepLabel.setStyle(.calloutTertiary)
-        stepLabel.text = "\(stepNumber) of \(maxSteps)"
+        stepLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                stepNumber,
+                                maxSteps)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -62,7 +64,13 @@ class ReviewChangeConfirmationsTxViewController: ReviewSafeTransactionViewContro
 
     func confirmationsCell() -> UITableViewCell {
         let cell = tableView.dequeueCell(ValueChangeTableViewCell.self)
-        cell.set(title: "Confirmations required", valueBefore: "\(oldThreshold) out of \(ownersCount)", valueAfter: "\(newThreshold) out of \(ownersCount)")
+        cell.set(title: "Confirmations required",
+                 valueBefore: String(format: NSLocalizedString("ui_step_out_of_format", comment: "Out of format"),
+                                     oldThreshold,
+                                     ownersCount),
+                 valueAfter: String(format: NSLocalizedString("ui_step_out_of_format", comment: "Out of format"),
+                                    newThreshold,
+                                    ownersCount))
         return cell
     }
 

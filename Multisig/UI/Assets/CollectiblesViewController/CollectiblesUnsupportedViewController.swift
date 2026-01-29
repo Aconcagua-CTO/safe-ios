@@ -17,7 +17,7 @@ class CollectiblesUnsupportedViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         bodyText.setStyle(.title3)
-        button.setText("View in Browser", .plain)
+        button.setText(NSLocalizedString("ui_view_in_browser_action", comment: "View in browser action"), .plain)
     }
 
     override func viewDidAppear(_ animated: Bool) {

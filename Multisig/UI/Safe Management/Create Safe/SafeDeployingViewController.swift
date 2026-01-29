@@ -25,7 +25,7 @@ class SafeDeployingViewController: UIViewController {
         super.viewDidLoad()
         statusLabel.setStyle(.title3)
         desciptionLabel.setStyle(.body)
-        txButton.setText("View transaction in block explorer", .primary)
+        txButton.setText(NSLocalizedString("ui_safe_view_transaction_on_block_explorer_title", comment: "View transaction in block explorer title"), .primary)
 
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .transactionDataInvalidated, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(reloadData), name: .selectedSafeChanged, object: nil)

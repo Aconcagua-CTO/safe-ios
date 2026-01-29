@@ -32,4 +32,8 @@ class AccountInfoView: UINibView {
         identiconView.setAddress(self.address.hexadecimal)
         addressInfoView.setAddress(address, showIdenticon: false, prefix: prefix)
     }
+
+    func setIcon(_ image: UIImage?) {
+        identiconView.image = image
+    }
 }

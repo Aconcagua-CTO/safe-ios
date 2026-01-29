@@ -7,14 +7,34 @@ import UIKit
 import DGCharts
 
 final class TokenPriceHistoryHeaderView: UIView {
-    private final class DayAxisValueFormatter: AxisValueFormatter {
+    enum Interval: Int, CaseIterable {
+        case week
+        case month
+        case year
+
+        var titleKey: String {
+            switch self {
+            case .week:
+                return "ui_chart_interval_week"
+            case .month:
+                return "ui_chart_interval_month"
+            case .year:
+                return "ui_chart_interval_year"
+            }
+        }
+    }
+
+    private final class DateAxisValueFormatter: AxisValueFormatter {
         private let formatter: DateFormatter = {
             let f = DateFormatter()
             f.locale = Locale.autoupdatingCurrent
             f.timeZone = .autoupdatingCurrent
-            f.dateFormat = "MMM d"
             return f
         }()
+
+        init(dateFormat: String) {
+            formatter.dateFormat = dateFormat
+        }
 
         func stringForValue(_ value: Double, axis: AxisBase?) -> String {
             // x is epoch seconds
@@ -51,9 +71,17 @@ final class TokenPriceHistoryHeaderView: UIView {
         let value: Double
     }
 
+    var onIntervalChanged: ((Interval) -> Void)?
+
+    private let intervalControl = UISegmentedControl(items: Interval.allCases.map {
+        NSLocalizedString($0.titleKey, comment: "Chart interval label")
+    })
     private let chartView = LineChartView()
     private let placeholderLabel = UILabel()
     private let activity = UIActivityIndicatorView(style: .medium)
+    private let dayFormatter = DateAxisValueFormatter(dateFormat: "MMM d")
+    private let monthFormatter = DateAxisValueFormatter(dateFormat: "MMM")
+    private(set) var selectedInterval: Interval = .week
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -67,6 +95,10 @@ final class TokenPriceHistoryHeaderView: UIView {
 
     private func setUp() {
         backgroundColor = .backgroundPrimary
+
+        intervalControl.translatesAutoresizingMaskIntoConstraints = false
+        intervalControl.selectedSegmentIndex = selectedInterval.rawValue
+        intervalControl.addTarget(self, action: #selector(intervalChanged), for: .valueChanged)
 
         chartView.translatesAutoresizingMaskIntoConstraints = false
         chartView.backgroundColor = .clear
@@ -82,9 +114,6 @@ final class TokenPriceHistoryHeaderView: UIView {
         chartView.xAxis.labelTextColor = UIColor.secondaryLabel
         chartView.xAxis.axisLineColor = UIColor.tertiaryLabel
         chartView.xAxis.granularityEnabled = true
-        chartView.xAxis.granularity = 24 * 60 * 60 // 1 day
-        chartView.xAxis.labelCount = 4
-        chartView.xAxis.valueFormatter = DayAxisValueFormatter()
 
         chartView.leftAxis.enabled = true
         chartView.leftAxis.drawGridLinesEnabled = true
@@ -111,26 +140,52 @@ final class TokenPriceHistoryHeaderView: UIView {
 
         activity.translatesAutoresizingMaskIntoConstraints = false
 
+        addSubview(intervalControl)
         addSubview(chartView)
         addSubview(placeholderLabel)
         addSubview(activity)
 
+        let chartLeading = chartView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16)
+        chartLeading.priority = UILayoutPriority(999)
+        let chartTrailing = chartView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16)
+        chartTrailing.priority = UILayoutPriority(999)
+
+        let placeholderCenterX = placeholderLabel.centerXAnchor.constraint(equalTo: centerXAnchor)
+        placeholderCenterX.priority = UILayoutPriority(750)
+        let placeholderLeading = placeholderLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24)
+        placeholderLeading.priority = UILayoutPriority(999)
+        let placeholderTrailing = placeholderLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24)
+        placeholderTrailing.priority = UILayoutPriority(999)
+
+        let intervalLeading = intervalControl.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16)
+        intervalLeading.priority = UILayoutPriority(999)
+        let intervalTrailing = intervalControl.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16)
+        intervalTrailing.priority = UILayoutPriority(999)
+        let intervalCenterX = intervalControl.centerXAnchor.constraint(equalTo: centerXAnchor)
+        intervalCenterX.priority = UILayoutPriority(750)
+
         NSLayoutConstraint.activate([
-            chartView.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-            chartView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            chartView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            intervalControl.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            intervalLeading,
+            intervalTrailing,
+            intervalCenterX,
+
+            chartView.topAnchor.constraint(equalTo: intervalControl.bottomAnchor, constant: 12),
+            chartLeading,
+            chartTrailing,
             chartView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
 
-            placeholderLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            placeholderCenterX,
             placeholderLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            placeholderLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 24),
-            placeholderLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+            placeholderLeading,
+            placeholderTrailing,
 
             activity.centerXAnchor.constraint(equalTo: centerXAnchor),
             activity.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
 
-        showPlaceholder(text: "Chart coming soon")
+        applyAxisStyle(for: selectedInterval)
+        showPlaceholder(text: NSLocalizedString("ui_chart_coming_soon", comment: "Chart placeholder"))
     }
 
     func showLoading() {
@@ -140,7 +195,7 @@ final class TokenPriceHistoryHeaderView: UIView {
         activity.startAnimating()
     }
 
-    func showPlaceholder(text: String = "Chart coming soon") {
+    func showPlaceholder(text: String = NSLocalizedString("ui_chart_coming_soon", comment: "Chart placeholder")) {
         activity.stopAnimating()
         activity.isHidden = true
         chartView.isHidden = true
@@ -175,6 +230,38 @@ final class TokenPriceHistoryHeaderView: UIView {
         if let first = sorted.first?.time, let last = sorted.last?.time, last > first {
             chartView.xAxis.axisMinimum = first
             chartView.xAxis.axisMaximum = last
+        }
+    }
+
+    func setSelectedInterval(_ interval: Interval, notify: Bool = false) {
+        guard interval != selectedInterval else { return }
+        selectedInterval = interval
+        intervalControl.selectedSegmentIndex = interval.rawValue
+        applyAxisStyle(for: interval)
+        if notify {
+            onIntervalChanged?(interval)
+        }
+    }
+
+    @objc private func intervalChanged() {
+        guard let interval = Interval(rawValue: intervalControl.selectedSegmentIndex) else { return }
+        setSelectedInterval(interval, notify: true)
+    }
+
+    private func applyAxisStyle(for interval: Interval) {
+        switch interval {
+        case .week:
+            chartView.xAxis.granularity = 24 * 60 * 60
+            chartView.xAxis.labelCount = 4
+            chartView.xAxis.valueFormatter = dayFormatter
+        case .month:
+            chartView.xAxis.granularity = 7 * 24 * 60 * 60
+            chartView.xAxis.labelCount = 4
+            chartView.xAxis.valueFormatter = dayFormatter
+        case .year:
+            chartView.xAxis.granularity = 30 * 24 * 60 * 60
+            chartView.xAxis.labelCount = 6
+            chartView.xAxis.valueFormatter = monthFormatter
         }
     }
 }

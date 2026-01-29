@@ -22,10 +22,14 @@ class ReviewClaimTokensHeaderCell: UITableViewCell {
 
     override func awakeFromNib() {
         super.awakeFromNib()
-        amountView.setTitle("You're claiming:", style: .body)
-        delegateView.setTitle("Delegating voting power to:", style: .body)
-        fromView.setTitle("From:", style: .body)
-        toView.setTitle("Interact with:", style: .body)
+        amountView.setTitle(NSLocalizedString("ui_claim_header_claiming_title", comment: "Claim header amount title"),
+                            style: .body)
+        delegateView.setTitle(NSLocalizedString("ui_claim_header_delegating_title", comment: "Claim header delegate title"),
+                              style: .body)
+        fromView.setTitle(NSLocalizedString("ui_claim_header_from_title", comment: "Claim header from title"),
+                          style: .body)
+        toView.setTitle(NSLocalizedString("ui_claim_header_interact_with_title", comment: "Claim header interact with title"),
+                        style: .body)
     }
 
     func setAmount(text: String, image: UIImage?) {

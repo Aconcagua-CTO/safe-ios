@@ -29,7 +29,7 @@ class ROUncoverViewController: UIViewController {
         par2Label.setStyle(.subheadlineSecondary)
         par3Label.setStyle(.subheadlineSecondary)
 
-        doneButton.setText("Done", .filled)
+        doneButton.setText(NSLocalizedString("button_done", comment: "Done button title"), .filled)
     }
 
     override func viewDidAppear(_ animated: Bool) {

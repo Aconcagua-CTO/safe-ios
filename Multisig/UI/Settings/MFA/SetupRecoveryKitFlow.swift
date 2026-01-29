@@ -24,7 +24,7 @@ class SetupRecoveryKitFlow: UIFlow {
     func intro() {
         let vc = factory.step(title: "Set up a recovery kit for your owner key",
                               description: "Once set you would need it only in case you lose your device or change it.",
-                              action: "Continue",
+                              action: NSLocalizedString("button_continue", comment: "Continue button title"),
                               image: "ico-setup-recovery-kit",
                               animation: nil,
                               trackingEvent: .screenStartCreatePassword) { [weak self] in
@@ -74,8 +74,8 @@ class SetupRecoveryKitFlow: UIFlow {
     func success() {
         let vc = factory.success(titleText: "Your owner security kit is ready!",
                                  bodyText: "You will need at least 2 factors to restore your key on a new device.",
-                                 primaryAction: "Done") { [weak self] in
-            App.shared.snackbar.show(message: "Password created")
+                                 primaryAction: NSLocalizedString("button_done", comment: "Done button title")) { [weak self] in
+            App.shared.snackbar.show(message: NSLocalizedString("ui_recovery_password_created_message", comment: "Recovery password created message"))
 
             self?.stop(success: true)
         }

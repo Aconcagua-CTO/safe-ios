@@ -73,7 +73,7 @@ class FlowStepViewController: UIViewController {
         self.actionButton.setText(actionText, .filled)
 
         learnMoreView.isHidden = learnMoreURL == nil
-        learnMoreView.setText("Learn more")
+        learnMoreView.setText(NSLocalizedString("ui_learn_more_action", comment: "Learn more action"))
         learnMoreView.trackingEvent = learnMoreTrackingEvent
         learnMoreView.url = learnMoreURL
     }

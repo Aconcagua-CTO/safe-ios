@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // Info view split into two objects so that the content view would track
 // changes to the safe, but the parent view tracks changes to the selection.
@@ -29,18 +30,38 @@ struct SafeInfoView: View {
 struct SafeInfoContentView: View {
     @ObservedObject var safe: Safe
     var body: some View {
-        VStack (alignment: .center) {
-            AddressImage(safe.address).frame(width: 56, height: 56)
+        VStack (alignment: .center, spacing: 0) {
+            Text(NSLocalizedString("ui_receive_transfer_instructions", comment: "Deposit transfer instructions"))
+                .font(.subheadline)
+                .foregroundColor(.labelSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.top, 16)
+                .padding(.horizontal, 24)
+
+            AddressImage(safe.address)
+                .frame(width: 56, height: 56)
+                .padding(.top, 12)
 
             if safe.hasAddress {
+                let prefix = prependingPrefixString()
+                let address = safe.address ?? ""
+                let copyValue = copyPrefixString() + address
+                
                 HStack(spacing: 0) {
-                    // Display should not include chain prefix (e.g. "arb1:"), but copy may include it.
-                    let prefix = prependingPrefixString()
-                    SlicedText(string: SlicedString(text: prefix + safe.address!, prefix: prefix.count + 6, suffix: 4))
-                        .style(.addressLong)
-                        .multilineTextAlignment(.center)
+                    Button(action: {
+                        UIPasteboard.general.string = copyValue
+                        App.shared.snackbar.show(message: "Copied to clipboard", duration: 2)
+                        print("[SafeInfoView][ADDRESS TAP] Address copied to clipboard: \(copyValue)")
+                    }) {
+                        SlicedText(string: SlicedString(text: prefix + address, prefix: prefix.count + 6, suffix: 4))
+                            .style(.addressLong)
+                            .multilineTextAlignment(.center)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
 
-                    CopyButton(copyPrefixString() + safe.address!) {
+                    CopyButton(copyValue) {
                         Image(systemName: "doc.on.doc")
                             .resizable()
                             .scaledToFit()
@@ -74,26 +95,17 @@ struct SafeInfoContentView: View {
     }
 
     private func copyPrefixString() -> String {
-        AppSettings.copyAddressWithChainPrefix ? prefixString() : ""
+        ""
     }
 
     private func prependingPrefixString() -> String {
-        AppSettings.prependingChainPrefixToAddresses ? prefixString() : ""
-    }
-
-    private func prefixString() -> String {
-        safe.chain!.shortName != nil ? "\(safe.chain!.shortName!):" : ""
+        ""
     }
     
     private var chainListView: some View {
         let allChains: [(String, String?)] = [
             ("Arbitrum", "42161"),
-            ("Base", "8453"),
-            ("BNB", "56"),
-            ("Ethereum", "1"),
-            ("Plasma", nil),
-            ("Polygon", "137"),
-            ("Rootstock", "30")
+            ("Plasma", nil)
         ]
         
         let columns: [GridItem] = [
@@ -176,7 +188,7 @@ struct WhatsAppLinkView: View {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }
         }) {
-            Text("Para Redes TRON y BTC nativo contáctanos")
+            Text("Para TRON, BITCOIN u otras redes, contáctanos")
                 .font(.subheadline)
                 .foregroundColor(.primary)
                 .underline()

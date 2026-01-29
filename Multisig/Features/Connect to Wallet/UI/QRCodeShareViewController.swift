@@ -21,8 +21,8 @@ class QRCodeShareViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        shareButton.setText("Share Code", .plain)
-        saveButton.setText("Save Image", .plain)
+        shareButton.setText(NSLocalizedString("ui_wallet_share_code", comment: "Share code button"), .plain)
+        saveButton.setText(NSLocalizedString("ui_wallet_save_image", comment: "Save image button"), .plain)
         qrCodeView.showsBorder = false
         qrCodeView.imageSizeInPoints = 600
     }
@@ -31,7 +31,7 @@ class QRCodeShareViewController: UIViewController {
         let vc = UIActivityViewController(activityItems: [qrCodeView.value], applicationActivities: nil)
         vc.completionWithItemsHandler = { _, success, _, _ in
             if success {
-                App.shared.snackbar.show(message: "QR Code shared.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_qr_code_shared_message", comment: "QR code shared message"))
             }
         }
         present(vc, animated: true, completion: nil)
@@ -42,7 +42,7 @@ class QRCodeShareViewController: UIViewController {
         let vc = UIActivityViewController(activityItems: [image], applicationActivities: nil)
         vc.completionWithItemsHandler = { _, success, _, _ in
             if success {
-                App.shared.snackbar.show(message: "QR Code saved.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_qr_code_saved_message", comment: "QR code saved message"))
             }
         }
         present(vc, animated: true, completion: nil)

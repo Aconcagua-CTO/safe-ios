@@ -86,11 +86,12 @@ class ChangeLockMethodFlow: UIFlow {
                     if let userCancellation = error as? GSError.CancelledByUser {
                         // do nothing
                     } else {
-                        App.shared.snackbar.show(message: "Failed to change lock method: \(error.localizedDescription)")
+                        App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_lock_method_change_failed_format", comment: "Failed to change lock method"),
+                                                                 error.localizedDescription))
                     }
                     stop(success: false)
                 } else {
-                    App.shared.snackbar.show(message: "Lock method changed")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_lock_method_changed_message", comment: "Lock method changed message"))
                     stop(success: true)
                 }
             }

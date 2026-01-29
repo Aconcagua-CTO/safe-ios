@@ -115,13 +115,17 @@ class SendTransactionCellBuilder {
         address(
             to,
             label: namingPolicy.name,
-            title: "To",
+            title: NSLocalizedString("ui_tx_to_plain_title", comment: "To title"),
             imageUri: namingPolicy.imageUri,
             browseURL: chain.browserURL(address: to.checksummed),
             prefix: chain.shortName
         )
 
-        text(data.toHexStringWithPrefix(), title: "Data", expandableTitle: "\(data.count) Bytes", copyText: data.toHexStringWithPrefix())
+        text(data.toHexStringWithPrefix(),
+             title: NSLocalizedString("ui_tx_data_title", comment: "Transaction data title"),
+             expandableTitle: String(format: NSLocalizedString("ui_tx_bytes_title_format", comment: "Bytes count title"),
+                                     "\(data.count)"),
+             copyText: data.toHexStringWithPrefix())
 
         var accountState = ExecuteWithAccountCellState.loading
         if let balance = balance {
@@ -184,7 +188,7 @@ class SendTransactionCellBuilder {
     func buildAmount(amountModel: TokenAmountUIModel) {
         let cell = tableView.dequeueCell(DetailMultiAccountsCell.self)
         let tokenView = TokenInfoView()
-        tokenView.setTitle("Amount")
+        tokenView.setTitle(NSLocalizedString("ui_tx_amount_title", comment: "Amount title"))
         tokenView.setImage(amountModel.tokenLogoURL, placeholder: amountModel.placeholder)
         tokenView.setText(amountModel.formattedAmount)
         tokenView.setDetail(amountModel.formattedFiatValue, style: .caption1.weight(.medium))
@@ -242,7 +246,7 @@ class SendTransactionCellBuilder {
 
     func buildExecutedWithAccount(_ model: ExecuteWithAccountCellState, tableView: UITableView) -> UITableViewCell {
         let cell = tableView.dequeueCell(DisclosureWithContentCell.self)
-        cell.setText("Execute with")
+        cell.setText(NSLocalizedString("ui_ctw_execute_with_title", comment: "Execute with title"))
         switch model {
 
         case .none:
@@ -253,7 +257,7 @@ class SendTransactionCellBuilder {
             cell.setContent(content)
 
         case .empty:
-            let content = textView("Not selected")
+            let content = textView(NSLocalizedString("ui_ctw_not_selected_title", comment: "Not selected title"))
             cell.setContent(content)
 
         case .filled(let accountModel):
@@ -266,7 +270,7 @@ class SendTransactionCellBuilder {
 
     func buildEstimatedGasFee(_ model: EstimatedFeeCellState, tableView: UITableView) -> UITableViewCell {
         let cell = tableView.dequeueCell(DisclosureWithContentCell.self)
-        cell.setText("Estimated fee")
+        cell.setText(NSLocalizedString("ui_tx_estimated_fee_title", comment: "Estimated fee title"))
 
         switch model {
         case .loading:
@@ -274,7 +278,7 @@ class SendTransactionCellBuilder {
             cell.setContent(content)
 
         case .empty:
-            let content = textView("Not set")
+            let content = textView(NSLocalizedString("ui_not_set_title", comment: "Not set label"))
             cell.setContent(content)
 
         case .loaded(let feeModel):

@@ -23,8 +23,7 @@ enum TokenBalanceBreakdownBuilder {
             let chainId = input.chainId
             for item in input.summary.items {
                 let token = TokenBalance(item, code: fiatCode, chainId: chainId)
-                let wrap = (TokenWhitelist.by(chainId: chainId, networkAddress: token.address)?.wrapLabel ?? "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let wrap = (token.wrapLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 let displaySymbol = (wrap.isEmpty ? token.symbol : wrap)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .lowercased()

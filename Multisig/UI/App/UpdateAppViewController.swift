@@ -17,11 +17,11 @@ class UpdateAppViewController: UIViewController {
         var description: String {
             switch self {
             case .required:
-                return "Your version of the Safe{Wallet} app is not supported anymore since it is too old. Please update your app"
+                return NSLocalizedString("ui_update_required_body", comment: "Required update description")
             case .recommended:
-                return "Your version of the Safe{Wallet} app will be deprecated soon. Please update your app."
+                return NSLocalizedString("ui_update_recommended_body", comment: "Recommended update description")
             case .optional:
-                return "There is an update of the Safe{Wallet} app available"
+                return NSLocalizedString("ui_update_optional_body", comment: "Optional update description")
             }
         }
 
@@ -58,8 +58,8 @@ class UpdateAppViewController: UIViewController {
 
         descriptionLabel.text = style.description
         descriptionLabel.setStyle(.body)
-        updateButton.setText("Update now", .filled)
-        skipButton.setText("Skip", .primary)
+        updateButton.setText(NSLocalizedString("ui_update_now_action", comment: "Update now action"), .filled)
+        skipButton.setText(NSLocalizedString("button_skip", comment: "Skip button title"), .primary)
         skipButton.isHidden = style.unskippable
     }
 

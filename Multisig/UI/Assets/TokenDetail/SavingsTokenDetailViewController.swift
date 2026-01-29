@@ -13,6 +13,9 @@ final class SavingsTokenDetailViewController: UIViewController {
     private let priceHeaderView = TokenPriceHistoryHeaderView()
     private let priceHistoryService = KrakenPriceHistoryService()
     private var ohlcTask: URLSessionDataTask?
+    private let aaveClient = AaveV3GraphQLClient()
+    private var aaveHistoryTask: URLSessionDataTask?
+    private var selectedInterval: TokenPriceHistoryHeaderView.Interval = .week
 
     init(token: TokenBalance, balancesProvider: TokenDetailBalancesProvider?) {
         self.token = token
@@ -26,6 +29,7 @@ final class SavingsTokenDetailViewController: UIViewController {
 
     deinit {
         ohlcTask?.cancel()
+        aaveHistoryTask?.cancel()
     }
 
     override func viewDidLoad() {
@@ -43,7 +47,7 @@ final class SavingsTokenDetailViewController: UIViewController {
         super.viewDidLayoutSubviews()
         // tableHeaderView uses frames (not Auto Layout). Keep it sized to current width.
         if tableView.tableHeaderView === priceHeaderView {
-            let targetHeight: CGFloat = 220
+            let targetHeight: CGFloat = 260
             if priceHeaderView.frame.width != tableView.bounds.width || priceHeaderView.frame.height != targetHeight {
                 priceHeaderView.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: targetHeight)
                 tableView.tableHeaderView = priceHeaderView
@@ -82,7 +86,7 @@ final class SavingsTokenDetailViewController: UIViewController {
 
     private func configureInvertirButton() {
         invertirButton.translatesAutoresizingMaskIntoConstraints = false
-        invertirButton.setText("Invertir", .filled)
+        invertirButton.setText(NSLocalizedString("ui_invertir_progress_title", comment: "Invertir button title"), .filled)
         invertirButton.addTarget(self, action: #selector(didTapInvertir), for: .touchUpInside)
     }
 
@@ -98,16 +102,87 @@ final class SavingsTokenDetailViewController: UIViewController {
 
     private func configurePriceHistoryHeader() {
         // Always show a header. For non-Kraken tokens it will display "Chart coming soon".
-        priceHeaderView.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 220)
+        let fallbackWidth = max(view.bounds.width, UIScreen.main.bounds.width)
+        priceHeaderView.frame = CGRect(x: 0, y: 0, width: fallbackWidth, height: 260)
         tableView.tableHeaderView = priceHeaderView
+        priceHeaderView.onIntervalChanged = { [weak self] interval in
+            self?.selectedInterval = interval
+            self?.fetchPriceHistory(interval: interval)
+        }
+        priceHeaderView.setSelectedInterval(selectedInterval)
+        fetchPriceHistory(interval: selectedInterval)
+    }
 
-        guard let pair = balancesProvider?.krakenPair(for: token) else {
-            priceHeaderView.showPlaceholder(text: "Chart coming soon")
+    private func fetchPriceHistory(interval: TokenPriceHistoryHeaderView.Interval) {
+        ohlcTask?.cancel()
+        ohlcTask = nil
+        aaveHistoryTask?.cancel()
+        aaveHistoryTask = nil
+
+        let normalizedCategory = token.category
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+        let tokenSymbolUpper = token.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if isSavingsYieldCategory(normalizedCategory) {
+            let source = (token.yieldSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let market = (token.aaveMarketPoolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let underlying = (token.aaveUnderlyingTokenAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard source == "aave_v3", !market.isEmpty, !underlying.isEmpty else {
+                #if DEBUG
+                LogService.shared.debug(
+                    "[Savings][YieldChart] token=\(tokenSymbolUpper) yieldSource=\(source) config=missing"
+                )
+                #endif
+                priceHeaderView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable", comment: "Yield chart unavailable"))
+                return
+            }
+
+            let chainId = Int(token.yieldChainId ?? "") ?? 1
+
+            #if DEBUG
+            LogService.shared.debug(
+                "[Savings][YieldChart] token=\(tokenSymbolUpper) chainId=\(chainId) market=\(market) underlying=\(underlying) interval=\(interval)"
+            )
+            #endif
+
+            priceHeaderView.showLoading()
+            aaveHistoryTask = aaveClient.fetchSupplyApyHistory(
+                chainId: chainId,
+                marketPoolAddress: market,
+                underlyingTokenAddress: underlying,
+                window: aaveWindow(for: interval)
+            ) { [weak self] result in
+                guard let self else { return }
+                switch result {
+                case .success(let points):
+                    let chartPoints = points.map { TokenPriceHistoryHeaderView.Point(time: $0.time, value: $0.apyPercent) }
+                    if chartPoints.count >= 2 {
+                        self.priceHeaderView.showChart(points: chartPoints)
+                    } else {
+                        self.priceHeaderView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable", comment: "Yield chart unavailable"))
+                    }
+                case .failure:
+                    self.priceHeaderView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable", comment: "Yield chart unavailable"))
+                }
+            }
             return
         }
 
+        guard let pair = balancesProvider?.krakenPair(for: token) else {
+            priceHeaderView.showPlaceholder(text: NSLocalizedString("ui_chart_coming_soon", comment: "Chart placeholder"))
+            return
+        }
+
+        #if DEBUG
+        LogService.shared.debug(
+            "[Savings][PriceChart] token=\(tokenSymbolUpper) category=\(normalizedCategory) pair=\(pair) interval=\(interval)"
+        )
+        #endif
+
         priceHeaderView.showLoading()
-        ohlcTask = priceHistoryService.fetch1WeekClosePoints(pair: pair) { [weak self] result in
+        ohlcTask = priceHistoryService.fetchClosePoints(pair: pair, window: krakenWindow(for: interval)) { [weak self] result in
             guard let self else { return }
             DispatchQueue.main.async {
                 switch result {
@@ -116,12 +191,38 @@ final class SavingsTokenDetailViewController: UIViewController {
                     if points.count >= 2 {
                         self.priceHeaderView.showChart(points: points)
                     } else {
-                        self.priceHeaderView.showPlaceholder(text: "Chart coming soon")
+                        self.priceHeaderView.showPlaceholder(text: NSLocalizedString("ui_chart_coming_soon", comment: "Chart placeholder"))
                     }
                 case .failure:
-                    self.priceHeaderView.showPlaceholder(text: "Chart coming soon")
+                    self.priceHeaderView.showPlaceholder(text: NSLocalizedString("ui_chart_coming_soon", comment: "Chart placeholder"))
                 }
             }
+        }
+    }
+
+    private func aaveWindow(for interval: TokenPriceHistoryHeaderView.Interval) -> AaveV3GraphQLClient.TimeWindow {
+        switch interval {
+        case .week:
+            return .lastWeek
+        case .month:
+            return .lastMonth
+        case .year:
+            return .lastYear
+        }
+    }
+
+    private func isSavingsYieldCategory(_ normalizedCategory: String) -> Bool {
+        TokenCategory.isSavings(normalizedCategory)
+    }
+
+    private func krakenWindow(for interval: TokenPriceHistoryHeaderView.Interval) -> KrakenPriceHistoryService.TimeWindow {
+        switch interval {
+        case .week:
+            return .week
+        case .month:
+            return .month
+        case .year:
+            return .year
         }
     }
 

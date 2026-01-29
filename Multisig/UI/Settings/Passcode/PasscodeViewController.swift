@@ -46,7 +46,26 @@ class PasscodeViewController: UIViewController, UITextFieldDelegate {
         promptLabel.setStyle(.headline)
         errorLabel.setStyle(.calloutError)
         detailLabel.setStyle(.callout)
-        button.setText("Skip", .plain)
+
+        headlineLabel.text = NSLocalizedString(
+            "ui_passcode_headline_owner_key_imported",
+            comment: "Passcode screen headline after importing an owner key"
+        )
+        promptLabel.text = NSLocalizedString(
+            "ui_passcode_create_prompt",
+            comment: "Passcode creation prompt"
+        )
+        detailLabel.text = NSLocalizedString(
+            "ui_passcode_setup_detail",
+            comment: "Passcode creation detail text"
+        )
+        // Default value; can be overridden by subclasses when needed.
+        errorLabel.text = NSLocalizedString(
+            "ui_passcode_wrong_error",
+            comment: "Wrong passcode error"
+        )
+
+        button.setText(NSLocalizedString("button_skip", comment: "Skip button title"), .plain)
         headlineContainerView.isHidden = hidesHeadline
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
         keyboardBehavior.hidesKeyboardOnTap = false
@@ -134,7 +153,7 @@ class PasscodeViewController: UIViewController, UITextFieldDelegate {
     }
 
     func showIncorrectPasscodeError() {
-       showError("Wrong passcode")
+        showError(NSLocalizedString("ui_passcode_wrong_error", comment: "Wrong passcode error"))
     }
 
     func showGenericError(description: String, error: Error) {

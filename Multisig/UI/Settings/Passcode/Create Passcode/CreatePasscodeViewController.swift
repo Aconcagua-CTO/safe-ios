@@ -15,7 +15,7 @@ class CreatePasscodeViewController: PasscodeViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Create Passcode"
+        navigationItem.title = NSLocalizedString("ui_passcode_create_title", comment: "Title for create passcode screen")
     }
 
     override func viewWillAppear(_ animated: Bool) {

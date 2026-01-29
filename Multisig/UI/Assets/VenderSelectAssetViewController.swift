@@ -39,7 +39,7 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
         super.viewDidLoad()
 
         view.backgroundColor = .backgroundPrimary
-        navigationItem.title = "¿Qué querés vender?"
+        navigationItem.title = NSLocalizedString("ui_vender_select_asset_title", comment: "Vender select asset title")
         ViewControllerFactory.addCloseButton(self)
 
         configureTable()
@@ -82,7 +82,7 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
         emptyLabel.textColor = .labelSecondary
         emptyLabel.textAlignment = .center
         emptyLabel.numberOfLines = 0
-        emptyLabel.text = "No assets found."
+        emptyLabel.text = NSLocalizedString("ui_assets_empty_title", comment: "Empty state title for assets")
 
         view.addSubview(emptyLabel)
         NSLayoutConstraint.activate([
@@ -202,14 +202,22 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
     }
 
     private func isSellableSectionId(_ id: String) -> Bool {
-        id == "invest" || id == "cripto" || id == "oro"
+        [
+            TokenCategory.sectionAcciones,
+            TokenCategory.sectionEtfIndices,
+            TokenCategory.sectionEtfOtros,
+            TokenCategory.sectionCripto,
+            TokenCategory.sectionOro
+        ].contains(id)
     }
 
     private var sellSectionOrder: [(id: String, title: String)] {
         [
-            (id: "invest", title: "ETF y acciones"),
-            (id: "cripto", title: "Cripto"),
-            (id: "oro", title: "Oro"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            (id: TokenCategory.sectionCripto, title: "Cripto"),
+            (id: TokenCategory.sectionOro, title: "Oro"),
         ]
     }
 
@@ -233,26 +241,7 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
     }
 
     private func mapCategoryToSectionId(_ item: TokenBalance) -> String {
-        switch item.category.lowercased() {
-        case "stablecoin", "stablecoins", "savings":
-            return "savings"
-        case "token":
-            return "cripto"
-        case "cripto":
-            return "cripto"
-        case "nft":
-            return "otros"
-        case "blacktoken":
-            return "blacktoken"
-        case "invest":
-            return "invest"
-        case "oro":
-            return "oro"
-        case "debt":
-            return "otros"
-        default:
-            return "otros"
-        }
+        TokenCategory.sectionId(for: item.category)
     }
 
     // MARK: UITableViewDataSource

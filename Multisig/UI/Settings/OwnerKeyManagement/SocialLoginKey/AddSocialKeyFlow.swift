@@ -109,7 +109,7 @@ class AddSocialKeyFlow: AddKeyFlow {
         }
 
         guard let email = email, !email.isEmpty else {
-            App.shared.snackbar.show(message: "Email not found")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_social_email_not_found_message", comment: "Social email not found message"))
             stop(success: false)
             return
         }
@@ -118,7 +118,8 @@ class AddSocialKeyFlow: AddKeyFlow {
         do {
             privateKey = try PrivateKey(data: Data(ethHex: key))
         } catch {
-            App.shared.snackbar.show(message: "Failed to create a private key (\(error.localizedDescription)).")
+            App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_safe_private_key_create_failed_format", comment: "Private key create failed"),
+                                                     error.localizedDescription))
             stop(success: false)
             return
         }

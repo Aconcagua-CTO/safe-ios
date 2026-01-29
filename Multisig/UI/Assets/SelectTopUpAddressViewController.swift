@@ -47,7 +47,7 @@ class SelectTopUpAddressViewController: LoadableViewController, UITableViewDeleg
 
         tableView.delegate = self
         tableView.dataSource = self
-        title = "Buy crypto"
+        title = NSLocalizedString("ui_buy_crypto_title", comment: "Buy crypto title")
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
@@ -76,7 +76,8 @@ class SelectTopUpAddressViewController: LoadableViewController, UITableViewDeleg
                         (error as NSError).domain == NSURLErrorDomain {
                         return
                     }
-                    self.onError(GSError.error(description: "Failed to load safe info", error: error))
+                    self.onError(GSError.error(description: NSLocalizedString("ui_safe_info_load_failed_error", comment: "Failed to load safe info error"),
+                                               error: error))
                 }
             case .success(let info):
                 DispatchQueue.main.async { [weak self] in

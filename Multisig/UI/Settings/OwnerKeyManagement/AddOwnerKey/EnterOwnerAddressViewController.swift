@@ -36,12 +36,14 @@ class EnterOwnerAddressViewController: UIViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: stepLabel)
 
         stepLabel.setStyle(.calloutTertiary)
-        stepLabel.text = "\(stepNumber) of \(maxSteps)"
+        stepLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                stepNumber,
+                                maxSteps)
 
         addressField.setPlaceholderText("Enter address")
         addressField.onTap = { [weak self] in self?.didTapAddressField() }
 
-        continueButton.setText("Continue", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
         continueButton.isEnabled = address != nil
     }
 

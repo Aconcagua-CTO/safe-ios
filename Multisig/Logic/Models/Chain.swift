@@ -444,6 +444,38 @@ extension Chain {
 }
 
 extension Chain {
+    func toSCGChain() -> SCGModels.Chain {
+        return SCGModels.Chain(
+            chainId: UInt256String(stringLiteral: id!),
+            chainName: name!,
+            rpcUri: SCGModels.RpcAuthentication(
+                authentication: SCGModels.RpcAuthentication.Authentication(rawValue: rpcUrlAuthentication ?? SCGModels.RpcAuthentication.Authentication.none.rawValue) ?? .none,
+                value: rpcUrl!
+            ),
+            blockExplorerUriTemplate: SCGModels.BlockExplorerUriTemplate(
+                address: blockExplorerUrlAddress!,
+                txHash: blockExplorerUrlTxHash!
+            ),
+            nativeCurrency: SCGModels.Currency(
+                name: nativeCurrency!.name!,
+                symbol: nativeCurrency!.symbol!,
+                decimals: Int(nativeCurrency!.decimals),
+                logoUri: nativeCurrency!.logoUrl!
+            ),
+            theme: SCGModels.Theme(
+                textColor: theme?.textColor ?? "#000000",
+                backgroundColor: theme?.backgroundColor ?? "#FFFFFF"
+            ),
+            ensRegistryAddress: ensRegistryAddress.flatMap { AddressString($0) },
+            shortName: shortName!,
+            l2: l2,
+            features: features ?? [],
+            gasPrice: gasPrice
+        )
+    }
+}
+
+extension Chain {
     private static var gatewayServiceCache: [String: SafeClientGatewayService] = [:]
     private static let gatewayServiceQueue = DispatchQueue(label: "io.gnosis.multisig.chainGatewayServiceCache")
 
@@ -469,7 +501,21 @@ extension Chain {
 
     /// Resolved gateway URL for this chain (custom if set, otherwise default)
     var gatewayURL: URL {
-        gatewayUrl ?? App.configuration.services.clientGatewayURL
+        let resolved = gatewayUrl ?? App.configuration.services.clientGatewayURL
+
+        // Option A: Route Safe-hosted SCG calls through our vaults backend proxy
+        // so Safe API keys stay server-side.
+        //
+        // - Keep custom gateways intact (e.g. Rootstock uses `transaction.safe.rootstock.io`)
+        // - Only override the default Safe-hosted gateway (`safe-client.safe.global`)
+        if gatewayUrl == nil, resolved.host == "safe-client.safe.global" {
+            #if DEBUG
+            LogService.shared.debug("[Chain] gatewayURL override: \(resolved.absoluteString) -> \(ApiConfig.scgProxyApiURL.absoluteString)")
+            #endif
+            return ApiConfig.scgProxyApiURL
+        }
+
+        return resolved
     }
 
     /// Returns chain-specific Safe Client Gateway service
@@ -492,7 +538,7 @@ extension Chain {
             #if DEBUG
             LogService.shared.debug("[Chain] gatewayService() - Creating new service for chainId: \(chainId), gatewayURL: \(gatewayURL.absoluteString), customGateway: \(gatewayUrl?.absoluteString ?? "nil")")
             #endif
-            let service = SafeClientGatewayService(url: gatewayURL, logger: LogService.shared)
+            let service = SafeClientGatewayService(url: gatewayURL, logger: LogService.shared, authRepository: App.shared.authRepository)
             Chain.gatewayServiceCache[chainId] = service
             return service
         }

@@ -79,7 +79,9 @@ class QRCodeScannerViewController: UIViewController {
     }
 
     @objc private func handleVideoInterruption(notification: Notification) {
-        let alert = UIAlertController(title: "Camera unavailable", message: "The camera is unavailable in Split View or in Slide Over mode. Please open the app to full screen.", preferredStyle: .alert)
+        let alert = UIAlertController(title: NSLocalizedString("ui_camera_unavailable_title", comment: "Camera unavailable title"),
+                                      message: NSLocalizedString("ui_camera_unavailable_body", comment: "Camera unavailable body"),
+                                      preferredStyle: .alert)
         let okAction = UIAlertAction(title: "OK", style: .default)
         alert.addAction(okAction)
         
@@ -263,10 +265,11 @@ extension QRCodeScannerViewController: AVCaptureMetadataOutputObjectsDelegate {
             scannerDidScan(code: validatedCode)
         case .failure(let error):
             captureSession.stopRunning()
-            let alert = UIAlertController(title: "Error",
+            let alert = UIAlertController(title: NSLocalizedString("ui_error_title", comment: "Error title"),
                                           message: error.localizedDescription,
                                           preferredStyle: .alert)
-            let retryButton = UIAlertAction(title: "Retry", style: .default) { [weak self] _ in
+            let retryButton = UIAlertAction(title: NSLocalizedString("button_retry", comment: "Retry button title"),
+                                             style: .default) { [weak self] _ in
                 self?.captureSession.startRunning()
             }
             alert.addAction(retryButton)

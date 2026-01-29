@@ -70,8 +70,8 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
         assert(chain != nil)
         assert(transaction != nil)
 
-        title = "Execute"
-        navigationItem.backButtonTitle = "Back"
+        title = NSLocalizedString("ui_execute_title", comment: "Title for executing a transaction")
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         
         // configure content
         contentVC = ReviewExecutionContentViewController(
@@ -99,7 +99,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
         ribbonView.update(chain: chain)
 
         // configure submit button
-        submitButton.actionTitle = "Submit"
+        submitButton.actionTitle = NSLocalizedString("button_submit", comment: "Submit button title")
         submitButton.set(rejectionEnabled: false)
         if controller.isValid && (relayingTask?.state != .running && sendingTask?.state != .running) {
             submitButton.state = .normal
@@ -180,8 +180,8 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
         let keyPickerVC = ChooseOwnerKeyViewController(
             owners: { keys },
             chainID: controller.chainId,
-            titleText: "Select an execution key",
-            header: .text(description: "The selected key will be used to execute this transaction."),
+            titleText: NSLocalizedString("ui_tx_select_execution_key_title", comment: "Select execution key title"),
+            header: .text(description: NSLocalizedString("ui_tx_select_execution_key_description", comment: "Select execution key description")),
             requestsPasscode: false,
             selectedKey: controller.selectedKey?.key,
             balancesLoader: balancesLoader
@@ -348,7 +348,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             })
         }
 
-        formVC.navigationItem.title = "Edit transaction fee"
+        formVC.navigationItem.title = NSLocalizedString("ui_fee_edit_title", comment: "Title for editing the transaction fee")
         let ribbon = RibbonViewController(rootViewController: formVC)
         let nav = UINavigationController(rootViewController: ribbon)
         present(nav, animated: true, completion: nil)
@@ -365,11 +365,21 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
         self.submitButton.state = .loading
 
         if AppConfiguration.FeatureToggles.securityCenter {
-            self.sign()
+            if AppSettings.selfHostedExecuteEnabled {
+                // Backend will execute and pay gas ("Bóveda")
+                self.submit()
+            } else {
+                self.sign()
+            }
         } else {
             authenticate(options: [.useForConfirmation]) { [weak self] success in
                 guard let self = self else { return }
                 if success {
+                    if AppSettings.selfHostedExecuteEnabled {
+                        // Backend will execute and pay gas ("Bóveda")
+                        self.submit()
+                        return
+                    }
                     if self.controller.relaysRemaining > ReviewExecutionViewController.MIN_RELAY_TXS_LEFT && !self.userSelectedSigner {
                         Tracker.trackEvent(.relayUserExecTxPaymentRelay)
                         // No need to sign when relaying
@@ -550,14 +560,14 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
                 let txHash = controller.hashForSigning()
 
                 guard let pk = try keyInfo.privateKey() else {
-                    App.shared.snackbar.show(message: "Private key not available")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_tx_private_key_not_available_error", comment: "Private key not available error"))
                     return
                 }
                 let signature = try pk._store.sign(hash: Array(txHash))
 
                 try controller.update(signature: signature)
             } catch {
-                let gsError = GSError.error(description: "Signing failed", error: error)
+                let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                 App.shared.snackbar.show(error: gsError)
                 return
             }
@@ -565,7 +575,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
 
         case .walletConnect:
             guard let clientTx = controller.walletConnectTransaction() else {
-                let gsError = GSError.error(description: "Unsupported transaction type")
+                let gsError = GSError.error(description: NSLocalizedString("ui_tx_unsupported_transaction_type_error", comment: "Unsupported transaction type error"))
                 App.shared.snackbar.show(error: gsError)
                 return
             }
@@ -590,7 +600,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             let chainId = controller.intChainId
             let isLegacy = controller.isLegacyTx
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action" : "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -603,7 +613,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
                 do {
                     try self.controller.update(signature: (UInt(signature.v), Array(signature.r), Array(signature.s)))
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -617,7 +627,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             let chainId = controller.intChainId
             let isLegacy = controller.isLegacyTx
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action": "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -631,7 +641,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
                 do {
                     try self.controller.update(signature: (UInt(signature.v), Array(signature.r), Array(signature.s)))
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -645,7 +655,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             let chainId = controller.intChainId
             let isLegacy = controller.isLegacyTx
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action": "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -658,7 +668,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
                 do {
                     try self.controller.update(signature: (UInt(signature.v), Array(signature.r), Array(signature.s)))
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -694,7 +704,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
                     try self?.controller.update(signature: (UInt(unmarshaledSignature.v), Array(unmarshaledSignature.r), Array(unmarshaledSignature.s)))
                     self?.submit()
                 } catch {
-                    App.shared.snackbar.show(error: GSError.error(description: "Signing failed", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"), error: error))
                 }
             }
             present(flow: keystoneSignFlow)
@@ -709,9 +719,10 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             do {
                 let executionData = try VaultsService.buildExecutionData(
                     safe: safe,
-                    transaction: transaction
+                    transaction: transaction,
+                    chainId: controller.chainId
                 )
-                let vaultId = safe.addressValue.checksummed
+                let vaultId = executionData.vaultId
                 vaultsService.executeTransactionForCurrentSession(
                     vaultId: vaultId,
                     executionData: executionData
@@ -771,7 +782,7 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
     }
 
     func didSubmitFailed(_ error: Error?) {
-        let gsError = GSError.error(description: "Submitting failed", error: error)
+        let gsError = GSError.error(description: NSLocalizedString("ui_tx_submitting_failed_error", comment: "Submitting failed error"), error: error)
         App.shared.snackbar.show(error: gsError)
     }
 
@@ -781,9 +792,9 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
         Tracker.trackEvent(.userTransactionExecuteSubmitted)
 
         let successVC = SuccessViewController(
-            titleText: "Your transaction is submitted!",
-            bodyText: "It normally takes some time for a transaction to be executed.",
-            primaryAction: "View transaction details",
+            titleText: NSLocalizedString("ui_tx_submit_success_title", comment: "Transaction submitted title"),
+            bodyText: NSLocalizedString("ui_tx_submit_success_body", comment: "Transaction submitted body"),
+            primaryAction: NSLocalizedString("ui_tx_view_transaction_details_action", comment: "View transaction details action"),
             secondaryAction: nil
         )
 

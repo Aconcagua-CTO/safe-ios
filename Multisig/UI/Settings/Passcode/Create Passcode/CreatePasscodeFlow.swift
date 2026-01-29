@@ -45,29 +45,10 @@ class CreatePasscodeFlow: UIFlow {
     }
 
     func setupBiometryV2() {
-        AppSettings.securityLockMethod = .passcode
-
-        // if device does not support biometrics, finish right away
-        guard App.shared.auth.isBiometricsSupported else {
-            createPasscodeV2()
-            return
-        }
-
-        //   if device supports it, ask if to enable biometry
-        let biometryAlert = factory.enableBiometryAlert { [unowned self] in
-            // if user enabled biometry, we finish
-            if AppSettings.securityLockMethod == .userPresence {
-                stop(success: true)
-            }
-            // otherwise, alert is dismissed to show the passcode screen.
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(300)) { [unowned self] in
-            
-            if let popoverPresentationController = biometryAlert.popoverPresentationController {
-                popoverPresentationController.sourceView = self.navigationController.view
-            }
-            self.navigationController.present(biometryAlert, animated: true)
+        if App.shared.auth.isBiometryActivationPossible {
+            AppSettings.securityLockMethod = .passcodeAndUserPresence
+        } else {
+            AppSettings.securityLockMethod = .passcode
         }
     }
 
@@ -161,23 +142,12 @@ class CreatePasscodeFlow: UIFlow {
     }
 
     func setupBiometry(presenter: UIViewController) {
-        // if device does not support biometrics, finish right away
-        guard App.shared.auth.isBiometricsSupported else {
-            AppSettings.securityLockMethod = .passcode
-            stop(success: true)
-            return
+        if App.shared.auth.isBiometryActivationPossible {
+            AppSettings.passcodeOptions.insert(.useBiometry)
+        } else {
+            AppSettings.passcodeOptions.remove(.useBiometry)
         }
-
-        //   if device supports it, ask if to enable biometry
-        let biometryAlert = factory.enableBiometryAlert { [unowned self] in
-            stop(success: true)
-        }
-        
-        if let popoverPresentationController = biometryAlert.popoverPresentationController {
-            popoverPresentationController.sourceView = presenter.view
-        }
-
-        presenter.present(biometryAlert, animated: true)
+        stop(success: true)
     }
 
     override func stop(success: Bool) {
@@ -190,11 +160,12 @@ class CreatePasscodeFlow: UIFlow {
                 // we have set the lock method already
                 do {
                     try App.shared.securityCenter.enableSecurityLock(passcode: userPasscode)
-                    App.shared.snackbar.show(message: "Passcode created")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_passcode_created_message", comment: "Passcode created message"))
                     super.stop(success: true)
                 } catch {
 
-                    App.shared.snackbar.show(message: "Failed to create passcode [](\(error.localizedDescription))")
+                    App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_passcode_create_failed_format", comment: "Passcode create failed"),
+                                                             error.localizedDescription))
                     super.stop(success: false)
                 }
             } else {
@@ -204,11 +175,12 @@ class CreatePasscodeFlow: UIFlow {
             if success {
                 do {
                     try App.shared.auth.createPasscode(plaintextPasscode: userPasscode!)
-                    App.shared.snackbar.show(message: "Passcode created")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_passcode_created_message", comment: "Passcode created message"))
                     super.stop(success: true)
                     return
                 } catch {
-                    App.shared.snackbar.show(message: "Failed to create passcode (\(error.localizedDescription))")
+                    App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_passcode_create_failed_format", comment: "Passcode create failed"),
+                                                             error.localizedDescription))
                 }
             }
             super.stop(success: false)

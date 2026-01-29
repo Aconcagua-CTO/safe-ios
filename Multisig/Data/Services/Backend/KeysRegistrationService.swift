@@ -21,8 +21,10 @@ final class KeysRegistrationService {
     func register(keys: [RegisterKey], completion: @escaping (Result<RegisterKeysResponse, Error>) -> Void) {
         do {
             let request = try RegisterKeysRequest(payload: RegisterKeysPayload(keys: keys))
-            _ = client.asyncExecute(request: request) { [weak self] result in
-                guard let self else { return }
+            // IMPORTANT:
+            // This service is commonly created as a local variable; don't use `[weak self]` here
+            // or the caller may deallocate us before we can decode/forward the result.
+            _ = client.asyncExecute(request: request) { result in
                 switch result {
                 case .success(let data):
                     do {

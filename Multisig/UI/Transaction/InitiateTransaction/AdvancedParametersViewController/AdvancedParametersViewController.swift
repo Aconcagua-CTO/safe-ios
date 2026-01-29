@@ -53,19 +53,24 @@ class AdvancedParametersViewController: UIViewController, ExternalURLSource {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        navigationItem.title = "Edit advanced parameters"
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.title = NSLocalizedString("ui_advanced_params_edit_title", comment: "Title for editing advanced transaction parameters")
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         
-        saveButton = UIBarButtonItem(title: "Save", style: .done, target: self, action: #selector(save))
+        saveButton = UIBarButtonItem(title: NSLocalizedString("button_save", comment: "Save button title"),
+                                     style: .done,
+                                     target: self,
+                                     action: #selector(save))
         navigationItem.rightBarButtonItem = saveButton
 
-        nonceLabel.setText("Safe Account nonce", description: "Safe Account nonce determines an order in which transactions are executed.")
+        nonceLabel.setText(NSLocalizedString("ui_tx_nonce_title", comment: "Safe transaction nonce title"),
+                           description: NSLocalizedString("ui_tx_nonce_description", comment: "Safe transaction nonce description"))
         nonceTextField.textField.text = nonce.description
         nonceTextField.textField.addTarget(self, action: #selector(validateInputs), for: .editingChanged)
         nonceTextField.textField.keyboardType = .numberPad
        
         if let safeTxGas = safeTxGas {
-            safeTxGasLabel.setText("SafeTxGas", description: "SafeTxGas specifies the gas that should be used for the Safe transaction.")
+            safeTxGasLabel.setText(NSLocalizedString("ui_tx_safetxgas_title", comment: "SafeTxGas title"),
+                                   description: NSLocalizedString("ui_tx_safetxgas_description", comment: "SafeTxGas description"))
             safeTxGasTextField.textField.text = safeTxGas.description
             safeTxGasTextField.textField.addTarget(self, action: #selector(validateInputs), for: .editingChanged)
         } else {
@@ -74,7 +79,7 @@ class AdvancedParametersViewController: UIViewController, ExternalURLSource {
         }
         safeTxGasTextField.textField.keyboardType = .numberPad
 
-        helpArticleLinkLabel.hyperLinkLabel(linkText: "How do I configure these details manually?")
+        helpArticleLinkLabel.hyperLinkLabel(linkText: NSLocalizedString("ui_tx_advanced_help_link", comment: "Advanced parameters help link text"))
         helpArticleButton.setTitle("", for: .normal)
         
         validateInputs()
@@ -109,7 +114,7 @@ class AdvancedParametersViewController: UIViewController, ExternalURLSource {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !nonceText.isEmpty,
               let nonce = UInt256(nonceText), nonce >= minimalNonce else {
                   if !(nonceTextField.textField.text ?? "").isEmpty {
-                      nonceTextField.setError("Transaction with this nonce is already executed")
+                      nonceTextField.setError(NSLocalizedString("ui_tx_nonce_already_executed_error", comment: "Nonce already executed error"))
                   } else {
                       nonceTextField.setError(nil)
                   }
@@ -120,11 +125,10 @@ class AdvancedParametersViewController: UIViewController, ExternalURLSource {
             nonceTextField.setError(nil)
         } else {
             let offset = nonce - minimalNonce
-            var txString = "transactions"
-            if offset == 1 {
-                txString = "transaction"
-            }
-            nonceTextField.setError("\(offset) \(txString) will need to be created and executed before this transaction")
+            let txString = offset == 1
+                ? NSLocalizedString("ui_tx_nonce_offset_singular_format", comment: "Nonce offset singular message")
+                : NSLocalizedString("ui_tx_nonce_offset_plural_format", comment: "Nonce offset plural message")
+            nonceTextField.setError(String(format: txString, "\(offset)"))
         }
         self.nonce = UInt256String(nonce)
         
@@ -139,7 +143,7 @@ class AdvancedParametersViewController: UIViewController, ExternalURLSource {
             self.safeTxGas = UInt256String(safeTxGas)
             
             if safeTxGas < proposedSafeTxGas! {
-                safeTxGasTextField.setError("Transaction may fail due to insufficient safeTxGas")
+                safeTxGasTextField.setError(NSLocalizedString("ui_tx_safetxgas_insufficient_error", comment: "SafeTxGas insufficient warning"))
             } else {
                 safeTxGasTextField.setError(nil)
             }

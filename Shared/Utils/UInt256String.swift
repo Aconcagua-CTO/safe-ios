@@ -73,6 +73,6 @@ extension UInt256String: ExpressibleByIntegerLiteral {
 
 extension UInt256String: CustomStringConvertible {
     var description: String {
-        String(value)
+        value.description
     }
 }

@@ -42,36 +42,37 @@ class NavigatingDAOViewController: UIViewController {
 
         checklistTitle.setStyle(.headline)
 
-        nextButton.setText("Start claiming", .filled)
+        nextButton.setText(NSLocalizedString("ui_claim_dao_start_action", comment: "Start claiming action"),
+                           .filled)
 
-        discussItemLabel.hyperLinkLabel("Discuss SafeDAO improvements - post topics and discuss in our",
+        discussItemLabel.hyperLinkLabel(NSLocalizedString("ui_claim_dao_discuss_prefix", comment: "DAO discuss prefix"),
                 prefixStyle: .body,
-                linkText: "Forum",
+                linkText: NSLocalizedString("ui_claim_forum_link", comment: "Forum link title"),
                 linkIcon: nil,
                 underlined: false,
-                postfixText: "."
+                postfixText: NSLocalizedString("ui_claim_dao_discuss_postfix", comment: "DAO discuss postfix")
         )
         openUrlOnTap(link: .discuss, label: discussItemLabel)
 
-        proposeItemLabel.hyperLinkLabel("Propose improvements - read our ",
+        proposeItemLabel.hyperLinkLabel(NSLocalizedString("ui_claim_dao_propose_prefix", comment: "DAO propose prefix"),
                 prefixStyle: .body,
-                linkText: "governance process",
+                linkText: NSLocalizedString("ui_claim_dao_governance_process_link", comment: "DAO governance process link"),
                 linkIcon: nil,
                 underlined: false,
-                postfixText: " and post an SIP."
+                postfixText: NSLocalizedString("ui_claim_dao_propose_postfix", comment: "DAO propose postfix")
         )
         openUrlOnTap(link: .propose, label: proposeItemLabel)
 
-        let governText = "Govern improvements - vote on our Snapshot."
+        let governText = NSLocalizedString("ui_claim_dao_govern_text", comment: "DAO govern text")
         governItemLabel.setStyle(.body)
 
         chatItemLabel.setStyle(.body)
-        chatItemLabel.hyperLinkLabel("Chat with the community - join our Safe ",
+        chatItemLabel.hyperLinkLabel(NSLocalizedString("ui_claim_dao_chat_prefix", comment: "DAO chat prefix"),
                 prefixStyle: .body,
-                linkText: "Safe Discord",
+                linkText: NSLocalizedString("ui_claim_dao_chat_link", comment: "DAO chat link"),
                 linkIcon: nil,
                 underlined: false,
-                postfixText: "."
+                postfixText: NSLocalizedString("ui_claim_dao_chat_postfix", comment: "DAO chat postfix")
         )
         openUrlOnTap(link: .chat, label: chatItemLabel)
 

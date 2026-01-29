@@ -28,7 +28,7 @@ class AddOwnerExceptionViewController: UIViewController {
     var bodyText: String!
 
     var addButtonTitle: String!
-    var notNowButtonTitle: String = "Not now"
+    var notNowButtonTitle: String = NSLocalizedString("button_not_now", comment: "Not now button title")
 
     var onAdd: () -> Void = { }
     var onClose: () -> Void = { }

@@ -239,8 +239,18 @@ class VaultsRepositoryImpl: VaultsRepository {
                         VaultLogger.debug("  Overriding backend chainId \(vault.chainId) with \(resolvedChainId) derived from network \(vault.contractNetwork ?? "nil")")
                     }
                     
-                    // Find Chain entity
-                    guard let chain = Chain.by(resolvedChainId) else {
+                    // Find Chain entity (or restore from Safe Config cache)
+                    let chain: Chain? = {
+                        if let existing = Chain.by(resolvedChainId) {
+                            return existing
+                        }
+                        if let cached = ChainManager.cachedChainInfo(for: resolvedChainId) {
+                            VaultLogger.info("Chain missing for chainId \(resolvedChainId); restoring from Safe Config cache")
+                            return Chain.createOrUpdate(cached.toSCGChain())
+                        }
+                        return nil
+                    }()
+                    guard let chain = chain else {
                         VaultLogger.warning("Failed to parse vault \(index + 1): Chain not found for chainId \(resolvedChainId)")
                         skippedCount += 1
                         continue

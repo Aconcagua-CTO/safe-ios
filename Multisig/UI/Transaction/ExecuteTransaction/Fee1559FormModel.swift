@@ -79,13 +79,14 @@ class Fee1559FormModel: FormModel {
 
     var totalFeeInNativeCoinText: String? {
         guard let totalFee = totalFeeInWei else {
-            return "Total estimated fee: n/a"
+            return NSLocalizedString("ui_tx_total_estimated_fee_na", comment: "Total estimated fee not available")
         }
         let amount = Eth.TokenAmount(
             value: totalFee,
             decimals: Int(nativeCurrency.decimals),
             symbol: nativeCurrency.symbol ?? "")
-        let result = "Total estimated fee: \(amount)"
+        let result = String(format: NSLocalizedString("ui_tx_total_estimated_fee_format", comment: "Total estimated fee format"),
+                            amount.description)
         return result
     }
 
@@ -101,11 +102,11 @@ class Fee1559FormModel: FormModel {
     func fields() -> [UIView] {
         nonceField = LabeledTextField()
         nonceField.infoLabel.setText(
-            "Nonce",
-            description: "Transaction count of the execution account",
+            NSLocalizedString("ui_tx_nonce_field_title", comment: "Nonce field title"),
+            description: NSLocalizedString("ui_tx_execution_account_nonce_description", comment: "Nonce field description"),
             style: .headline
         )
-        nonceField.gnoTextField.setPlaceholder("Nonce")
+        nonceField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_nonce_field_title", comment: "Nonce field title"))
         nonceField.gnoTextField.text = nonceText
         nonceField.gnoTextField.textField.keyboardType = .numberPad
         nonceField.validator = IntegerTextValidator()
@@ -113,11 +114,11 @@ class Fee1559FormModel: FormModel {
 
         gasField = LabeledTextField()
         gasField.infoLabel.setText(
-            "Gas limit",
-            description: "Maximum gas that this transaction can spend. Unused gas will be refunded",
+            NSLocalizedString("ui_tx_gas_limit_title", comment: "Gas limit title"),
+            description: NSLocalizedString("ui_tx_gas_limit_description", comment: "Gas limit description"),
             style: .headline
         )
-        gasField.gnoTextField.setPlaceholder("Gas limit")
+        gasField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_gas_limit_title", comment: "Gas limit title"))
         gasField.gnoTextField.text = gasText
         gasField.gnoTextField.textField.keyboardType = .numberPad
         gasField.validator = IntegerTextValidator()
@@ -125,11 +126,11 @@ class Fee1559FormModel: FormModel {
 
         maxPriorityFeeField = LabeledTextField()
         maxPriorityFeeField.infoLabel.setText(
-            "Max priority fee per gas (GWEI)",
-            description: "Maximum tip to miner per 1 gas in Gwei price units",
+            NSLocalizedString("ui_tx_max_priority_fee_title", comment: "Max priority fee title"),
+            description: NSLocalizedString("ui_tx_max_priority_fee_description", comment: "Max priority fee description"),
             style: .headline
         )
-        maxPriorityFeeField.gnoTextField.setPlaceholder("Max priority fee per gas (GWEI)")
+        maxPriorityFeeField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_max_priority_fee_title", comment: "Max priority fee title"))
         maxPriorityFeeField.gnoTextField.text = maxPriorityFeePerGasInGigaweiText
         maxPriorityFeeField.gnoTextField.textField.keyboardType = .decimalPad
         maxPriorityFeeField.validator = DecimalTextValidator()
@@ -137,11 +138,11 @@ class Fee1559FormModel: FormModel {
 
         maxFeePerGasField = LabeledTextField()
         maxFeePerGasField.infoLabel.setText(
-            "Max fee per gas (GWEI)",
-            description: "Maximum limit paid per 1 gas in Gwei price units",
+            NSLocalizedString("ui_tx_max_fee_per_gas_title", comment: "Max fee per gas title"),
+            description: NSLocalizedString("ui_tx_max_fee_per_gas_description", comment: "Max fee per gas description"),
             style: .headline
         )
-        maxFeePerGasField.gnoTextField.setPlaceholder("Max fee per gas (GWEI)")
+        maxFeePerGasField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_max_fee_per_gas_title", comment: "Max fee per gas title"))
         maxFeePerGasField.gnoTextField.text = maxFeePerGasInGigaweiText
         maxFeePerGasField.gnoTextField.textField.keyboardType = .decimalPad
         maxFeePerGasField.validator = DecimalTextValidator()
@@ -150,7 +151,7 @@ class Fee1559FormModel: FormModel {
         maxFeePerGasField.setCaption(totalFeeInNativeCoinText)
 
         helpField = HyperlinkButtonView()
-        helpField.setText("How do I configure these details manually?")
+        helpField.setText(NSLocalizedString("ui_tx_advanced_help_link", comment: "Advanced parameters help link text"))
         helpField.url = App.configuration.help.advancedTxParamsURL
 
         return [nonceField,
@@ -182,12 +183,12 @@ class Fee1559FormModel: FormModel {
         gasField.gnoTextField.setErrorText(nil)
 
         guard let gasText = gasField.text, !gasText.isEmpty else {
-            gasField.gnoTextField.setErrorText("This value is required")
+            gasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let value = Sol.UInt64(gasText, radix: 10) else {
-            gasField.gnoTextField.setErrorText("Value is not a valid number")
+            gasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
 
@@ -199,17 +200,17 @@ class Fee1559FormModel: FormModel {
         nonceField.gnoTextField.setErrorText(nil)
 
         guard let text = nonceField.text, !text.isEmpty else {
-            nonceField.gnoTextField.setErrorText("This value is required")
+            nonceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let value = Sol.UInt64(text, radix: 10) else {
-            nonceField.gnoTextField.setErrorText("Value is not a valid number")
+            nonceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
         
         if value < minimalNonce {
-            nonceField.gnoTextField.setErrorText("Transaction with this nonce is already executed")
+            nonceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_nonce_already_executed_error", comment: "Nonce already executed error"))
             return false
         }
 
@@ -221,22 +222,22 @@ class Fee1559FormModel: FormModel {
         maxFeePerGasField.gnoTextField.setErrorText(nil)
 
         guard let text = maxFeePerGasField.text, !text.isEmpty else {
-            maxFeePerGasField.gnoTextField.setErrorText("This value is required")
+            maxFeePerGasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let amount = Eth.TokenAmount<Sol.UInt256>(text, radix: 10, decimals: gigaweiDecimals) else {
-            maxFeePerGasField.gnoTextField.setErrorText("Value is not a valid number")
+            maxFeePerGasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
         
         if amount.value == 0  {
-            maxFeePerGasField.gnoTextField.setErrorText("Value should be greater than 0")
+            maxFeePerGasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_greater_than_zero_error", comment: "Value must be greater than zero"))
             return false
         }
 
         guard let maxPriorityFeeAmount = maxPriorityFeeAmount, amount.value >= maxPriorityFeeAmount.value else {
-            maxFeePerGasField.gnoTextField.setErrorText("Max fee must be greater or equal than max priority fee")
+            maxFeePerGasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_max_fee_greater_equal_priority_error", comment: "Max fee must be greater or equal than max priority fee"))
             return false
         }
 
@@ -248,22 +249,22 @@ class Fee1559FormModel: FormModel {
         maxPriorityFeeField.gnoTextField.setErrorText(nil)
 
         guard let text = maxPriorityFeeField.text, !text.isEmpty else {
-            maxPriorityFeeField.gnoTextField.setErrorText("This value is required")
+            maxPriorityFeeField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let amount = Eth.TokenAmount<Sol.UInt256>(text, radix: 10, decimals: gigaweiDecimals) else {
-            maxPriorityFeeField.gnoTextField.setErrorText("Value is not a valid number")
+            maxPriorityFeeField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
         
         if amount.value == 0  {
-            maxPriorityFeeField.gnoTextField.setErrorText("Value should be greater than 0")
+            maxPriorityFeeField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_greater_than_zero_error", comment: "Value must be greater than zero"))
             return false
         }
 
         guard let maxFeeAmount = maxFeePerGasAmount, amount.value <= maxFeeAmount.value else {
-            maxPriorityFeeField.gnoTextField.setErrorText("Max priority fee must be less than or equal to max fee")
+            maxPriorityFeeField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_max_priority_fee_error", comment: "Max priority fee error"))
             return false
         }
 
@@ -285,8 +286,8 @@ class Fee1559FormModel: FormModel {
 
     func validateTotalFee() -> Bool {
         guard totalFeeInWei != nil else {
-            gasField.gnoTextField.setErrorText("Total fee is too high")
-            maxFeePerGasField.gnoTextField.setErrorText("Total fee is too high ")
+            gasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_total_fee_too_high_error", comment: "Total fee too high error"))
+            maxFeePerGasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_total_fee_too_high_error", comment: "Total fee too high error"))
             return false
         }
         return true

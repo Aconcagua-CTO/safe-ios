@@ -82,14 +82,14 @@ class LedgerKeyFlowFactory: AddKeyFlowFactory {
                       body: "Your key will remain on your Ledger wallet. We do not store it in the app.")
         ]
         introVC.viewTrackingEvent = .ledgerOwnerOnboarding
-        introVC.navigationItem.title = "Connect Ledger Nano X"
+        introVC.navigationItem.title = NSLocalizedString("ui_ledger_connect_nano_x_title", comment: "Title for connecting a Ledger Nano X device")
         introVC.navigationItem.largeTitleDisplayMode = .never
         return introVC
     }
 
     func selectDevice(completion: @escaping (UUID, BaseBluetoothController) -> Void) -> SelectLedgerDeviceViewController {
         let vc = SelectLedgerDeviceViewController(trackingParameters: ["action" : "import"],
-                                                  title: "Connect Ledger Nano X",
+                                                  title: NSLocalizedString("ui_ledger_connect_nano_x_title", comment: "Title for connecting a Ledger Nano X device"),
                                                   showsCloseButton: false)
         vc.completion = completion
         

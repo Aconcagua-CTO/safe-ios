@@ -15,5 +15,8 @@ class FinalStepInstructionTableViewCell: UITableViewCell {
     override func awakeFromNib() {
         super.awakeFromNib()
         cellLabel.setStyle(.headline)
+        // The final step title can be long; allow wrapping.
+        cellLabel.numberOfLines = 0
+        cellLabel.lineBreakMode = .byWordWrapping
     }
 }

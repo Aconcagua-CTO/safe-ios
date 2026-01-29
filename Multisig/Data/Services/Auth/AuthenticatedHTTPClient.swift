@@ -25,16 +25,22 @@ class AuthenticatedHTTPClient {
     func asyncExecute<T: HTTPRequest>(request: T, completion: @escaping (Result<Data, Error>) -> Void) -> URLSessionTask {
         AuthLogger.network("Preparing authenticated request: \(request.httpMethod) \(request.urlPath)")
         
+        // IMPORTANT:
+        // This client is often created as a short-lived object (e.g. inside onboarding flows).
+        // Using `[weak self]` here can drop the request entirely if the caller doesn't retain
+        // the service/client instance long enough for the async token fetch to complete.
+        //
+        // Capture strong references needed to dispatch the request.
+        let baseClient = self.baseClient
+        let authRepository = self.authRepository
+
         // Get auth token
-        authRepository.getIdToken(forceRefresh: false) { [weak self] tokenResult in
-            guard let self = self else { return }
-            
+        authRepository.getIdToken(forceRefresh: false) { tokenResult in
             switch tokenResult {
             case .success(let token):
                 AuthLogger.network("Successfully obtained auth token, adding to request")
                 
                 // Add auth headers to request
-                var authenticatedRequest = request
                 var headers = request.headers
                 headers["Authorization"] = "Bearer \(token)"
                 headers["Content-Type"] = "application/json"
@@ -47,7 +53,10 @@ class AuthenticatedHTTPClient {
                     headers: headers
                 )
                 
-                let task = self.baseClient.asyncExecute(request: authenticatedHTTPRequest) { result in
+                // Retain the underlying HTTPClient until the URLSessionTask completes.
+                // Otherwise, if the caller doesn't retain the service/client, `HTTPClient` can deinit
+                // and `invalidateAndCancel()` the session, producing NSURLErrorDomain -999.
+                let task = baseClient.asyncExecute(request: authenticatedHTTPRequest) { [baseClient] result in
                     switch result {
                     case .success(let data):
                         AuthLogger.network("Request successful")

@@ -39,7 +39,7 @@ final class TangemCardReaderViewController: UIViewController {
         TangemLogger.info("📖 CARD READER VC: View controller loaded")
         
         view.backgroundColor = .backgroundSecondary
-        navigationItem.title = "Read Tangem Card"
+        navigationItem.title = NSLocalizedString("ui_tangem_read_card_title", comment: "Title for Tangem card reader screen")
         navigationItem.largeTitleDisplayMode = .never
         
         setupUI()
@@ -69,7 +69,7 @@ final class TangemCardReaderViewController: UIViewController {
         activityIndicator.hidesWhenStopped = true
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         
-        scanButton.setTitle("Scan Card", for: .normal)
+        scanButton.setTitle(NSLocalizedString("ui_tangem_card_reader_scan_card", comment: "Scan Tangem card button title"), for: .normal)
         scanButton.addTarget(self, action: #selector(scanTapped), for: .touchUpInside)
         scanButton.translatesAutoresizingMaskIntoConstraints = false
         
@@ -115,14 +115,14 @@ final class TangemCardReaderViewController: UIViewController {
     private func updateUI(state: State) {
         switch state {
         case .idle:
-            statusLabel.text = "Tap 'Scan Card' to read all Tangem card information"
+            statusLabel.text = NSLocalizedString("ui_tangem_card_reader_tap_to_scan", comment: "Tangem card reader idle message")
             statusLabel.isHidden = false
             activityIndicator.stopAnimating()
             scanButton.isEnabled = true
             scrollView.isHidden = true
             
         case .scanning:
-            statusLabel.text = "Hold your Tangem card near the top of your iPhone..."
+            statusLabel.text = NSLocalizedString("ui_tangem_card_reader_hold_near_top", comment: "Tangem card reader scanning message")
             statusLabel.isHidden = false
             activityIndicator.startAnimating()
             scanButton.isEnabled = false
@@ -132,7 +132,7 @@ final class TangemCardReaderViewController: UIViewController {
             statusLabel.isHidden = true
             activityIndicator.stopAnimating()
             scanButton.isEnabled = true
-            scanButton.setTitle("Scan Again", for: .normal)
+            scanButton.setTitle(NSLocalizedString("ui_tangem_card_reader_scan_again", comment: "Scan again button title"), for: .normal)
             scrollView.isHidden = false
             
         case .error(let message):
@@ -140,7 +140,7 @@ final class TangemCardReaderViewController: UIViewController {
             statusLabel.isHidden = false
             activityIndicator.stopAnimating()
             scanButton.isEnabled = true
-            scanButton.setTitle("Try Again", for: .normal)
+            scanButton.setTitle(NSLocalizedString("button_retry", comment: "Retry button title"), for: .normal)
             scrollView.isHidden = true
         }
     }
@@ -318,7 +318,10 @@ final class TangemCardReaderViewController: UIViewController {
         let walletTitle = UILabel()
         walletTitle.font = .preferredFont(forTextStyle: .subheadline)
         walletTitle.textColor = .labelPrimary
-        walletTitle.text = "Wallet #\(index + 1)"
+        walletTitle.text = String(
+            format: NSLocalizedString("ui_tangem_wallet_format", comment: "Tangem wallet label format"),
+            index + 1
+        )
         walletStack.addArrangedSubview(walletTitle)
         
         do {

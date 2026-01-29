@@ -46,7 +46,11 @@ class AuthenticationController {
         try accessService.registerUser(password: password)
         AppSettings.passcodeWasSetAtLeastOnce = true
 
-        AppSettings.passcodeOptions = [.useForLogin, .useForConfirmation]
+        var options: PasscodeOptions = [.useForLogin, .useForConfirmation]
+        if isBiometryActivationPossible {
+            options.insert(.useBiometry)
+        }
+        AppSettings.passcodeOptions = options
 
         NotificationCenter.default.post(name: .passcodeCreated, object: nil)
 
@@ -86,7 +90,7 @@ class AuthenticationController {
                     Tracker.setPasscodeIsSet(to: false)
                     Tracker.trackEvent(trackingEvent)
 
-                    App.shared.snackbar.show(message: "Passcode disabled")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_auth_passcode_disabled_message", comment: "Passcode disabled message"))
                 }
             }
         } else {
@@ -99,7 +103,7 @@ class AuthenticationController {
                 Tracker.setPasscodeIsSet(to: false)
                 Tracker.trackEvent(trackingEvent)
 
-                App.shared.snackbar.show(message: "Passcode disabled")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_auth_passcode_disabled_message", comment: "Passcode disabled message"))
             } catch {
                 let uiError = GSError.error(
                     description: "Failed to delete passcode",
@@ -113,7 +117,7 @@ class AuthenticationController {
         try Safe.removeAll()
         try OwnerKeyController.deleteAllKeys(showingMessage: false)
         deletePasscode(authenticate: false, trackingEvent: .userPasscodeReset)
-        App.shared.snackbar.show(message: "All data removed from this app")
+        App.shared.snackbar.show(message: NSLocalizedString("ui_auth_all_data_removed_message", comment: "All data removed message"))
     }
 
     func migrateFromPasscodeV1() {
@@ -193,7 +197,7 @@ class AuthenticationController {
             switch result {
             case .success:
                 if AppConfiguration.FeatureToggles.securityCenter {
-                    let newLockMethod = lockMethod == nil ? .userPresence : lockMethod!
+                    let newLockMethod = lockMethod == nil ? .passcodeAndUserPresence : lockMethod!
                     AppSettings.securityLockMethod = newLockMethod
                     #if DEBUG
                     LogService.shared.debug("[AuthController] Biometrics activated - SecurityCenter mode, lockMethod set to: \(newLockMethod.rawValue)")
@@ -206,7 +210,7 @@ class AuthenticationController {
                 }
 
                 NotificationCenter.default.post(name: .biometricsActivated, object: nil)
-                App.shared.snackbar.show(message: "Biometrics activated.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_auth_biometrics_activated_message", comment: "Biometrics activated message"))
                 completion(.success(()))
 
             case .failure(let error):

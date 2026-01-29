@@ -19,7 +19,7 @@ class ExportInProgressViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Exporting data..."
+        title = NSLocalizedString("ui_data_exporting_title", comment: "Exporting data title")
     }
     
     override func viewDidAppear(_ animated: Bool) {

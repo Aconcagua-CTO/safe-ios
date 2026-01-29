@@ -17,16 +17,22 @@ class ExportDataFlow: UIFlow {
     
     func instructions() {
         let vc = CommonInstructionsViewController()
-        vc.title = "Export Data"
+        vc.title = NSLocalizedString("ui_data_export_title", comment: "Export data title")
         
         vc.trackingEvent = .screenExportInstructions
         
         vc.steps = [
             .header,
-            .step(number: "1", title: "Create a file password", description: "Enter a strong password for locking the export file."),
-            .step(number: "2", title: "Export the data", description: "Data includes private keys, safes and address book in an encrypted file format."),
-            .step(number: "3", title: "Save the data file", description: "Store the export file in Files on your device or a secure location of your choice."),
-            .finalStep(title: "Export of data completed!")
+            .step(number: "1",
+                  title: NSLocalizedString("ui_data_export_step1_title", comment: "Export step 1 title"),
+                  description: NSLocalizedString("ui_data_export_step1_description", comment: "Export step 1 description")),
+            .step(number: "2",
+                  title: NSLocalizedString("ui_data_export_step2_title", comment: "Export step 2 title"),
+                  description: NSLocalizedString("ui_data_export_step2_description", comment: "Export step 2 description")),
+            .step(number: "3",
+                  title: NSLocalizedString("ui_data_export_step3_title", comment: "Export step 3 title"),
+                  description: NSLocalizedString("ui_data_export_step3_description", comment: "Export step 3 description")),
+            .finalStep(title: NSLocalizedString("ui_data_export_complete_title", comment: "Export complete title"))
         ]
         
         vc.onClose = { [unowned self] in
@@ -42,14 +48,14 @@ class ExportDataFlow: UIFlow {
     
     func createPassword() {
         let vc = CreateExportPasswordViewController(nibName: nil, bundle: nil)
-        vc.title = "Create password"
-        vc.prompt = "Your password protects the data, including private keys.\n• At least 8 characters long.\n• Use numbers, symbols, and capital letters.\n• Use a password manager like 1Password or iCloud Keychain."
-        vc.placeholder = "Enter password"
+        vc.title = NSLocalizedString("ui_data_create_password_title", comment: "Create password title")
+        vc.prompt = NSLocalizedString("ui_data_password_prompt", comment: "Password prompt")
+        vc.placeholder = NSLocalizedString("ui_data_password_placeholder", comment: "Password placeholder")
         vc.passwordMeterEnabled = true
         vc.validateValue = { [unowned vc] value in
             let score = vc.passwordScore(value)
             if score < 64 {
-                return "Password must be at least 8 characters long."
+                return NSLocalizedString("ui_data_password_min_length_error", comment: "Password min length error")
             }
             return nil
         }
@@ -61,12 +67,12 @@ class ExportDataFlow: UIFlow {
 
     func repeatPassword(_ password: String) {
         let vc = CreateExportPasswordViewController(nibName: nil, bundle: nil)
-        vc.title = "Repeat password"
-        vc.placeholder = "Repeat password"
-        vc.prompt = "Repeat previously entered password"
+        vc.title = NSLocalizedString("ui_data_repeat_password_title", comment: "Repeat password title")
+        vc.placeholder = NSLocalizedString("ui_data_repeat_password_placeholder", comment: "Repeat password placeholder")
+        vc.prompt = NSLocalizedString("ui_data_repeat_password_prompt", comment: "Repeat password prompt")
         vc.validateValue = { value in
             if value != password {
-                return "Passwords do not match"
+                return NSLocalizedString("ui_data_passwords_mismatch_error", comment: "Passwords mismatch error")
             }
             return nil
         }
@@ -88,10 +94,10 @@ class ExportDataFlow: UIFlow {
     func saveExportedData(tempFileURL: URL?, logs: [String]) {
         if let url = tempFileURL {
             let vc = SuccessViewController(
-                titleText: "Export completed",
-                bodyText: "Exported data is encrypted and includes private keys, list of safes and address book.\n\nSave it to Files - On My iPhone.",
-                primaryAction: "Save",
-                secondaryAction: "Done"
+                titleText: NSLocalizedString("ui_data_export_completed_title", comment: "Export completed title"),
+                bodyText: NSLocalizedString("ui_data_export_completed_body", comment: "Export completed body"),
+                primaryAction: NSLocalizedString("button_save", comment: "Save button title"),
+                secondaryAction: NSLocalizedString("button_done", comment: "Done button title")
             )
             vc.reenablesNavBar = false
             vc.setTrackingData(trackingEvent: .screenExportSuccess)
@@ -109,11 +115,11 @@ class ExportDataFlow: UIFlow {
             show(vc)
         } else {
             let vc = ErrorViewController(nibName: nil, bundle: nil)
-            vc.titleText = "Export failed"
-            vc.bodyText = "Details are shown below:"
+            vc.titleText = NSLocalizedString("ui_data_export_failed_title", comment: "Export failed title")
+            vc.bodyText = NSLocalizedString("ui_data_export_failed_body", comment: "Export failed body")
             vc.errorText = logs.joined(separator: "\n")
             if vc.errorText.isEmpty {
-                vc.errorText = "No error messages"
+                vc.errorText = NSLocalizedString("ui_data_no_error_messages", comment: "No error messages")
             }
             vc.completion = { [weak self] in
                 self?.stop(success: false)

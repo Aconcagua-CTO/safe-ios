@@ -6,10 +6,11 @@
 //  Copyright © 2022 Gnosis Ltd. All rights reserved.
 //
 
-import Foundation
+import UIKit
 class KeyNotificationViewController: AccountActionCompletedViewController {
     private var addKeyController: DelegateKeyController!
     private var type: KeyType!
+    private var didAutoConfirm = false
 
     convenience init(address: Address, name: String, type: KeyType, completion: @escaping () -> Void) {
         self.init(namedClass: AccountActionCompletedViewController.self)
@@ -20,23 +21,38 @@ class KeyNotificationViewController: AccountActionCompletedViewController {
     }
 
     override func viewDidLoad() {
-        titleText = type.titleText
-        headerText = "Owner Key added"
+        titleText = NSLocalizedString("ui_safe_mobile_key_name", comment: "Mobile key title")
+        headerText = "Mobile Key generada con éxito!"
 
         assert(accountName != nil)
         assert(accountAddress != nil)
 
-        descriptionText = "\(accountName ?? "Key") can't receive push notifications without your confirmation.\n\nYou can change this at any time in App Settings - Owner Keys - Key Details."
+        descriptionText = ""
 
-        primaryActionName = "Confirm to receive push notifications"
-        secondaryActionName = "Skip"
+        primaryActionName = NSLocalizedString("button_continue", comment: "Continue button title")
+        secondaryActionName = ""
 
         super.viewDidLoad()
+        
+        accountInfoView.isHidden = false
+        accountInfoView.setIcon(makeMobileKeyIcon())
+
+        descriptionLabel.isHidden = true
+
+        // Streamlined flow: don't ask; always confirm notifications.
+        primaryButton.isHidden = false
+        secondaryButton.isHidden = true
+        ViewControllerFactory.addCloseButton(self)
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         Tracker.trackEvent(.screen_add_delegate, parameters: ["key_type" : type.name])
+
+        // Streamlined flow: auto-confirm once.
+        guard !didAutoConfirm else { return }
+        didAutoConfirm = true
+        primaryAction(self)
     }
 
     override func primaryAction(_ sender: Any) {
@@ -48,29 +64,56 @@ class KeyNotificationViewController: AccountActionCompletedViewController {
             addKeyController.createDelegate()
         } catch {
             App.shared.snackbar.show(message: error.localizedDescription)
+            // Ensure the user can proceed even if we can't start the delegate flow.
+            completion()
         }
     }
 
     override func secondaryAction(_ sender: Any) {
-        // doing nothing because user skipped
+        // User chose to leave this screen.
         Tracker.trackEvent(.addDelegateKeySkipped)
         completion()
+    }
+
+    private func makeMobileKeyIcon() -> UIImage? {
+        guard let baseImage = UIImage(named: "ico-mobile") else { return nil }
+        let badgeImage = UIImage(named: "ico-app-settings-key")
+        let baseSize = CGSize(width: 56, height: 56)
+        let badgeDiameter = baseSize.width * 0.6
+        let badgeOrigin = CGPoint(x: baseSize.width - badgeDiameter, y: baseSize.height - badgeDiameter)
+        let badgeRect = CGRect(origin: badgeOrigin, size: CGSize(width: badgeDiameter, height: badgeDiameter))
+
+        let renderer = UIGraphicsImageRenderer(size: baseSize)
+        return renderer.image { _ in
+            baseImage.draw(in: CGRect(origin: .zero, size: baseSize))
+
+            if let badgeColor = UIColor(named: "backgroundGreen") {
+                badgeColor.setFill()
+                UIBezierPath(ovalIn: badgeRect).fill()
+            }
+
+            guard let badgeImage else { return }
+            let tintedBadge = badgeImage.withTintColor(.primary, renderingMode: .alwaysOriginal)
+            let badgeInset = badgeDiameter * 0.2
+            let badgeImageRect = badgeRect.insetBy(dx: badgeInset, dy: badgeInset)
+            tintedBadge.draw(in: badgeImageRect)
+        }
     }
 }
 
 fileprivate extension KeyType {
     var titleText: String {
         switch self {
-        case .ledgerNanoX: return "Connect Ledger Nano X"
-        case .deviceImported: return "Import Owner Key"
-        case .deviceGenerated: return "Generate Owner Key"
-        case .keystone: return "Connect Keystone"
-        case .walletConnect: return "Connect WalletConnect"
-        case .web3AuthApple: return "Login via Web2"
-        case .web3AuthGoogle: return "Login via Web2"
-        case .tangem: return "Connect Tangem Card"
-        case .tangem0: return "Connect Tangem0 Card"
-        case .burner: return "Connect Burner Card"
+        case .ledgerNanoX: return NSLocalizedString("ui_ledger_connect_nano_x_title", comment: "Title for connecting a Ledger Nano X device")
+        case .deviceImported: return NSLocalizedString("ui_owner_key_import_title", comment: "Import owner key title")
+        case .deviceGenerated: return NSLocalizedString("ui_owner_key_create_title", comment: "Generate owner key title")
+        case .keystone: return NSLocalizedString("ui_keystone_connect_title", comment: "Title for connecting a Keystone device")
+        case .walletConnect: return NSLocalizedString("ui_walletconnect_connect_owner_key_title", comment: "Connect Owner Key title")
+        case .web3AuthApple: return NSLocalizedString("ui_web2_login_title", comment: "Login via Web2 title")
+        case .web3AuthGoogle: return NSLocalizedString("ui_web2_login_title", comment: "Login via Web2 title")
+        case .tangem: return NSLocalizedString("ui_tangem_connect_card_title", comment: "Connect Tangem Card title")
+        case .tangem0: return NSLocalizedString("ui_tangem0_connect_card_title", comment: "Connect Tangem0 Card title")
+        case .burner: return NSLocalizedString("ui_burner_connect_card_title", comment: "Title for the burner owner key connect flow")
         }
     }
 }

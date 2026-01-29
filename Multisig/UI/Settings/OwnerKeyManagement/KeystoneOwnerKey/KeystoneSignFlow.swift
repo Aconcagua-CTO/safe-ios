@@ -34,7 +34,7 @@ final class KeystoneSignFlow: UIFlow {
         let signVC = UIHostingController(rootView: KeystoneRequestSignatureView(onTap: { [weak self] in
             self?.presentScanner()
         }))
-        signVC.navigationItem.title = "Request signature"
+        signVC.navigationItem.title = NSLocalizedString("ui_keystone_request_signature_title", comment: "Title for requesting a signature with Keystone")
         
         let ribbon = ViewControllerFactory.ribbonWith(viewController: signVC)
         ribbon.storedChain = signInfo.chain

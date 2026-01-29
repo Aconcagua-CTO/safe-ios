@@ -19,7 +19,7 @@ class SelectFiatViewController: LoadableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Fiat Currency"
+        navigationItem.title = NSLocalizedString("ui_settings_fiat_currency_title", comment: "Settings title for fiat currency")
 
         tableView.delegate = self
         tableView.dataSource = self
@@ -51,7 +51,8 @@ class SelectFiatViewController: LoadableViewController {
                         return
                     }
 
-                    self.onError(GSError.error(description: "Failed to load fiats", error: error))
+                    self.onError(GSError.error(description: NSLocalizedString("ui_fiats_load_failed_error", comment: "Failed to load fiats error"),
+                                               error: error))
                 }
             case .success(let results):
                 DispatchQueue.main.async { [weak self] in

@@ -278,7 +278,8 @@ extension VaultsService {
 
     static func buildExecutionData(
         safe: Safe,
-        transaction: SCGModels.TransactionDetails
+        transaction: SCGModels.TransactionDetails,
+        chainId: String?
     ) throws -> ExecuteSafeTransactionExecutionData {
         guard let txData = transaction.txData else {
             throw ExecutePayloadError.missingTransactionData
@@ -322,9 +323,18 @@ extension VaultsService {
 
         let nonce = Int(truncatingIfNeeded: multisigInfo.nonce.value)
 
+        let scopedVaultId: String = {
+            guard let chainId,
+                  let network = TransactionRequestsService.networkName(forChainId: chainId) else {
+                return safe.addressValue.checksummed
+            }
+            let normalized = safe.addressValue.hexadecimal.lowercased()
+            return "\(network):\(normalized)"
+        }()
+
         return ExecuteSafeTransactionExecutionData(
             safeAddress: safe.addressValue.checksummed,
-            vaultId: safe.addressValue.checksummed,
+            vaultId: scopedVaultId,
             hash: safeTxHash,
             nonce: nonce,
             safeTxData: safeTxData,

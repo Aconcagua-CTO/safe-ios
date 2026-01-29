@@ -16,10 +16,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var updateAppWindow: UIWindow?
     var tabBarWindow: UIWindow?
     var privacyShieldWindow: UIWindow?
+    var postLoginGateWindow: UIWindow?
     var forceAssetsOnNextMainContent: Bool = false
 
     // the window to present
     var presentedWindow: UIWindow?
+    private var postLoginGateCoordinator: PostLoginGateCoordinator?
+    
+    // Gate to prevent unapproved users (lead not approved) from entering the app on relaunch.
+    private var isCheckingProvisioningGate = false
+    private var provisioningGateApprovedUid: String?
+    private lazy var userProvisioningService =
+        UserProvisioningService(authRepository: App.shared.authRepository, logger: LogService.shared)
 
     private var shouldShowPasscode: Bool {
         App.shared.auth.isPasscodeSetAndAvailable && AppSettings.passcodeOptions.contains(.useForLogin)
@@ -268,14 +276,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 onFaceIDCheckCompletion()
             } else {
                 // Face ID failed or cancelled - fall back to passcode if lock method requires it
-                let lockMethodRequiresPasscode = App.shared.securityCenter.lockMethod.isPasscodeRequired()
                 let shouldShowPasscodeEntry = App.shared.securityCenter.shouldShowPasscode()
                 
                 #if DEBUG
-                LogService.shared.debug("[SceneDelegate] Face ID failed - lockMethodRequiresPasscode: \(lockMethodRequiresPasscode), shouldShowPasscode: \(shouldShowPasscodeEntry)")
+                LogService.shared.debug("[SceneDelegate] Face ID failed - shouldShowPasscode: \(shouldShowPasscodeEntry)")
                 #endif
                 
-                if lockMethodRequiresPasscode && shouldShowPasscodeEntry {
+                if shouldShowPasscodeEntry {
                     #if DEBUG
                     LogService.shared.debug("[SceneDelegate] Falling back to passcode window")
                     #endif
@@ -373,6 +380,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Terms accepted - check authentication state
         if !App.shared.authRepository.isAuthenticated() {
             AuthLogger.info("User not authenticated, showing login screen")
+            postLoginGateCoordinator = nil
+            dismissPostLoginGateWindow()
             showWindow(makeLoginWindow())
             return
         }
@@ -402,11 +411,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             #endif
             showWindow(makeEnterPasscodeWindow())
         } else {
-            // Go directly to main content (assets screen)
+            // Go directly to main content (assets screen) after post-login gating
             #if DEBUG
-            LogService.shared.debug("[SceneDelegate] No unlock needed, showing main content")
+            LogService.shared.debug("[SceneDelegate] No unlock needed, showing post-login gate")
             #endif
-            showMainContentWindow()
+            showPostLoginGateIfNeeded()
         }
     }
     
@@ -415,6 +424,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let loginVC = LoginViewController()
         loginWindow.rootViewController = UINavigationController(rootViewController: loginVC)
         return loginWindow
+    }
+    
+    private func makeContactRequiredWindow(message: String) -> UIWindow {
+        let window = makeWindow(scene: scene!)
+        window.rootViewController = ContactRequiredViewController(message: message)
+        return window
+    }
+    
+    private func showContactRequiredWindow(message: String) {
+        postLoginGateCoordinator = nil
+        dismissPostLoginGateWindow()
+        showWindow(makeContactRequiredWindow(message: message))
     }
 
     func showMainContentWindow() {
@@ -443,14 +464,111 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             if AppConfiguration.FeatureToggles.securityCenter {
                 try App.shared.securityCenter.unlockDataStore(userPassword: userPassword)
             }
-            showMainContentWindow()
+            showPostLoginGateIfNeeded()
         } catch {
             LogService.shared.error("Failed to unlock", error: error)
         }
     }
 
     func onFaceIDCheckCompletion() {
-        showMainContentWindow()
+        showPostLoginGateIfNeeded()
+    }
+
+    private func showPostLoginGateIfNeeded() {
+        guard App.shared.authRepository.isAuthenticated() else {
+            showMainContentWindow()
+            return
+        }
+        
+        // If the user is authenticated in Firebase Auth but not approved in the backend (lead gating),
+        // we must not enter post-login gate (vault sync / pending vault activation screens).
+        let currentUid = App.shared.authRepository.getCurrentUser()?.uid
+        if provisioningGateApprovedUid != nil, provisioningGateApprovedUid == currentUid {
+            // already approved for this uid in this session
+        } else {
+            guard !isCheckingProvisioningGate else { return }
+            isCheckingProvisioningGate = true
+            
+            userProvisioningService.ensureUserRecord { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isCheckingProvisioningGate = false
+                    
+                    switch result {
+                    case .success(let leadAction):
+                        switch leadAction {
+                        case .leadCreated:
+                            let msg = NSLocalizedString("auth_lead_created_message", comment: "")
+                            self.provisioningGateApprovedUid = nil
+                            App.shared.authRepository.signOut { _ in
+                                DispatchQueue.main.async {
+                                    self.showContactRequiredWindow(message: msg)
+                                }
+                            }
+                            return
+                        case .leadMissingNames, .leadMissingCardManufacturer:
+                            let msg = NSLocalizedString("auth_lead_pending_message", comment: "")
+                            self.provisioningGateApprovedUid = nil
+                            App.shared.authRepository.signOut { _ in
+                                DispatchQueue.main.async {
+                                    self.showContactRequiredWindow(message: msg)
+                                }
+                            }
+                            return
+                        default:
+                            // allowed: existing_user / copied_from_lead / none
+                            self.provisioningGateApprovedUid = currentUid
+                        }
+                    case .failure:
+                        // Fail closed: if we can't verify approval, sign out and return to login.
+                        self.provisioningGateApprovedUid = nil
+                        App.shared.authRepository.signOut { _ in
+                            DispatchQueue.main.async {
+                                self.postLoginGateCoordinator = nil
+                                self.dismissPostLoginGateWindow()
+                                self.showWindow(self.makeLoginWindow())
+                            }
+                        }
+                        return
+                    }
+                    
+                    // Continue with the normal flow now that provisioning gate passed.
+                    self.showPostLoginGateIfNeeded()
+                }
+            }
+            return
+        }
+
+        if postLoginGateCoordinator != nil {
+            if let postLoginGateWindow {
+                showWindow(postLoginGateWindow)
+            }
+            return
+        }
+
+        let coordinator = PostLoginGateCoordinator(sceneDelegate: self)
+        postLoginGateCoordinator = coordinator
+        coordinator.start { [weak self] in
+            guard let self else { return }
+            self.postLoginGateCoordinator = nil
+            self.showMainContentWindow()
+        }
+    }
+
+    func showPostLoginGateWindow(rootViewController: UIViewController) {
+        if postLoginGateWindow == nil {
+            let window = makeWindow(scene: scene!)
+            window.rootViewController = rootViewController
+            postLoginGateWindow = window
+        } else {
+            postLoginGateWindow?.rootViewController = rootViewController
+        }
+        showWindow(postLoginGateWindow)
+    }
+
+    func dismissPostLoginGateWindow() {
+        postLoginGateWindow?.isHidden = true
+        postLoginGateWindow = nil
     }
 
     func onTabBarAppearance(of tabBar: MainTabBarViewController) {

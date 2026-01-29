@@ -23,12 +23,43 @@ class OnboardingViewController: UIViewController {
     private var createSafeFlow: CreateSafeFlow!
     private var addSafeFlow: AddSafeFlow!
     
-    private let steps: [OnboardingStep] = [OnboardingStep(title: (text: "Get Money, Grow Money",
-                                                                  highlightedText: nil),
-                                                          description: (text: "",
-                                                                        highlightedText: nil),
-                                                          image: UIImage(named: "ico-onboarding-key")!,
-                                                          trackingEvent: .screenOnboarding1)
+    private let steps: [OnboardingStep] = [
+        OnboardingStep(
+            title: (
+                text: NSLocalizedString("ui_onboarding_1_title", comment: "Onboarding screen 1 title"),
+                highlightedText: NSLocalizedString("ui_onboarding_1_title_highlight", comment: "Onboarding screen 1 title highlight")
+            ),
+            description: (
+                text: NSLocalizedString("ui_onboarding_1_body", comment: "Onboarding screen 1 body"),
+                highlightedText: nil
+            ),
+            image: UIImage(named: "ico-onboarding-1")!,
+            trackingEvent: .screenOnboarding1
+        ),
+        OnboardingStep(
+            title: (
+                text: NSLocalizedString("ui_onboarding_2_title", comment: "Onboarding screen 2 title"),
+                highlightedText: NSLocalizedString("ui_onboarding_2_title_highlight", comment: "Onboarding screen 2 title highlight")
+            ),
+            description: (
+                text: NSLocalizedString("ui_onboarding_2_body", comment: "Onboarding screen 2 body"),
+                highlightedText: nil
+            ),
+            image: UIImage(named: "ico-onboarding-2")!,
+            trackingEvent: .screenOnboarding2
+        ),
+        OnboardingStep(
+            title: (
+                text: NSLocalizedString("ui_onboarding_3_title", comment: "Onboarding screen 3 title"),
+                highlightedText: NSLocalizedString("ui_onboarding_3_title_highlight", comment: "Onboarding screen 3 title highlight")
+            ),
+            description: (
+                text: NSLocalizedString("ui_onboarding_3_body", comment: "Onboarding screen 3 body"),
+                highlightedText: nil
+            ),
+            image: UIImage(named: "ico-onboarding-3")!,
+            trackingEvent: .screenOnboarding3
+        )
     ]
 
     private var completion: () -> () = { }
@@ -42,10 +73,14 @@ class OnboardingViewController: UIViewController {
         super.viewDidLoad()
 
         completelyNewLabel.setStyle(.callout)
-        loadSafeButton.setText("Load existing Safe Account", .bordered)
-        createSafeButton.setText("Create new Safe Account", .filled)
-        demoButton.setText("Explore Demo", .primary)
-        skipButton.setText("Skip", .primary)
+        createSafeButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
+
+        // Hide legacy onboarding actions and top-right controls.
+        loadSafeButton.isHidden = true
+        demoButton.isHidden = true
+        completelyNewLabel.isHidden = true
+        skipButton.isHidden = true
+        closeButton.isHidden = true
         let nib = UINib(nibName: OnboardingStepCollectionViewCell.identifier, bundle: Bundle(for: OnboardingStepCollectionViewCell.self))
         collectionView.register(nib, forCellWithReuseIdentifier: OnboardingStepCollectionViewCell.identifier)
 
@@ -53,7 +88,7 @@ class OnboardingViewController: UIViewController {
         collectionView.dataSource = self
 
         pageControl.numberOfPages = self.steps.count
-        actionsContainerView.isHidden = true
+        actionsContainerView.isHidden = false
         bindCurrentStep(page: 0)
         overrideUserInterfaceStyle = .dark
     }
@@ -68,12 +103,14 @@ class OnboardingViewController: UIViewController {
     }
 
     @IBAction private func didTapCreateSafe(_ sender: Any) {
-        Tracker.trackEvent(.createSafeFromOnboarding)
-        createSafeFlow = CreateSafeFlow(completion: { [weak self] _ in
-            self?.createSafeFlow = nil
-            self?.completion()
-        })
-        present(flow: createSafeFlow, dismissableOnSwipe: false)
+        let nextPage = pageControl.currentPage + 1
+        if nextPage < steps.count {
+            let indexPath = IndexPath(item: nextPage, section: 0)
+            collectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+            bindCurrentStep(page: nextPage)
+        } else {
+            completion()
+        }
     }
 
     @IBAction private func didTapTryDemo(_ sender: Any) {
@@ -105,29 +142,10 @@ class OnboardingViewController: UIViewController {
     private func bindCurrentStep(page: Int) {
         pageControl.currentPage = page
 
-        // Always hide actions screen - we go directly to login after onboarding
-        UIView.transition(with: actionsContainerView, duration: 0.4,
-                          options: .transitionCrossDissolve,
-                          animations: { [weak self] in
-            guard let self = self else { return }
-            self.actionsContainerView.isHidden = true
-          })
-
-        // Show close button on last page
-        UIView.transition(with: skipButton, duration: 0.4,
-                          options: .transitionCrossDissolve,
-                          animations: { [weak self] in
-            guard let self = self else { return }
-            self.closeButton.isHidden = page != self.pageControl.numberOfPages - 1
-          })
-
-        // Hide skip button on last page (use close button instead)
-        UIView.transition(with: skipButton, duration: 0.4,
-                          options: .transitionCrossDissolve,
-                          animations: { [weak self] in
-            guard let self = self else { return }
-            self.skipButton.isHidden = page == self.pageControl.numberOfPages - 1
-          })
+        let actionTitleKey = page == steps.count - 1
+            ? "ui_onboarding_start_action"
+            : "button_next"
+        createSafeButton.setText(NSLocalizedString(actionTitleKey, comment: "Onboarding CTA title"), .filled)
 
         let step = steps[page]
         if let event = step.trackingEvent {

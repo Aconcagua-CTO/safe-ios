@@ -14,15 +14,18 @@ class LedgerKeyPickerViewController: SegmentViewController {
     var completion: ((KeyAddressInfo, String?, String) -> Void)?
 
     private lazy var importButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(title: "Import", style: .done, target: self, action: #selector(didTapImport))
+        let button = UIBarButtonItem(title: NSLocalizedString("button_import", comment: "Import button title"),
+                                     style: .done,
+                                     target: self,
+                                     action: #selector(didTapImport))
         return button
     }()
 
     convenience init(deviceId: UUID, bluetoothController: BaseBluetoothController) {
         self.init(nibName: "SegmentViewController", bundle: Bundle.main)
         segmentItems = [
-            SegmentBarItem(image: nil, title: "Ledger Live"),
-            SegmentBarItem(image: nil, title: "Ledger")
+            SegmentBarItem(image: nil, title: NSLocalizedString("ui_ledger_live_tab_title", comment: "Ledger Live tab title")),
+            SegmentBarItem(image: nil, title: NSLocalizedString("ui_ledger_tab_title", comment: "Ledger tab title"))
         ]
         viewControllers = [
             LedgerKeyPickerContentViewController(type: .ledgerLive,
@@ -40,7 +43,7 @@ class LedgerKeyPickerViewController: SegmentViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Connect Ledger Wallet"
+        title = NSLocalizedString("ui_ledger_connect_wallet_title", comment: "Title for connecting a Ledger wallet")
         navigationItem.rightBarButtonItem = importButton
         importButton.isEnabled = false
     }
@@ -52,8 +55,8 @@ class LedgerKeyPickerViewController: SegmentViewController {
 
         var namePrefix = ""
         switch contentVC.keyType {
-        case .ledger: namePrefix = "Ledger key #"
-        case .ledgerLive: namePrefix = "Ledger Live key #"
+        case .ledger: namePrefix = NSLocalizedString("ui_ledger_key_name_prefix", comment: "Ledger key name prefix")
+        case .ledgerLive: namePrefix = NSLocalizedString("ui_ledger_live_key_name_prefix", comment: "Ledger Live key name prefix")
         }
         let defaultName = "\(namePrefix)\(key.index + 1)"
         let derivationPath = contentVC.basePath.replacingOccurrences(of: "{index}", with: "\(key.index)")
@@ -137,7 +140,7 @@ fileprivate class LedgerKeyPickerViewModel {
                     semaphore.signal()
                     guard let address = addressOrNil, self != nil else {
                         self?.isLoading = false
-                        completion("Please unlock your Ledger device and open Ethereum App on it.")
+                        completion(NSLocalizedString("ui_ledger_unlock_open_app_detail", comment: "Ledger unlock device message"))
                         shouldReturn = true
                         return
                     }
@@ -146,12 +149,7 @@ fileprivate class LedgerKeyPickerViewModel {
                 guard semaphore.wait(timeout: .now().advanced(by: .seconds(self.getAddressTimeLimitInSec))) == .success else {
                     self.isLoading = false
                     self.getAddressTimeLimitReached = true
-                    completion("""
-Please unlock your Ledger device and open Ethereum App on it.
-
-If it does not help, there is probably an issue with Bluetooth device pairing. Please remove pairing in your phone settings and try to pair with opened Ethereum App on your device.
-"""
-                    )
+                    completion(NSLocalizedString("ui_ledger_unlock_open_app_troubleshoot", comment: "Ledger unlock device troubleshooting message"))
                     return
                 }
 
@@ -304,7 +302,9 @@ fileprivate class LedgerKeyPickerContentViewController: UITableViewController, L
 
     private func loadMoreCell() -> UITableViewCell {
         let cell = tableView.dequeueCell(ButtonTableViewCell.self)
-        let text = model.keys.count == 0 ? "Retry" : "Load more"
+        let text = model.keys.count == 0
+            ? NSLocalizedString("button_retry", comment: "Retry button title")
+            : "Load more"
         cell.height = estimatedRowHeight
         cell.setText(text) { [weak self] in
             self?.generateNextPage()

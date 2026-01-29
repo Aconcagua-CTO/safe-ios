@@ -58,7 +58,7 @@ final class TangemFactoryResetViewController: UIViewController {
         TangemLogger.info("🔥 FACTORY RESET VC: View controller loaded")
         
         view.backgroundColor = .backgroundSecondary
-        navigationItem.title = "Factory Reset Tangem Card"
+        navigationItem.title = NSLocalizedString("ui_tangem_factory_reset_title", comment: "Title for the Tangem factory reset screen")
         navigationItem.largeTitleDisplayMode = .never
         
         setupUI()
@@ -83,7 +83,7 @@ final class TangemFactoryResetViewController: UIViewController {
         warningLabel.textColor = .systemRed
         warningLabel.numberOfLines = 0
         warningLabel.textAlignment = .center
-        warningLabel.text = "⚠️ WARNING"
+        warningLabel.text = NSLocalizedString("ui_tangem_factory_reset_warning_title", comment: "Tangem factory reset warning title")
         
         statusLabel.font = .preferredFont(forTextStyle: .body)
         statusLabel.textColor = .labelPrimary
@@ -94,9 +94,15 @@ final class TangemFactoryResetViewController: UIViewController {
         
         configureButton(initiateButton, title: "Start Factory Reset", action: #selector(initiateTapped))
         configureButton(confirmButton, title: "Confirm Factory Reset", action: #selector(confirmTapped))
-        configureButton(cancelButton, title: "Cancel", action: #selector(cancelTapped))
-        configureButton(doneButton, title: "Done", action: #selector(doneTapped))
-        configureButton(tryAgainButton, title: "Try Again", action: #selector(tryAgainTapped))
+        configureButton(cancelButton,
+                        title: NSLocalizedString("cancel", comment: "Cancel button title"),
+                        action: #selector(cancelTapped))
+        configureButton(doneButton,
+                        title: NSLocalizedString("button_done", comment: "Done button title"),
+                        action: #selector(doneTapped))
+        configureButton(tryAgainButton,
+                        title: NSLocalizedString("button_retry", comment: "Retry button title"),
+                        action: #selector(tryAgainTapped))
         
         contentStack.addArrangedSubview(warningLabel)
         contentStack.addArrangedSubview(statusLabel)
@@ -140,7 +146,7 @@ final class TangemFactoryResetViewController: UIViewController {
         switch state {
         case .idle:
             warningLabel.isHidden = false
-            statusLabel.text = "Factory reset will permanently delete ALL data on your Tangem card, including all wallets and private keys. This operation cannot be undone."
+            statusLabel.text = NSLocalizedString("ui_tangem_factory_reset_warning_body", comment: "Tangem factory reset warning body")
             activityIndicator.stopAnimating()
             initiateButton.isHidden = false
             confirmButton.isHidden = true
@@ -150,7 +156,7 @@ final class TangemFactoryResetViewController: UIViewController {
             
         case .confirmationRequired:
             warningLabel.isHidden = false
-            statusLabel.text = "⚠️ FINAL WARNING ⚠️\n\nThis will PERMANENTLY DELETE all wallets and data on your Tangem card. This action cannot be undone.\n\nAre you absolutely sure you want to continue?"
+            statusLabel.text = NSLocalizedString("ui_tangem_factory_reset_final_warning", comment: "Tangem factory reset final warning")
             activityIndicator.stopAnimating()
             initiateButton.isHidden = true
             confirmButton.isHidden = false
@@ -160,7 +166,7 @@ final class TangemFactoryResetViewController: UIViewController {
             
         case .inProgress:
             warningLabel.isHidden = true
-            statusLabel.text = "Resetting card to factory settings...\n\nPlease hold your Tangem card near the top of your iPhone.\n\n⚠️ Do not remove the card until the process is complete."
+            statusLabel.text = NSLocalizedString("ui_tangem_factory_reset_progress", comment: "Tangem factory reset progress message")
             activityIndicator.startAnimating()
             initiateButton.isHidden = true
             confirmButton.isHidden = true
@@ -170,7 +176,7 @@ final class TangemFactoryResetViewController: UIViewController {
             
         case .success:
             warningLabel.isHidden = true
-            statusLabel.text = "✅ Factory reset completed successfully!\n\nThe card has been reset to factory settings. All wallets and data have been permanently deleted."
+            statusLabel.text = NSLocalizedString("ui_tangem_factory_reset_success", comment: "Tangem factory reset success message")
             activityIndicator.stopAnimating()
             initiateButton.isHidden = true
             confirmButton.isHidden = true
@@ -180,7 +186,10 @@ final class TangemFactoryResetViewController: UIViewController {
             
         case .error(let message):
             warningLabel.isHidden = false
-            statusLabel.text = "❌ Factory reset failed:\n\n\(message)"
+            statusLabel.text = String(
+                format: NSLocalizedString("ui_tangem_factory_reset_failed_format", comment: "Tangem factory reset failed message"),
+                message
+            )
             activityIndicator.stopAnimating()
             initiateButton.isHidden = true
             confirmButton.isHidden = true

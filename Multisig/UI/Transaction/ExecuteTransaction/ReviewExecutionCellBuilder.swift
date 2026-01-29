@@ -95,26 +95,34 @@ class ReviewExecutionCellBuilder: TransactionDetailCellBuilder {
         buildAmount(amountModel: amountModel)
 
         // from
-        let (senderLabel, senderLogo) = NamingPolicy.name(for: transferTx.sender, chainId: chain.id!)
+        let (senderLabel, _) = NamingPolicy.name(for: transferTx.sender, chainId: chain.id!)
         let senderUrl = chain.browserURL(address: transferTx.sender.value.address.checksummed)
 
         // to
-        let (recipientLabel, recipientLogo) = NamingPolicy.name(for: transferTx.recipient, chainId: chain.id!)
+        let (recipientLabel, _) = NamingPolicy.name(for: transferTx.recipient, chainId: chain.id!)
         let recipientUrl = chain.browserURL(address: transferTx.recipient.value.address.checksummed)
 
         self.addresses([
-            (address: transferTx.sender.value.address, label: senderLabel,
-             imageUri: senderLogo, title: "From", browseURL: senderUrl, prefix: chain.shortName),
+            (address: transferTx.sender.value.address,
+             label: senderLabel,
+             imageUri: nil,
+             title: NSLocalizedString("ui_tx_from_title", comment: "From title"),
+             browseURL: senderUrl,
+             prefix: chain.shortName),
 
-            (address: transferTx.recipient.value.address, label: recipientLabel,
-             imageUri: recipientLogo, title: "To", browseURL: recipientUrl, prefix: chain.shortName)
+            (address: transferTx.recipient.value.address,
+             label: recipientLabel,
+             imageUri: nil,
+             title: NSLocalizedString("ui_tx_to_plain_title", comment: "To title"),
+             browseURL: recipientUrl,
+             prefix: chain.shortName)
         ])
     }
 
     func buildAmount(amountModel: TokenAmountUIModel) {
         let cell = newCell(DetailMultiAccountsCell.self)
         let tokenView = TokenInfoView()
-        tokenView.setTitle("Amount")
+        tokenView.setTitle(NSLocalizedString("ui_tx_amount_title", comment: "Amount title"))
         tokenView.setImage(amountModel.tokenLogoURL, placeholder: amountModel.placeholder)
         tokenView.setText(amountModel.formattedAmount)
         tokenView.setDetail(amountModel.formattedFiatValue, style: .caption1.weight(.medium))
@@ -152,6 +160,7 @@ class ReviewExecutionCellBuilder: TransactionDetailCellBuilder {
         }
         return result
     }
+
 }
 
 struct TokenAmountUIModel {
@@ -177,7 +186,7 @@ struct TokenAmountUIModel {
 
             tokenAmountText = "\(amount) \(symbol)"
         } else {
-            tokenAmountText = "Unknown token"
+            tokenAmountText = NSLocalizedString("ui_tx_unknown_token_title", comment: "Unknown token title")
         }
         return tokenAmountText
     }

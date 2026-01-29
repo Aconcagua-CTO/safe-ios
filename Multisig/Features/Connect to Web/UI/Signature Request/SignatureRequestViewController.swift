@@ -28,7 +28,7 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Signature request"
+        navigationItem.title = NSLocalizedString("ui_ctw_signature_request_title", comment: "Signature request title")
 
         contentVC = SignatureRequestContentViewController()
         viewControllers = [contentVC]
@@ -54,10 +54,10 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
 
         contentVC.detailsLabel.text = request.message.toHexStringWithPrefix()
         contentVC.signerAddressView.setContent(loadingView())
-        contentVC.signerAddressView.setTitle("Sign with")
+        contentVC.signerAddressView.setTitle(NSLocalizedString("ui_ctw_sign_with_title", comment: "Sign with title"))
 
         ribbonView.update(chain: chain)
-        actionPanelView.setConfirmText("Submit")
+        actionPanelView.setConfirmText(NSLocalizedString("ui_ctw_submit_action", comment: "Submit action"))
 
         loadAccountBalance()
 
@@ -185,7 +185,7 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
         case .deviceImported, .deviceGenerated, .web3AuthApple, .web3AuthGoogle:
             do {
                 guard let pk = try keyInfo.privateKey() else {
-                    App.shared.snackbar.show(message: "Private key not available")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_tx_private_key_not_available_error", comment: "Private key not available error"))
                     return
                 }
                 let preimage = "\u{19}Ethereum Signed Message:\n\(request.message.count)".data(using: .utf8)! + request.message
@@ -193,7 +193,8 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
                 let signature = Data(signatureParts.r) + Data(signatureParts.s) + Data([UInt8(signatureParts.v)])
                 confirm(signature:  signature)
             } catch {
-                App.shared.snackbar.show(message: "Failed to sign: \(error.localizedDescription)")
+                App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_signature_failed_format", comment: "Failed to sign format"),
+                                                         error.localizedDescription))
             }
 
         case .walletConnect:
@@ -210,7 +211,7 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
         case .ledgerNanoX:
             let hexToSign = request.message.toHexStringWithPrefix()
 
-            let request = SignRequest(title: "Sign Message",
+            let request = SignRequest(title: NSLocalizedString("ui_ctw_sign_message_title", comment: "Sign message title"),
                                       tracking: ["action": "signMessage"],
                                       signer: keyInfo,
                                       hexToSign: hexToSign)
@@ -228,7 +229,7 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
             }
         case .tangem, .tangem0:
             let hexToSign = request.message.toHexStringWithPrefix()
-            let request = SignRequest(title: "Sign Message",
+            let request = SignRequest(title: NSLocalizedString("ui_ctw_sign_message_title", comment: "Sign message title"),
                                       tracking: ["action": "signMessage"],
                                       signer: keyInfo,
                                       hexToSign: hexToSign)
@@ -244,7 +245,7 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
             }
         case .burner:
             let hexToSign = request.message.toHexStringWithPrefix()
-            let request = SignRequest(title: "Sign Message",
+            let request = SignRequest(title: NSLocalizedString("ui_ctw_sign_message_title", comment: "Sign message title"),
                                       tracking: ["action": "signMessage"],
                                       signer: keyInfo,
                                       hexToSign: hexToSign)
@@ -297,6 +298,8 @@ class SignatureRequestViewController: WebConnectionContainerViewController, WebC
 
     private func reject() {
         Tracker.trackEvent(.webConnectionSignRequestRejected)
-        controller.respond(request: request, errorCode: WebConnectionRequest.ErrorCode.requestRejected.rawValue, message: "User rejected the request")
+        controller.respond(request: request,
+                           errorCode: WebConnectionRequest.ErrorCode.requestRejected.rawValue,
+                           message: NSLocalizedString("ui_ctw_user_rejected_request", comment: "User rejected request"))
     }
 }

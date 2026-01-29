@@ -11,20 +11,16 @@ import SwiftCryptoTokenFormatter
 /// Balances list for the Invertir tab with fiat value and amount hidden.
 class InvertirBalancesViewController: BalancesViewController {
     private var isWhitelistSyncInProgress = false
+    /// When true, we already successfully synced the whitelist but the backend returned an empty list.
+    /// In that case, reloading would cause an infinite sync loop (empty local -> sync -> empty -> reload -> ...).
+    private var didReceiveEmptyWhitelistFromBackend = false
     private var didAttemptWhitelistPricingBackfill = false
     private var allMarketItems: [TokenBalance] = []
     private var tokenPrices: [String: Double] = [:] // Cache: token address -> unit price
+    private var tokenChangePct24h: [String: Double] = [:] // Cache: token address -> 24h % change
     private var marketPriceTasks: [URLSessionTask] = []
     private let marketPriceService = MarketPriceService()
     private var isMarketPriceLoadInProgress: Bool = false
-
-    // Bottom-sticky search UI
-    private let searchContainerView = UIView()
-    private let searchFieldBackgroundView = UIView()
-    private let searchTextField = UITextField()
-    private var searchBottomConstraint: NSLayoutConstraint?
-    private let searchContainerHeight: CGFloat = 64
-    private var searchTerm: String = ""
 
     override func viewDidLoad() {
         hideFiatAndAmount = true
@@ -39,41 +35,33 @@ class InvertirBalancesViewController: BalancesViewController {
             forCellReuseIdentifier: "BalanceTableViewCell"
         )
 
-        configureBottomSearch()
+    }
+    
+    override var isEmpty: Bool {
+        return super.isEmpty
     }
 
     // MARK: - Section ordering (Invertir)
 
-    // Invertir “markets” rows are not chain-specific; show money-market yield using Ethereum as default.
+    // Invertir "markets" rows are not chain-specific; show money-market yield using Ethereum as default.
     override var useEthereumUnderlyingApyForMoneyMarket: Bool { true }
 
     override var balanceSectionOrder: [(id: String, title: String)] {
         [
-            (id: "moneymarket", title: "Money market"),
-            (id: "cripto", title: "Cripto"),
-            (id: "gold", title: "Oro"),
-            (id: "invest", title: "ETF y acciones"),
+            (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            (id: TokenCategory.sectionCripto, title: "Cripto"),
+            (id: TokenCategory.sectionOro, title: "Oro"),
             // Keep these last so we don't hide anything unexpected.
-            (id: "otros", title: "Otros"),
-            (id: "blacktoken", title: "blackToken")
+            (id: TokenCategory.sectionOtros, title: "Otros"),
+            (id: TokenCategory.sectionBlackToken, title: "blackToken")
         ]
     }
 
     override func mapCategoryToSectionId(_ item: TokenBalance) -> String {
-        switch item.category.lowercased() {
-        case "moneymarket":
-            return "moneymarket"
-        case "token", "cripto":
-            return "cripto"
-        case "oro", "gold":
-            return "gold"
-        case "invest":
-            return "invest"
-        case "blacktoken":
-            return "blacktoken"
-        default:
-            return "otros"
-        }
+        TokenCategory.sectionId(for: item.category)
     }
 
     override func loadTokenItems() {
@@ -105,6 +93,17 @@ class InvertirBalancesViewController: BalancesViewController {
         }
 
         if totalWhitelist == 0, !isWhitelistSyncInProgress {
+            if didReceiveEmptyWhitelistFromBackend {
+                LogService.shared.error("[InvertirMarkets] Whitelist is empty after a successful sync; stopping auto-sync to avoid infinite loop")
+                // Show empty state without overwriting global balances header/actions.
+                apply(rawItems: [],
+                      displayItems: [],
+                      totalFiat: nil,
+                      transferSelectableAssets: nil,
+                      postBalanceUpdated: false)
+                endRefreshing()
+                return
+            }
             isWhitelistSyncInProgress = true
             LogService.shared.debug("[InvertirMarkets] Whitelist empty locally; triggering sync (chainId=\(chainId), network=\(network ?? "nil"))")
             App.shared.tokenWhitelistRepository.syncWhitelist(force: false, network: nil) { [weak self] result in
@@ -113,11 +112,27 @@ class InvertirBalancesViewController: BalancesViewController {
                     self.isWhitelistSyncInProgress = false
                     switch result {
                     case .success:
-                        LogService.shared.debug("[InvertirMarkets] Whitelist sync completed; reloading markets")
-                        self.reloadData()
+                        // If backend returns an empty list, do not reload forever.
+                        let newTotal = TokenWhitelist.all.count
+                        if newTotal == 0 {
+                            self.didReceiveEmptyWhitelistFromBackend = true
+                            LogService.shared.error("[InvertirMarkets] Whitelist sync completed but still empty; showing empty state")
+                        } else {
+                            self.didReceiveEmptyWhitelistFromBackend = false
+                            LogService.shared.debug("[InvertirMarkets] Whitelist sync completed; loading markets (localCount=\(newTotal))")
+                        }
+                        // Avoid `reloadData()` here to prevent re-entering the sync branch in a loop.
+                        self.loadTokenItems()
                     case .failure(let error):
+                        // Allow retry on next reload / pull-to-refresh.
+                        self.didReceiveEmptyWhitelistFromBackend = false
                         LogService.shared.error("[InvertirMarkets] Whitelist sync failed: \(error.localizedDescription)")
-                        self.apply(items: [], totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+                        // Show empty state without overwriting global balances header/actions.
+                        self.apply(rawItems: [],
+                                   displayItems: [],
+                                   totalFiat: nil,
+                                   transferSelectableAssets: nil,
+                                   postBalanceUpdated: false)
                     }
                 }
             }
@@ -147,90 +162,52 @@ class InvertirBalancesViewController: BalancesViewController {
             LogService.shared.debug("[InvertirMarkets] afterMarkets grouped=\(entries.count) categories{\(catCounts)} sample[\(min(entries.count, 20))]=[\(sample)]")
         }
 
-        // If the app already has a whitelist but none of the entries have priceSource, we likely
-        // need a backfill sync (older local data or backend key mismatch). Attempt this once.
-        let hasAnyPriceSource = entries.contains { !((($0.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines))).isEmpty }
-        if !entries.isEmpty, !hasAnyPriceSource, !isWhitelistSyncInProgress, !didAttemptWhitelistPricingBackfill {
-            didAttemptWhitelistPricingBackfill = true
-            isWhitelistSyncInProgress = true
-            LogService.shared.debug("[InvertirMarkets] Detected empty priceSource for all market entries; triggering whitelist backfill sync")
-            App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { [weak self] result in
-                guard let self else { return }
-                DispatchQueue.main.async {
-                    self.isWhitelistSyncInProgress = false
-                    switch result {
-                    case .success:
-                        LogService.shared.debug("[InvertirMarkets] Whitelist backfill sync completed; reloading markets")
-                        self.reloadData()
-                    case .failure(let error):
-                        LogService.shared.error("[InvertirMarkets] Whitelist backfill sync failed: \(error.localizedDescription)")
-                        // Continue showing tokens (without prices) even if backfill fails.
-                        self.apply(items: self.filteredItems(from: self.allMarketItems, term: self.searchTerm),
-                                   totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
-                    }
-                }
-            }
+        let balances = entries.map { TokenBalance(whitelist: $0, fiatCode: "USD") }
+        let filteredBalances = balances.filter { !TokenCategory.isSavings($0.category) }
+
+        do {
+            let sample = filteredBalances.prefix(20).map {
+                "\($0.symbol){name=\($0.name), cat=\($0.category), addr=\($0.address.prefix(8))}"
+            }.joined(separator: ", ")
+            let catCounts = Dictionary(grouping: filteredBalances) { $0.category.lowercased() }
+                .mapValues { $0.count }
+                .sorted { $0.value > $1.value }
+                .prefix(12)
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: ", ")
+
+            LogService.shared.debug("[InvertirMarkets] balanceBuilt count=\(filteredBalances.count) categories{\(catCounts)} sample[\(min(filteredBalances.count, 20))]=[\(sample)]")
+        }
+
+        allMarketItems = filteredBalances
+
+        apply(items: allMarketItems,
+              totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
+
+        // Fetch prices
+        let shownEntries = entries.filter { !TokenCategory.isSavings($0.tokenCategory) }
+        fetchPricesForMarketTokens(entries: shownEntries)
+    }
+
+    private func apply(items: [TokenBalance], totalFiat: String?) {
+        apply(rawItems: items,
+              displayItems: items,
+              totalFiat: totalFiat,
+              transferSelectableAssets: nil,
+              postBalanceUpdated: false)
+    }
+
+    private func fetchPricesForMarketTokens(entries: [TokenWhitelist]) {
+        guard !isMarketPriceLoadInProgress else {
+            LogService.shared.debug("[InvertirPrices] fetchPrices skipped; a fetch is already in progress")
             return
         }
+        isMarketPriceLoadInProgress = true
 
-        var shownEntries: [TokenWhitelist] = []
-        var items: [TokenBalance] = []
-        items.reserveCapacity(entries.count)
-        shownEntries.reserveCapacity(entries.count)
-
-        for entry in entries {
-            let category = (entry.tokenCategory ?? "").lowercased()
-            if ["stablecoin", "stablecoins", "savings"].contains(category) {
-                continue
-            }
-            shownEntries.append(entry)
-            // Markets list uses USD-only pricing display.
-            items.append(TokenBalance(whitelist: entry, fiatCode: "USD"))
-        }
-
-        items.sort { lhs, rhs in
-            let sym = lhs.symbol.localizedCaseInsensitiveCompare(rhs.symbol)
-            if sym != .orderedSame { return sym == .orderedAscending }
-            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-        }
-
-        LogService.shared.debug("[InvertirMarkets] final shown=\(items.count) (filteredSavings=\(entries.count - items.count)) chainId=\(chainId) network=\(network ?? "nil")")
-        allMarketItems = items
-        fetchPricesForMarketTokens(entries: shownEntries)
-
-        let filtered = filteredItems(from: items, term: searchTerm)
-        let cachedBalances = LatestBalancesCache.shared.balances
-        if cachedBalances.isEmpty {
-            // If we don't have real balances yet (e.g. user opened Invertir first),
-            // don't publish a fake "0" total that would overwrite the header.
-            apply(rawItems: [],
-                  displayItems: filtered,
-                  totalFiat: nil,
-                  transferSelectableAssets: nil,
-                  postBalanceUpdated: false)
-        } else {
-            let total = cachedBalances.reduce(0.0) { $0 + $1.fiatValue }
-            let totalFiat = TokenBalance.displayCurrency(from: String(total), code: AppSettings.selectedFiatCode)
-            // Publish real balances for header/actions, but show market rows in the table.
-            apply(rawItems: cachedBalances,
-                  displayItems: filtered,
-                  totalFiat: totalFiat,
-                  transferSelectableAssets: nil,
-                  postBalanceUpdated: true)
-        }
-    }
-    
-    // MARK: - Price Fetching
-    
-    private func fetchPricesForMarketTokens(entries: [TokenWhitelist]) {
-        // Cancel any existing price fetch
         marketPriceTasks.forEach { $0.cancel() }
         marketPriceTasks = []
-        isMarketPriceLoadInProgress = !entries.isEmpty
 
-        LogService.shared.debug("[InvertirPrices][START] entries=\(entries.count) ondoBase=\(ApiConfig.ondoAppBaseURL.absoluteString) krakenBase=\(ApiConfig.krakenPublicBaseURL.absoluteString)")
-        self.logWhitelistPricingSummary(prefix: "[InvertirPrices][INPUT]", entries: entries)
-
+        LogService.shared.debug("[InvertirPrices][START] Fetching market prices; count=\(entries.count)")
         marketPriceTasks = marketPriceService.fetchPrices(entries: entries) { [weak self] result in
             guard let self else { return }
             DispatchQueue.main.async {
@@ -239,264 +216,111 @@ class InvertirBalancesViewController: BalancesViewController {
                 case .success(let snapshot):
                     LogService.shared.debug("[InvertirPrices][DONE] Loaded market prices count=\(snapshot.pricesByAddress.count) at=\(snapshot.fetchedAt)")
                     self.tokenPrices = snapshot.pricesByAddress
+                    self.tokenChangePct24h = snapshot.changePct24hByAddress
                     self.logPriceBindingDiagnostics()
                     self.tableView.reloadData()
                 case .failure(let error):
-                    LogService.shared.error("[InvertirPrices][FAIL] Failed to fetch market prices", error: error)
+                    LogService.shared.error("[InvertirPrices][FAIL] Market price fetch error: \(error.localizedDescription)")
                 }
-                // If the user pulled to refresh, keep the spinner until prices are ready (matches Assets behavior).
-                self.endRefreshing()
             }
         }
     }
 
-    /// Keep pull-to-refresh active until market prices load, otherwise the UI ends refresh quickly
-    /// and then "jumps" when prices arrive (can feel like a stutter/vibration).
-    override func endRefreshing() {
-        guard !isMarketPriceLoadInProgress else { return }
-        super.endRefreshing()
-    }
-    
-    private func logWhitelistPricingSummary(prefix: String, entries: [TokenWhitelist]) {
-        // Summarize how many entries have a pricing source configured.
-        let normalizedSource: (TokenWhitelist) -> String = { e in
-            (e.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        }
-        let hasParam: (TokenWhitelist) -> Bool = { e in
-            !((e.priceSourceParam ?? "").trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty
-        }
-        let hasAddr: (TokenWhitelist) -> Bool = { e in
-            let a = (e.networkAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            return !a.isEmpty
-        }
-        
-        let countsBySource = Dictionary(grouping: entries, by: normalizedSource)
-            .mapValues { $0.count }
-            .sorted { $0.value > $1.value }
-            .map { "\($0.key.isEmpty ? "<empty>" : $0.key)=\($0.value)" }
-            .joined(separator: ", ")
-        
-        let emptySourceCount = entries.filter { normalizedSource($0).isEmpty }.count
-        let missingParamCount = entries.filter { !normalizedSource($0).isEmpty && !hasParam($0) }.count
-        let missingAddrCount = entries.filter { !hasAddr($0) }.count
-        
-        LogService.shared.debug("\(prefix) total=\(entries.count) sources{\(countsBySource)} emptySource=\(emptySourceCount) missingParam=\(missingParamCount) missingAddr=\(missingAddrCount)")
-        
-        // Print a small sample of pricing-critical fields.
-        let sample = entries.prefix(15).map { e -> String in
-            let sym = (e.tokenSymbol ?? "nil").trimmingCharacters(in: .whitespacesAndNewlines)
-            let addr = (e.networkAddress ?? "nil").trimmingCharacters(in: .whitespacesAndNewlines)
-            let src = normalizedSource(e)
-            let param = (e.priceSourceParam ?? "nil").trimmingCharacters(in: .whitespacesAndNewlines)
-            return "\(sym){src=\(src.isEmpty ? "<empty>" : src),param=\(param),addr=\(addr)}"
-        }.joined(separator: ", ")
-        LogService.shared.debug("\(prefix) sample[\(min(entries.count, 15))]=[\(sample)]")
-    }
-    
     private func logPriceBindingDiagnostics() {
-        let items = allMarketItems
-        let priceKeys = Set(tokenPrices.keys)
-        let itemKeys = Set(items.map { $0.address })
-        
-        let withPrice = items.filter { tokenPrices[$0.address] != nil }.count
-        let missingPrice = items.count - withPrice
-        let extraPriceKeys = priceKeys.subtracting(itemKeys)
-        let missingPriceKeys = itemKeys.subtracting(priceKeys)
-        
-        LogService.shared.debug("[InvertirPrices][BIND] items=\(items.count) priced=\(withPrice) missing=\(missingPrice) tokenPricesKeys=\(priceKeys.count) extraKeys=\(extraPriceKeys.count) missingKeys=\(missingPriceKeys.count)")
-        
-        // Show a few misses to spot systematic mismatches (address casing, native token address, etc.).
-        let missSample = items.filter { tokenPrices[$0.address] == nil }.prefix(12).map { "\($0.symbol){addr=\($0.address)}" }.joined(separator: ", ")
-        LogService.shared.debug("[InvertirPrices][BIND] missingSample[\(min(missingPrice, 12))]=[\(missSample)]")
-        
-        let priceSample = items.filter { tokenPrices[$0.address] != nil }.prefix(12).map { item in
-            let p = tokenPrices[item.address] ?? 0
-            return "\(item.symbol){addr=\(item.address),p=\(p)}"
-        }.joined(separator: ", ")
-        LogService.shared.debug("[InvertirPrices][BIND] pricedSample[\(min(withPrice, 12))]=[\(priceSample)]")
+        let mapped = allMarketItems.filter { tokenPrices[$0.address] != nil }.count
+        let unmapped = allMarketItems.count - mapped
+        let sampleUnmapped = allMarketItems
+            .filter { tokenPrices[$0.address] == nil }
+            .prefix(12)
+            .map { "\($0.symbol){addr=\($0.address.prefix(8))}" }
+            .joined(separator: ", ")
+        LogService.shared.debug("[InvertirPrices][DIAG] cellUpdateReady mapped=\(mapped) unmapped=\(unmapped) sampleUnmapped[\(min(unmapped, 12))]=[\(sampleUnmapped)]")
     }
 
-    // MARK: - Search
+    private func logWhitelistPricingSummary(prefix: String, entries: [TokenWhitelist]) {
+        let onlyOndoBond = entries.filter {
+            ($0.priceSource ?? "").lowercased() == "ondobond" && ($0.priceSourceParam ?? "").isEmpty
+        }.count
+        let ondoBondWithParam = entries.filter {
+            ($0.priceSource ?? "").lowercased() == "ondobond" && !($0.priceSourceParam ?? "").isEmpty
+        }.count
+        let onlyKraken = entries.filter {
+            ($0.priceSource ?? "").lowercased() == "kraken" && ($0.priceSourceParam ?? "").isEmpty
+        }.count
+        let krakenWithParam = entries.filter {
+            ($0.priceSource ?? "").lowercased() == "kraken" && !($0.priceSourceParam ?? "").isEmpty
+        }.count
+        let empty = entries.filter { ($0.priceSource ?? "").isEmpty }.count
+        let other = entries.count - onlyOndoBond - ondoBondWithParam - onlyKraken - krakenWithParam - empty
 
-    private func configureBottomSearch() {
-        searchContainerView.translatesAutoresizingMaskIntoConstraints = false
-        searchContainerView.backgroundColor = .backgroundPrimary
-
-        searchFieldBackgroundView.translatesAutoresizingMaskIntoConstraints = false
-        searchFieldBackgroundView.backgroundColor = .backgroundSecondary
-        searchFieldBackgroundView.layer.cornerRadius = 12
-        searchFieldBackgroundView.layer.masksToBounds = true
-        searchFieldBackgroundView.layer.borderWidth = 1
-        searchFieldBackgroundView.layer.borderColor = UIColor.border.cgColor
-
-        searchTextField.translatesAutoresizingMaskIntoConstraints = false
-        searchTextField.borderStyle = .none
-        searchTextField.setStyle(.bodyPrimary)
-        searchTextField.clearButtonMode = .whileEditing
-        searchTextField.autocorrectionType = .no
-        searchTextField.autocapitalizationType = .none
-        searchTextField.returnKeyType = .done
-        searchTextField.addTarget(self, action: #selector(searchTextDidChange), for: .editingChanged)
-
-        // Left icon
-        let icon = UIImageView(image: UIImage(systemName: "magnifyingglass"))
-        icon.tintColor = .labelSecondary
-        icon.contentMode = .scaleAspectFit
-        icon.frame = CGRect(x: 0, y: 0, width: 18, height: 18)
-        let iconContainer = UIView(frame: CGRect(x: 0, y: 0, width: 34, height: 18))
-        icon.center = CGPoint(x: 17, y: 9)
-        iconContainer.addSubview(icon)
-        searchTextField.leftView = iconContainer
-        searchTextField.leftViewMode = .always
-
-        searchTextField.attributedPlaceholder = NSAttributedString(
-            string: "Search tokens",
-            attributes: GNOTextStyle.bodyTertiary.attributes
-        )
-
-        view.addSubview(searchContainerView)
-        searchContainerView.addSubview(searchFieldBackgroundView)
-        searchFieldBackgroundView.addSubview(searchTextField)
-
-        let bottom = searchContainerView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-        searchBottomConstraint = bottom
-
-        NSLayoutConstraint.activate([
-            searchContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            searchContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            bottom,
-            searchContainerView.heightAnchor.constraint(equalToConstant: searchContainerHeight),
-
-            searchFieldBackgroundView.leadingAnchor.constraint(equalTo: searchContainerView.leadingAnchor, constant: 16),
-            searchFieldBackgroundView.trailingAnchor.constraint(equalTo: searchContainerView.trailingAnchor, constant: -16),
-            searchFieldBackgroundView.topAnchor.constraint(equalTo: searchContainerView.topAnchor, constant: 10),
-            searchFieldBackgroundView.bottomAnchor.constraint(equalTo: searchContainerView.bottomAnchor, constant: -10),
-
-            searchTextField.leadingAnchor.constraint(equalTo: searchFieldBackgroundView.leadingAnchor, constant: 12),
-            searchTextField.trailingAnchor.constraint(equalTo: searchFieldBackgroundView.trailingAnchor, constant: -12),
-            searchTextField.topAnchor.constraint(equalTo: searchFieldBackgroundView.topAnchor, constant: 8),
-            searchTextField.bottomAnchor.constraint(equalTo: searchFieldBackgroundView.bottomAnchor, constant: -8)
-        ])
-
-        // Ensure table content is not hidden behind the sticky search.
-        let inset = searchContainerHeight + 8
-        tableView.contentInset.bottom += inset
-        tableView.scrollIndicatorInsets.bottom += inset
-
-        // Move search bar above keyboard
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(keyboardWillShow(_:)),
-                                               name: UIResponder.keyboardWillShowNotification,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(keyboardWillHide(_:)),
-                                               name: UIResponder.keyboardWillHideNotification,
-                                               object: nil)
-
-        // Dismiss keyboard when scrolling/tapping list
-        tableView.keyboardDismissMode = .onDrag
+        LogService.shared.debug("\(prefix) priceSource ondoBond(noParam=\(onlyOndoBond), withParam=\(ondoBondWithParam)) kraken(noParam=\(onlyKraken), withParam=\(krakenWithParam)) empty=\(empty) other=\(other)")
     }
 
-    @objc private func searchTextDidChange() {
-        searchTerm = (searchTextField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        apply(items: filteredItems(from: allMarketItems, term: searchTerm),
-              totalFiat: TokenBalance.displayCurrency(from: "0", code: AppSettings.selectedFiatCode))
-    }
-
-    private func filteredItems(from items: [TokenBalance], term: String) -> [TokenBalance] {
-        let t = term.lowercased()
-        guard !t.isEmpty else { return items }
-        return items.filter { item in
-            item.symbol.lowercased().contains(t)
-            || item.name.lowercased().contains(t)
-            || item.category.lowercased().contains(t)
-        }
-    }
-
-    @objc private func keyboardWillShow(_ notification: NSNotification) {
-        guard let view = view,
-              let screenValue = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue,
-              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber
-        else { return }
-        let keyboardScreen = screenValue.cgRectValue
-        let keyboardFrame = view.convert(keyboardScreen, from: UIScreen.main.coordinateSpace)
-        let overlap = max(0, keyboardFrame.height - view.safeAreaInsets.bottom)
-        searchBottomConstraint?.constant = -overlap
-        UIView.animate(withDuration: duration.doubleValue) {
-            self.view.layoutIfNeeded()
-        }
-    }
-
-    @objc private func keyboardWillHide(_ notification: NSNotification) {
-        guard let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber else { return }
-        searchBottomConstraint?.constant = 0
-        UIView.animate(withDuration: duration.doubleValue) {
-            self.view.layoutIfNeeded()
-        }
-    }
-    
-    
     // MARK: - Cell Configuration with Price
     
     /// Configures the badge and also sets the price for InvertirBalanceTableViewCell
     override func configureBadge(for cell: BalanceTableViewCell, item: TokenBalance, section: BalanceCategorySection) {
         // Configure price and description for InvertirBalanceTableViewCell
         if let invertirCell = cell as? InvertirBalanceTableViewCell {
-            let priceText = formatTokenPrice(item)
-            invertirCell.setPrice(priceText)
             invertirCell.setDescription(item.name)
+            // In the Money Market section we only want to show the APY badge.
+            // Hide price text for those rows.
+            if section.id == "moneymarket" {
+                invertirCell.setPrice(nil)
+            } else {
+                let priceText = formatTokenPrice(item)
+                invertirCell.setPrice(priceText)
+            }
         }
         
         // Call parent's badge configuration
         super.configureBadge(for: cell, item: item, section: section)
-        
-        // Then apply Invertir-specific badge logic (non-money-market sections only).
-        // Money market badges are handled by the base controller (live APY from Aave).
-        if ["cripto", "invest", "gold"].contains(section.id) {
-            let firstChar = item.symbol.uppercased().first
-            let isAscending = firstChar.map { $0 >= "A" && $0 <= "M" } ?? false
-            let triangle = isAscending ? "▲" : "▼"
-            let color: UIColor = isAscending ? .success : .error
-            let text = isAscending ? "5%" : "3%"
-            cell.setBadge(text: text,
-                          backgroundColor: .clear,
-                          textColor: color,
-                          prefix: triangle,
-                          prefixColor: color)
+
+        // Override badge for Invertir: show 24h % change instead of yield
+        if [
+            TokenCategory.sectionAcciones,
+            TokenCategory.sectionEtfIndices,
+            TokenCategory.sectionEtfOtros,
+            TokenCategory.sectionCripto,
+            TokenCategory.sectionOro
+        ].contains(section.id) {
+            if let change = tokenChangePct24h[item.address], change.isFinite {
+                let isAscending = change >= 0
+                let triangle = isAscending ? "▲" : "▼"
+                let color: UIColor = isAscending ? .success : .error
+                let text = formatChangePct(change)
+                cell.setBadge(text: text,
+                              backgroundColor: .clear,
+                              textColor: color,
+                              prefix: triangle,
+                              prefixColor: color)
+            } else {
+                cell.setBadge(text: nil)
+            }
         } else if section.id != "moneymarket" {
             cell.setBadge(text: nil)
         }
     }
-    
-    // MARK: - Price Formatting
-    
-    private func formatTokenPrice(_ item: TokenBalance) -> String? {
-        guard let price = tokenPrices[item.address], price > 0 else {
-            return "—"
-        }
-        return formatPrice(price, code: "USD")
-    }
-    
-    private func decimalValue(from amount: BigDecimal) -> Double {
-        // Convert BigDecimal to Decimal string without grouping, then to Double.
-        let decimalString = TokenFormatter().string(from: amount,
-                                                    decimalSeparator: ".",
-                                                    thousandSeparator: "")
-        guard let dec = Decimal(string: decimalString) else { return 0 }
-        return (dec as NSDecimalNumber).doubleValue
-    }
-    
-    private func formatPrice(_ value: Double, code: String) -> String {
-        // Format price similar to how fiat values are displayed
+
+    private func formatTokenPrice(_ token: TokenBalance) -> String? {
+        guard let price = tokenPrices[token.address], price > 0 else { return nil }
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.locale = Locale.autoupdatingCurrent
         formatter.usesGroupingSeparator = true
         formatter.minimumFractionDigits = 2
         formatter.maximumFractionDigits = 2
-        
-        let formattedValue = formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
+        let formattedValue = formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
+        let code = AppSettings.selectedFiatCode
         return "\(formattedValue) \(code)"
+    }
+
+    private func formatChangePct(_ value: Double) -> String {
+        let sign = value >= 0 ? "+" : "-"
+        let absValue = abs(value)
+        let formatted = String(format: "%.2f", absValue)
+        return "\(sign)\(formatted)%"
     }
 }
 
+ 

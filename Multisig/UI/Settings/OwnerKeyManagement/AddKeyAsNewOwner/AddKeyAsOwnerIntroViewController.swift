@@ -28,8 +28,8 @@ class AddKeyAsOwnerIntroViewController: UIViewController, UIAdaptivePresentation
 
         titleLabel.setStyle(.title2)
         descriptionLabel.setStyle(.body)
-        addButton.setText("Add as owner", .filled)
-        skipButton.setText("Skip", .plain)
+        addButton.setText(NSLocalizedString("ui_add_as_owner_action", comment: "Add as owner action"), .filled)
+        skipButton.setText(NSLocalizedString("button_skip", comment: "Skip button title"), .plain)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -61,15 +61,19 @@ class AddKeyAsOwnerIntroViewController: UIViewController, UIAdaptivePresentation
             message: nil,
             preferredStyle: .multiplatformActionSheet)
 
-        let add = UIAlertAction(title: "Add new owner", style: .default) { [unowned self] _ in
+        let add = UIAlertAction(title: NSLocalizedString("ui_add_new_owner_action", comment: "Add new owner action"),
+                                style: .default) { [unowned self] _ in
             onAdd?()
         }
 
-        let replace = UIAlertAction(title: "Replace owner", style: .default) { [unowned self] _ in
+        let replace = UIAlertAction(title: NSLocalizedString("ui_owner_replace_title", comment: "Replace owner action title"),
+                                    style: .default) { [unowned self] _ in
             onReplace?()
         }
 
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
 
         alertController.addAction(add)
         alertController.addAction(replace)

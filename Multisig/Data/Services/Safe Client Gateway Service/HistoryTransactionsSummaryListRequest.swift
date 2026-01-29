@@ -12,17 +12,36 @@ struct HistoryTransactionsSummaryListRequest: JSONRequest {
     let safeAddress: String
     let timezoneOffset = TimeZone.currentOffest()
     let chainId: String
+    // Chains that must use Transaction Service style paths (no /v1/chains/{id} prefix)
+    private static let txServiceStyleChains: Set<String> = [Chain.ChainID.rootstock]
 
     var httpMethod: String { "GET" }
     var urlPath: String {
-        "/v1/chains/\(chainId)/safes/\(safeAddress)/transactions/history"
+        let path: String
+        if Self.txServiceStyleChains.contains(chainId) {
+            // Transaction Service style (matches backend usage for custom chains like Rootstock)
+            path = "/api/v1/safes/\(safeAddress)/multisig-transactions/"
+            #if DEBUG
+            LogService.shared.debug("[HistoryTransactionsSummaryListRequest] Using Transaction Service style path for chainId: \(chainId), path: \(path)")
+            #endif
+        } else {
+            // Default Safe Client Gateway multi-chain path
+            path = "/v1/chains/\(chainId)/safes/\(safeAddress)/transactions/history"
+            #if DEBUG
+            LogService.shared.debug("[HistoryTransactionsSummaryListRequest] Using multi-chain gateway path for chainId: \(chainId), path: \(path)")
+            #endif
+        }
+        return path
     }
 
     var query: String? {
+        if Self.txServiceStyleChains.contains(chainId) {
+            return "executed=true&limit=20"
+        }
         return "timezone_offset=\(timezoneOffset)"
     }
     
-    typealias ResponseType = Page<SCGModels.TransactionSummaryItem>
+    typealias ResponseType = TransactionSummaryPage
 }
 
 extension HistoryTransactionsSummaryListRequest {
@@ -45,6 +64,6 @@ extension SafeClientGatewayService {
         pageUri: String,
         completion: @escaping (Result<HistoryTransactionsSummaryListRequest.ResponseType, Error>) -> Void) throws -> URLSessionTask? {
 
-        asyncExecute(request: try PagedRequest<SCGModels.TransactionSummaryItem>(pageUri), completion: completion)
+        asyncExecute(request: try TransactionSummaryPagedRequest(pageUri), completion: completion)
     }
 }

@@ -10,6 +10,8 @@ final class OndoAssetsClient {
         struct Asset: Decodable {
             struct PrimaryMarket: Decodable {
                 let price: String?
+                let priceChange24h: String?
+                let priceChangePct24h: String?
             }
 
             let symbol: String?
@@ -49,7 +51,8 @@ final class OndoAssetsClient {
             }
             guard let data else {
                 LogService.shared.error("[OndoAssetsClient] empty response body", error: nil)
-                completion(.failure(GSError.error(description: "Ondo assets: empty response", error: nil)))
+                completion(.failure(GSError.error(description: NSLocalizedString("ui_ondo_assets_empty_response", comment: "Ondo assets empty response"),
+                                                  error: nil)))
                 return
             }
             let code = (response as? HTTPURLResponse)?.statusCode

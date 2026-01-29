@@ -22,14 +22,14 @@ class SelectDataFileViewController: UIViewController, UIDocumentPickerDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Select file"
-        headerLabel.text = "Select the previously exported data file."
+        title = NSLocalizedString("ui_data_select_file_title", comment: "Select file title")
+        headerLabel.text = NSLocalizedString("ui_data_select_file_header", comment: "Select file header")
         
         headerLabel.setStyle(.body)
         filenameLabel.setStyle(.subheadline1Medium)
         
-        selectButton.setText("Select File", .bordered)
-        nextButton.setText("Next", .filled)
+        selectButton.setText(NSLocalizedString("ui_data_select_file_button", comment: "Select file button"), .bordered)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
         
         updateFile(nil)
     }
@@ -59,7 +59,7 @@ class SelectDataFileViewController: UIViewController, UIDocumentPickerDelegate {
         if let name = url?.lastPathComponent, !name.isEmpty {
             filenameLabel.text = name
         } else {
-            filenameLabel.text = "No file selected"
+            filenameLabel.text = NSLocalizedString("ui_data_no_file_selected", comment: "No file selected")
         }
         
         nextButton.isEnabled = url != nil

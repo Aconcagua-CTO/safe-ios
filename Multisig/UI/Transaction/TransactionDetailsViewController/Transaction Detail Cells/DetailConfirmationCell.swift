@@ -25,7 +25,7 @@ class DetailConfirmationCell: UITableViewCell {
 
         views += confirmations.map { address -> ConfirmationConfirmedPiece in
             let v = ConfirmationConfirmedPiece(frame: bounds)
-            v.setText("Confirmed")
+            v.setText(NSLocalizedString("ui_tx_status_confirmed", comment: "Transaction confirmed status"))
             let keyInfo = try? KeyInfo.keys(addresses: [address]).first
             let (name, _) = NamingPolicy.name(for: address, info: nil, chainId: chain.id!)
             v.setAddress(address,
@@ -38,7 +38,7 @@ class DetailConfirmationCell: UITableViewCell {
 
         if isReplaced {
             let status = ConfirmationStatusPiece(frame: bounds)
-            status.setText("Replaced", style: .headline)
+            status.setText(NSLocalizedString("ui_tx_status_replaced", comment: "Transaction replaced status"), style: .headline)
             status.setSymbol("arrow.triangle.2.circlepath", color: .labelSecondary)
             views.append(status)
         } else {
@@ -47,7 +47,8 @@ class DetailConfirmationCell: UITableViewCell {
             let confirmationsRemaining = required - confirmations.count
             if confirmationsRemaining > 0 {
                 let status = ConfirmationStatusPiece(frame: bounds)
-                status.setText("Execute (\(confirmationsRemaining) more confirmations needed)", style: .callout)
+                let remainingText = String(format: NSLocalizedString("ui_tx_execute_more_confirmations_format", comment: "Execute button with confirmations remaining"), "\(confirmationsRemaining)")
+                status.setText(remainingText, style: .callout)
                 status.setSymbol("circle", color: .labelSecondary)
                 views.append(status)
             } else {
@@ -61,20 +62,20 @@ class DetailConfirmationCell: UITableViewCell {
 
         case .cancelled:
             let status = ConfirmationStatusPiece(frame: bounds)
-            status.setText("Cancelled", style: .headline)
+            status.setText(NSLocalizedString("ui_tx_status_cancelled", comment: "Transaction cancelled status"), style: .headline)
             status.setSymbol("xmark.circle", color: .black)
             views.append(status)
 
         case .failed:
             let status = ConfirmationStatusPiece(frame: bounds)
-            status.setText("Failed", style: .headlineError)
+            status.setText(NSLocalizedString("ui_tx_status_failed", comment: "Transaction failed status"), style: .headlineError)
             status.setSymbol("xmark.circle", color: .error)
             views.append(status)
 
         case .success:
             if let address = executor {
                 let success = ConfirmationConfirmedPiece(frame: bounds)
-                success.setText("Executed")
+                success.setText(NSLocalizedString("ui_tx_status_executed", comment: "Transaction executed status"))
                 success.setShowsBar(false)
                 let keyInfo = try? KeyInfo.keys(addresses: [address]).first
                 let (name, _) = NamingPolicy.name(for: address, info: nil, chainId: chain.id!)
@@ -86,14 +87,14 @@ class DetailConfirmationCell: UITableViewCell {
                 views.append(success)
             } else {
                 let status = ConfirmationStatusPiece(frame: bounds)
-                status.setText("Executed", style: .headline)
+                status.setText(NSLocalizedString("ui_tx_status_executed", comment: "Transaction executed status"), style: .headline)
                 status.setSymbol("checkmark.circle", color: .success)
                 views.append(status)
             }
 
         case .pending:
             let status = ConfirmationStatusPiece(frame: bounds)
-            status.setText("Pending", style: .headline)
+            status.setText(NSLocalizedString("ui_tx_status_pending", comment: "Transaction pending status"), style: .headline)
             status.setSymbol("circle", color: .success)
             views.append(status)
             }

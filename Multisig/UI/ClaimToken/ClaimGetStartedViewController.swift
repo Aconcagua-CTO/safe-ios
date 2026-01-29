@@ -25,19 +25,20 @@ class ClaimGetStartedViewController: UIViewController {
         ViewControllerFactory.removeNavigationBarBorder(self)
         navigationItem.largeTitleDisplayMode = .never
 
-        startClaimButton.setText("Start your claiming process", .filled)
-        screenTitle.text = "Welcome to the next generation of digital ownership!"
+        startClaimButton.setText(NSLocalizedString("ui_claim_start_process_action", comment: "Start claim process action"),
+                                 .filled)
+        screenTitle.text = NSLocalizedString("ui_claim_welcome_title", comment: "Claim welcome title")
         screenTitle.setStyle(.title1)
 
         instructionsView.setContent(steps: [
             InstructionStepListView.Step(
-                description: "SafeDAO is on a mission to unlock digital ownership for everyone in Web3."
+                description: NSLocalizedString("ui_claim_intro_step1", comment: "Claim intro step 1")
             ),
             InstructionStepListView.Step(
-                description: "We will do this by establishing a universal standard for custody of digital assets, data and identity with smart contract based accounts."
+                description: NSLocalizedString("ui_claim_intro_step2", comment: "Claim intro step 2")
             ),
             InstructionStepListView.Step(
-                description: "You have been chosen to help govern the SafeDAO, and decide on the future of Web3 ownership. Use this power wisely!"
+                description: NSLocalizedString("ui_claim_intro_step3", comment: "Claim intro step 3")
             )
         ])
     }

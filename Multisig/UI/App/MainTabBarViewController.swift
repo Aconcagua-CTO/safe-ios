@@ -14,7 +14,6 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
     }
 
     private let tabIconSize = CGSize(width: 28, height: 28)
-    private weak var transactionsSegementControl: SegmentViewController?
     private var appearsFirstTime: Bool = true
     private var addOwnerFlow: UpdateOwnersFromInviteLinkFlow!
     private var addSafeFlow: AddSafeFlow!
@@ -32,26 +31,23 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
 
         static let invertir: IndexPath = [1]
 
-        static let pedir: IndexPath = [2]
+        static let pagar: IndexPath = [2]
 
-        static let transactions: IndexPath = [3]
-        static let queue: IndexPath = transactions.appending(0)
-        static let history: IndexPath = transactions.appending(1)
+        static let pedir: IndexPath = [3]
 
         static let settings: IndexPath = [4]
         static let appSettings: IndexPath = settings.appending(0)
         static let safeSettings: IndexPath = settings.appending(1)
         static let dappsSettings: IndexPath = settings.appending(2)
 
-        static let count = [assets, transactions, invertir, settings, pedir].count
+        static let queueSegment = 0
+        static let historySegment = 1
+
+        static let count = [assets, invertir, pagar, pedir, settings].count
     }
 
     lazy var balancesTabVC: BalancesUINavigationController = {
         balancesTabViewController()
-    }()
-
-    lazy var transactionsTabVC: UIViewController = {
-        transactionsTabViewController()
     }()
 
     lazy var invertirTabVC: UIViewController = {
@@ -64,6 +60,10 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
 
     lazy var pedirTabVC: UIViewController = {
         pedirTabViewController()
+    }()
+
+    lazy var pagarTabVC: UIViewController = {
+        pagarTabViewController()
     }()
 
     override func viewDidLoad() {
@@ -160,7 +160,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         let tabRoot = HeaderViewController(rootViewController: noSafesVC)
         let balances = balancesTabViewController(
             root: tabRoot,
-            title: "Boveda",
+            title: "Guardar",
             image: UIImage(named: "tab-icon-balances")!.scaled(to: tabIconSize),
             tag: Path.balances[0]
         )
@@ -169,7 +169,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         return balances
     }
 
-    private func transactionsTabViewController() -> UIViewController {
+    private func transactionsRootViewController(selectedSegment: Int) -> UIViewController {
         let queuedTransactionsViewController = QueuedTransactionsViewController()
         let historyTransactionsViewController = HistoryTransactionsViewController()
 
@@ -182,7 +182,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
             queuedTransactionsViewController,
             historyTransactionsViewController
         ]
-        segmentVC.selectedIndex = Path.queue.last
+        segmentVC.selectedIndex = selectedSegment
 
         let noSafesVC = NoSafesViewController()
         let loadSafeViewController = LoadSafeViewController()
@@ -195,13 +195,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         noSafesVC.safeDepolyingViewContoller = ViewControllerFactory.ribbonWith(viewController: deploySafeVC)
 
         let tabRoot = HeaderViewController(rootViewController: noSafesVC)
-        transactionsSegementControl = segmentVC
-
-        return tabViewController(
-            root: tabRoot,
-            title: "Transactions",
-            image: UIImage(named: "tab-icon-transactions")!,
-            tag: Path.transactions[0])
+        return tabRoot
     }
 
     private func invertirTabViewController() -> UIViewController {
@@ -291,7 +285,7 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
     }
 
     private func pedirTabViewController() -> UIViewController {
-        let pedirVC = PedirViewController()
+        let pedirVC = ComingSoonViewController(title: "Pedir")
 
         let noSafesVC = NoSafesViewController()
         let loadSafeViewController = LoadSafeViewController()
@@ -310,6 +304,29 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
             title: "Pedir",
             image: UIImage(named: "tab-icon-coins")!,
             tag: Path.pedir[0]
+        )
+    }
+
+    private func pagarTabViewController() -> UIViewController {
+        let pagarVC = ComingSoonViewController(title: "Pagar")
+
+        let noSafesVC = NoSafesViewController()
+        let loadSafeViewController = LoadSafeViewController()
+        loadSafeViewController.trackingEvent = .assetsNoSafe
+
+        let deploySafeVC = SafeDeployingViewController()
+
+        let ribbonVC = RibbonViewController(rootViewController: pagarVC)
+        noSafesVC.hasSafeViewController = ribbonVC
+        noSafesVC.noSafeViewController = loadSafeViewController
+        noSafesVC.safeDepolyingViewContoller = ViewControllerFactory.ribbonWith(viewController: deploySafeVC)
+
+        let tabRoot = HeaderViewController(rootViewController: noSafesVC)
+        return tabViewController(
+            root: tabRoot,
+            title: "Pagar",
+            image: UIImage(named: "tab-icon-dapps")!,
+            tag: Path.pagar[0]
         )
     }
 
@@ -344,15 +361,15 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
     }
 
     @objc private func showQueuedTransactions() {
-        switchTo(indexPath: Path.queue)
+        openTransactions(segment: Path.queueSegment)
     }
 
     @objc private func showHistoryTransactions() {
-        switchTo(indexPath: Path.history)
+        openTransactions(segment: Path.historySegment)
     }
     
     @objc private func updateTabs() {
-        viewControllers = [balancesTabVC, invertirTabVC, pedirTabVC, transactionsTabVC, settingsTabVC]
+        viewControllers = [balancesTabVC, invertirTabVC, pagarTabVC, pedirTabVC, settingsTabVC]
         LogService.shared.debug("[Tabs] updateTabs() set viewControllers count=\(viewControllers?.count ?? -1) selectedIndex=\(selectedIndex)")
     }
 
@@ -521,9 +538,9 @@ extension MainTabBarViewController: NavigationRouter {
                 if let transactionId = route.info["transactionId"] as? String {
                     showTransactionDetails(transactionId: transactionId)
                 } else if route.path.contains("history") {
-                    switchTo(indexPath: Path.history)
+                    openTransactions(segment: Path.historySegment)
                 } else {
-                    switchTo(indexPath: Path.queue)
+                    openTransactions(segment: Path.queueSegment)
                 }
             }
         } else if route.path == NavigationRoute.showAssets().path {
@@ -602,13 +619,13 @@ extension MainTabBarViewController: NavigationRouter {
         case Path.invertir.first:
             break
 
-        case Path.transactions.first:
-            switchTransactions(segment: segment)
-
         case Path.settings.first:
             switchSettings(segment: segment)
 
         case Path.pedir.first:
+            break
+
+        case Path.pagar.first:
             break
 
         default:
@@ -616,10 +633,13 @@ extension MainTabBarViewController: NavigationRouter {
         }
     }
 
-    func switchTransactions(segment: Int) {
-        if let segmentVC = transactionsSegementControl, segment < segmentVC.segmentItems.count {
-            segmentVC.selectSegment(at: segment)
-        }
+    func openTransactions(segment: Int) {
+        guard segment == Path.queueSegment || segment == Path.historySegment else { return }
+        guard let nav = selectedViewController as? UINavigationController else { return }
+
+        let root = transactionsRootViewController(selectedSegment: segment)
+        root.hidesBottomBarWhenPushed = false
+        nav.pushViewController(root, animated: true)
     }
 
     func switchTab(index: Int) {

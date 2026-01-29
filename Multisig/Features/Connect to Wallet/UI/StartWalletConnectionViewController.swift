@@ -29,9 +29,10 @@ class StartWalletConnectionViewController: PendingWalletActionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         if let wallet = wallet {
-            titleLabel.text = "Connecting to \(wallet.name)..."
+            titleLabel.text = String(format: NSLocalizedString("ui_wallet_connecting_to_format", comment: "Connecting to wallet title"),
+                                     wallet.name)
         } else {
-            titleLabel.text = "Scan QR code in your wallet"
+            titleLabel.text = NSLocalizedString("ui_wallet_scan_qr_in_wallet", comment: "Scan QR in wallet title")
             qrCodeController = QRCodeShareViewController()
             viewControllers = [qrCodeController]
             activityIndicator.isHidden = true
@@ -66,7 +67,7 @@ class StartWalletConnectionViewController: PendingWalletActionViewController {
             guard checkCorrectChain() else { return }
 
             if let keyInfo = keyInfo, OwnerKeyController.updateKey(keyInfo, connection: connection, wallet: wallet) {
-                App.shared.snackbar.show(message: "Key connected successfully")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_wallet_key_connected_success", comment: "Key connected success"))
             }
 
             self.dismiss(animated: true) { [weak self] in
@@ -85,12 +86,15 @@ class StartWalletConnectionViewController: PendingWalletActionViewController {
 
     func checkCorrectAccount() -> Bool {
         if let keyInfo = keyInfo, !connection.accounts.contains(keyInfo.address) {
-            App.shared.snackbar.show(message: "Unexpected address. Please connnect to account \(keyInfo.address.ellipsized()).")
+            App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_wallet_unexpected_address_format", comment: "Unexpected address message"),
+                                                     keyInfo.address.ellipsized()))
             WebConnectionController.shared.userDidDisconnect(connection)
             return false
         } else if keyInfo == nil, let account = connection.accounts.first, let existing = (try? KeyInfo.firstKey(address: account)) {
-            let name = existing.displayName.prefix(30)
-            App.shared.snackbar.show(message: "Address '\(account.ellipsized())' already exists with name '\(name)'. Please connect another account.")
+            let name = String(existing.displayName.prefix(30))
+            App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_wallet_address_exists_format", comment: "Address exists message"),
+                                                     account.ellipsized(),
+                                                     name))
             WebConnectionController.shared.userDidDisconnect(connection)
             return false
         } else {
@@ -106,11 +110,15 @@ class StartWalletConnectionViewController: PendingWalletActionViewController {
            let selectedChainId = chain.id,
            String(connectedChainId) != selectedChainId {
             let connectedChain = Chain.by(String(connectedChainId))
-            let selectedName = chain.name ?? "Chain Id \(selectedChainId)"
-            let connectedName = connectedChain?.name ?? "Chain Id \(connectedChainId)"
+            let selectedName = chain.name ?? String(format: NSLocalizedString("ui_chain_id_format", comment: "Chain ID format"),
+                                                    "\(selectedChainId)")
+            let connectedName = connectedChain?.name ?? String(format: NSLocalizedString("ui_chain_id_format", comment: "Chain ID format"),
+                                                              "\(connectedChainId)")
             let icon = UIImage(systemName: "exclamationmark.triangle.fill")!.withTintColor(.systemYellow, renderingMode: .alwaysOriginal)
             App.shared.snackbar.show(
-                message: "Selected Safe's network '\(selectedName)' is different from the network in the wallet: '\(connectedName)'.",
+                message: String(format: NSLocalizedString("ui_wallet_network_mismatch_format", comment: "Wallet network mismatch message"),
+                                selectedName,
+                                connectedName),
                 icon: SnackbarViewController.IconSource.image(icon)
             )
         }

@@ -80,16 +80,22 @@ class BalanceTableViewCell: UITableViewCell {
                   backgroundColor: UIColor? = .primary,
                   textColor: UIColor? = UIColor.primaryInverted ?? UIColor.backgroundSecondary,
                   prefix: String? = nil,
-                  prefixColor: UIColor? = nil) {
+                  prefixColor: UIColor? = nil,
+                  borderColor: UIColor? = nil,
+                  borderWidth: CGFloat = 0) {
         guard let text, !text.isEmpty else {
             badgeLabel.text = nil
             badgeLabel.attributedText = nil
             badgeContainerView.isHidden = true
             badgeContainerView.backgroundColor = .clear
+            badgeContainerView.layer.borderWidth = 0
+            badgeContainerView.layer.borderColor = nil
             return
         }
         badgeContainerView.isHidden = false
         badgeContainerView.backgroundColor = backgroundColor
+        badgeContainerView.layer.borderWidth = borderWidth
+        badgeContainerView.layer.borderColor = borderColor?.cgColor
 
         let attributed = NSMutableAttributedString()
         if let prefix = prefix {

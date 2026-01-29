@@ -25,13 +25,16 @@ class OwnerKeyController {
                           isDerivedFromSeedPhrase: Bool) -> Bool {
         do {
             guard KeyType.privateKeyTypes.contains(type) else {
-                App.shared.snackbar.show(error: GSError.error(description: "Could not import signing key."))
+                App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_import_signing_key_failed_error", comment: "Import signing key failed")))
                 return false
             }
 
             try KeyInfo.import(address: privateKey.address, name: name, privateKey: privateKey, type: type)
 
             App.shared.notificationHandler.signingKeyUpdated()
+            if let keyInfo = try? KeyInfo.firstKey(address: privateKey.address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
 
             switch type {
             case .deviceImported:
@@ -54,7 +57,8 @@ class OwnerKeyController {
             postNotification(.ownerKeyImported)
             return true
         } catch {
-            App.shared.snackbar.show(error: GSError.error(description: "Could not import signing key.", error: error))
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_import_signing_key_failed_error", comment: "Import signing key failed"),
+                                                          error: error))
             return false
         }
     }
@@ -66,13 +70,16 @@ class OwnerKeyController {
                           type: KeyType) -> Bool {
         do {
             guard KeyType.socialKeyTypes.contains(type) else {
-                App.shared.snackbar.show(error: GSError.error(description: "Could not import signing key."))
+                App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_import_signing_key_failed_error", comment: "Import signing key failed")))
                 return false
             }
 
             try KeyInfo.import(address: key.address, name: name, privateKey: key, type: type, email: email)
 
             App.shared.notificationHandler.signingKeyUpdated()
+            if let keyInfo = try? KeyInfo.firstKey(address: key.address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
 
             switch type {
             case .web3AuthApple:
@@ -88,7 +95,8 @@ class OwnerKeyController {
             postNotification(.ownerKeyImported)
             return true
         } catch {
-            App.shared.snackbar.show(error: GSError.error(description: "Could not import signing key.", error: error))
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_import_signing_key_failed_error", comment: "Import signing key failed"),
+                                                          error: error))
             return false
         }
     }
@@ -107,6 +115,9 @@ class OwnerKeyController {
 
             Tracker.setNumKeys(KeyInfo.count(.walletConnect), type: .walletConnect)
             postNotification(.ownerKeyImported)
+            if let keyInfo = newKey {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
 
             let name = wallet?.name ?? connection?.remotePeer?.name ?? "unknown"
             Tracker.trackEvent(.connectInstalledWallet, parameters: ["wallet": name])
@@ -116,7 +127,8 @@ class OwnerKeyController {
             if let err = error as? GSError.DuplicateKey {
                 App.shared.snackbar.show(error: err)
             } else {
-                let err = GSError.error(description: "Failed to add WalletConnect owner", error: error)
+                let err = GSError.error(description: NSLocalizedString("ui_add_walletconnect_owner_failed_error", comment: "Add WalletConnect owner failed"),
+                                        error: error)
                 App.shared.snackbar.show(error: err)
             }
             return false
@@ -140,7 +152,8 @@ class OwnerKeyController {
             if let err = error as? DetailedLocalizedError {
                 App.shared.snackbar.show(error: err)
             } else {
-                let err = GSError.error(description: "Failed to add WalletConnect owner", error: error)
+                let err = GSError.error(description: NSLocalizedString("ui_add_walletconnect_owner_failed_error", comment: "Add WalletConnect owner failed"),
+                                        error: error)
                 App.shared.snackbar.show(error: err)
             }
             return false
@@ -155,12 +168,16 @@ class OwnerKeyController {
             Tracker.setNumKeys(KeyInfo.count(.ledgerNanoX), type: .ledgerNanoX)
             postNotification(.ownerKeyImported)
             Tracker.trackEvent(.ledgerKeyImported)
+            if let keyInfo = try? KeyInfo.firstKey(address: address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
             return true
         } catch {
             if let err = error as? GSError.DuplicateKey {
                 App.shared.snackbar.show(error: err)
             } else {
-                let err = GSError.error(description: "Failed to add Ledger owner", error: error)
+                let err = GSError.error(description: NSLocalizedString("ui_add_ledger_owner_failed_error", comment: "Add Ledger owner failed"),
+                                        error: error)
                 App.shared.snackbar.show(error: err)
             }
             return false
@@ -185,12 +202,16 @@ class OwnerKeyController {
             Tracker.setNumKeys(KeyInfo.count(.tangem), type: .tangem)
             postNotification(.ownerKeyImported)
             Tracker.trackEvent(.tangemKeyImported)
+            if let keyInfo = try? KeyInfo.firstKey(address: address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
             return true
         } catch {
             if let err = error as? GSError.DuplicateKey {
                 App.shared.snackbar.show(error: err)
             } else {
-                let err = GSError.error(description: "Failed to add Tangem owner", error: error)
+                let err = GSError.error(description: NSLocalizedString("ui_add_tangem_owner_failed_error", comment: "Add Tangem owner failed"),
+                                        error: error)
                 App.shared.snackbar.show(error: err)
             }
             return false
@@ -215,12 +236,16 @@ class OwnerKeyController {
             Tracker.setNumKeys(KeyInfo.count(.tangem0), type: .tangem0)
             postNotification(.ownerKeyImported)
             Tracker.trackEvent(.tangemKeyImported)
+            if let keyInfo = try? KeyInfo.firstKey(address: address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
             return true
         } catch {
             if let err = error as? GSError.DuplicateKey {
                 App.shared.snackbar.show(error: err)
             } else {
-                let err = GSError.error(description: "Failed to add Tangem0 owner", error: error)
+                let err = GSError.error(description: NSLocalizedString("ui_add_tangem0_owner_failed_error", comment: "Add Tangem0 owner failed"),
+                                        error: error)
                 App.shared.snackbar.show(error: err)
             }
             return false
@@ -249,12 +274,15 @@ class OwnerKeyController {
             Tracker.setNumKeys(KeyInfo.count(.burner), type: .burner)
             postNotification(.ownerKeyImported)
             Tracker.trackEvent(.burnerKeyImported)
+            if let keyInfo = try? KeyInfo.firstKey(address: address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
             return true
         } catch {
             if let err = error as? GSError.DuplicateKey {
                 App.shared.snackbar.show(error: err)
             } else {
-                let err = GSError.error(description: "Failed to add Burner owner", error: error)
+                let err = GSError.error(description: NSLocalizedString("error_failed_add_burner_owner", comment: "Error shown when adding Burner owner key fails"), error: error)
                 App.shared.snackbar.show(error: err)
             }
             return false
@@ -271,9 +299,13 @@ class OwnerKeyController {
             Tracker.trackEvent(.keystoneKeyImported)
 
             postNotification(.ownerKeyImported)
+            if let keyInfo = try? KeyInfo.firstKey(address: address) {
+                registerKeyInBackend(keyInfo: keyInfo)
+            }
             return true
         } catch {
-            App.shared.snackbar.show(error: GSError.error(description: "Failed to add Keystone owner", error: error))
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_add_keystone_owner_failed_error", comment: "Add Keystone owner failed"),
+                                                          error: error))
             return false
         }
     }
@@ -286,15 +318,16 @@ class OwnerKeyController {
                 let result = try result.get()
                 if result {
                     App.shared.notificationHandler.signingKeyUpdated()
-                    App.shared.snackbar.show(message: "Owner key removed from this app")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_owner_key_removed_message", comment: "Owner key removed message"))
                     Tracker.trackEvent(.ownerKeyRemoved)
                     Tracker.setNumKeys(KeyInfo.count(keyInfo.keyType), type: keyInfo.keyType)
+                    registerKeyInBackend(keyInfo: keyInfo, state: 0)
                     postNotification(.ownerKeyRemoved)
                 } else {
-                    App.shared.snackbar.show(error: GSError.error(description: "Failed to remove imported key"))
+                    App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_remove_imported_key_failed_error", comment: "Remove imported key failed")))
                 }
             } catch {
-                App.shared.snackbar.show(error: GSError.error(description: "Failed to remove imported key",
+                App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_remove_imported_key_failed_error", comment: "Remove imported key failed"),
                                                               error: error))
             }
         })
@@ -302,7 +335,7 @@ class OwnerKeyController {
 
     static func edit(keyInfo: KeyInfo, name: String) {
         keyInfo.rename(newName: name)
-        App.shared.snackbar.show(message: "Owner key updated")
+        App.shared.snackbar.show(message: NSLocalizedString("ui_owner_key_updated_message", comment: "Owner key updated message"))
         postNotification(.ownerKeyUpdated)
     }
 
@@ -408,10 +441,11 @@ class OwnerKeyController {
 
     /// Call this when you want to wipe out all of the keys by the user's request
     static func deleteAllKeys(showingMessage: Bool = true) throws {
+        let keysToDisable = (try? KeyInfo.all()) ?? []
         try KeyInfo.deleteAll(authenticate: false)
         App.shared.notificationHandler.signingKeyUpdated()
         if showingMessage {
-            App.shared.snackbar.show(message: "All owner keys removed from this app")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_owner_keys_removed_message", comment: "All owner keys removed message"))
         }
         Tracker.trackEvent(.ownerKeyRemoved)
         Tracker.setNumKeys(KeyInfo.count(.deviceGenerated), type: .deviceGenerated)
@@ -424,7 +458,157 @@ class OwnerKeyController {
         Tracker.setNumKeys(KeyInfo.count(.tangem), type: .tangem)
         Tracker.setNumKeys(KeyInfo.count(.tangem0), type: .tangem0)
         Tracker.setNumKeys(KeyInfo.count(.burner), type: .burner)
+        keysToDisable.forEach { keyInfo in
+            registerKeyInBackend(keyInfo: keyInfo, state: 0)
+        }
         postNotification(.ownerKeyRemoved)
+    }
+
+    static func migrateBackendKeyRegistryIfNeeded() {
+        guard App.shared.authRepository.isAuthenticated() else { return }
+        if AppSettings.didMigrateOwnerKeysBackendRegistry == true { return }
+
+        let keys = (try? KeyInfo.all()) ?? []
+        if keys.isEmpty {
+            AppSettings.didMigrateOwnerKeysBackendRegistry = true
+            return
+        }
+
+        let registerKeys = keys.compactMap { buildRegisterKey(from: $0, state: nil) }
+        if registerKeys.isEmpty {
+            AppSettings.didMigrateOwnerKeysBackendRegistry = true
+            return
+        }
+
+        let service = KeysRegistrationService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+        service.register(keys: registerKeys) { result in
+            switch result {
+            case .success:
+                AppSettings.didMigrateOwnerKeysBackendRegistry = true
+                LogService.shared.info("[OwnerKeyController] Migrated \(registerKeys.count) keys to backend registry")
+            case .failure(let error):
+                LogService.shared.error("[OwnerKeyController] Failed to migrate keys to backend registry", error: error)
+            }
+        }
+    }
+
+    /// Force a best-effort sync of all local keys to the backend registry.
+    /// Unlike `migrateBackendKeyRegistryIfNeeded()`, this does NOT use any one-time flag,
+    /// so it can be safely called after key provisioning flows to ensure the backend has the latest keys.
+    static func syncBackendKeyRegistry() {
+        guard App.shared.authRepository.isAuthenticated() else { return }
+
+        let keys = (try? KeyInfo.all()) ?? []
+        if keys.isEmpty { return }
+
+        let registerKeys = keys.compactMap { buildRegisterKey(from: $0, state: nil) }
+        if registerKeys.isEmpty { return }
+
+        let service = KeysRegistrationService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+        service.register(keys: registerKeys) { result in
+            switch result {
+            case .success:
+                LogService.shared.info("[OwnerKeyController] Synced \(registerKeys.count) keys to backend registry")
+            case .failure(let error):
+                LogService.shared.error("[OwnerKeyController] Failed to sync keys to backend registry", error: error)
+            }
+        }
+    }
+
+    private static func registerKeyInBackend(keyInfo: KeyInfo, state: Int? = nil) {
+        guard App.shared.authRepository.isAuthenticated() else { return }
+        guard let registerKey = buildRegisterKey(from: keyInfo, state: state) else { return }
+
+        let service = KeysRegistrationService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+        service.register(keys: [registerKey]) { result in
+            switch result {
+            case .success:
+                LogService.shared.debug("[OwnerKeyController] Registered key in backend: \(registerKey.keyType)")
+            case .failure(let error):
+                LogService.shared.error("[OwnerKeyController] Failed to register key in backend", error: error)
+            }
+        }
+    }
+
+    private static func buildRegisterKey(from keyInfo: KeyInfo, state: Int?) -> RegisterKey? {
+        let keyType = backendKeyType(for: keyInfo.keyType)
+        let publicAddress = keyInfo.address.checksummed
+
+        var cardId: String?
+        var walletIndex: Int?
+        var tagIdentifier: String?
+        var slot: Int?
+        var attestationValid: Bool?
+
+        switch keyInfo.keyType {
+        case .tangem:
+            let metadata = keyInfo.metadata.flatMap {
+                try? JSONDecoder().decode(KeyInfo.TangemKeyMetadata.self, from: $0)
+            }
+            cardId = metadata?.cardId
+            walletIndex = metadata?.walletIndex
+        case .tangem0:
+            let metadata = keyInfo.metadata.flatMap {
+                try? JSONDecoder().decode(KeyInfo.Tangem0KeyMetadata.self, from: $0)
+            }
+            cardId = metadata?.cardId
+            walletIndex = metadata?.walletIndex
+        case .burner:
+            let metadata = keyInfo.metadata.flatMap {
+                try? JSONDecoder().decode(KeyInfo.BurnerKeyMetadata.self, from: $0)
+            }
+            cardId = metadata?.cardId
+            tagIdentifier = metadata?.tagIdentifier
+            slot = metadata?.slot
+            attestationValid = metadata?.attestationValid
+        default:
+            break
+        }
+
+        return RegisterKey(
+            keyType: keyType,
+            publicAddress: publicAddress,
+            cardId: cardId,
+            walletIndex: walletIndex,
+            tagIdentifier: tagIdentifier,
+            slot: slot,
+            attestationValid: attestationValid,
+            state: state
+        )
+    }
+
+    private static func backendKeyType(for keyType: KeyType) -> String {
+        switch keyType {
+        case .deviceImported:
+            return "deviceImported"
+        case .deviceGenerated:
+            return "deviceGenerated"
+        case .walletConnect:
+            return "walletConnect"
+        case .ledgerNanoX:
+            return "ledgerNanoX"
+        case .keystone:
+            return "keystone"
+        case .web3AuthApple:
+            return "web3AuthApple"
+        case .web3AuthGoogle:
+            return "web3AuthGoogle"
+        case .tangem:
+            return "tangem"
+        case .burner:
+            return "burner"
+        case .tangem0:
+            return "tangem0"
+        }
     }
     
     private static func postNotification(_ name: Notification.Name) {

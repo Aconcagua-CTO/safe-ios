@@ -20,7 +20,7 @@ class RepeatChangedPasscodeViewController: PasscodeViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Change Passcode"
+        navigationItem.title = NSLocalizedString("ui_passcode_change_title", comment: "Title for change passcode flow")
         promptLabel.text = "Repeat the 6-digit passcode"
         button.isHidden = true
     }

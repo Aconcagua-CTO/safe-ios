@@ -18,6 +18,7 @@ class AddOwnerKeyViewController: UITableViewController {
     var generateKeyFlow: GenerateKeyFlow!
     var walletConnectKeyFlow: WalletConnectKeyFlow!
     var socialKeyFlow: AddSocialKeyFlow!
+    private var cardKeyFlow: AddKeyFlow?
 
     enum Row {
         case social
@@ -32,7 +33,7 @@ class AddOwnerKeyViewController: UITableViewController {
             case .social:
                 return "Create or import with Google or Apple ID"
             case .generate:
-                return "Crear nueva Card Key"
+                return "Crear nueva Mobile Key"
             case .importKey:
                 return "Importar Mobile Key"
             case .hardware:
@@ -49,7 +50,7 @@ class AddOwnerKeyViewController: UITableViewController {
             case .generate:
                 return UIImage(named: "ico-mobile")!
             case .importKey:
-                return UIImage(named: KeyType.deviceImported.imageName)!
+                return UIImage(named: "ico-key-type-key")!
             case .walletConnect:
                 return UIImage(named: KeyType.walletConnect.imageName)!
             case .hardware:
@@ -57,7 +58,7 @@ class AddOwnerKeyViewController: UITableViewController {
             case .social:
                 return UIImage(named: "ico-add")!
             case .activateCard:
-                return UIImage(named: "ico-payment-key")!
+                return UIImage(named: "ico-nfc")!
             }
         }
 
@@ -101,9 +102,8 @@ class AddOwnerKeyViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Add Owner Key"
-        navigationItem.largeTitleDisplayMode = .always
-        navigationController?.navigationBar.prefersLargeTitles = true
+        title = NSLocalizedString("ui_owner_keys_manage_title", comment: "Title for managing owner keys")
+        navigationItem.largeTitleDisplayMode = .never
         navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back")
         
         ViewControllerFactory.removeNavigationBarBorder(self)
@@ -151,10 +151,7 @@ class AddOwnerKeyViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let view = tableView.dequeueHeaderFooterView(BasicHeaderView.self)
-        view.setName(sections[section].section, backgroundColor: .clear)
-
-        return view
+        return nil
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -205,9 +202,17 @@ class AddOwnerKeyViewController: UITableViewController {
             show(vc, sender: self)
             
         case .activateCard:
-            let vc = ComingSoonViewController()
-            vc.title = "Activar nueva Card Key"
-            show(vc, sender: self)
+            // Route by cached lead manufacturer.
+            let manufacturer = (AppSettings.leadCardManufacturer ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if manufacturer == "tangem" {
+                startTangemActivationFlow()
+            } else if manufacturer == "burner" {
+                startBurnerActivationFlow()
+            } else {
+                presentCardKeyManufacturerChoice()
+            }
             
         case .social:
             socialKeyFlow = AddSocialKeyFlow { [weak self] _ in
@@ -220,6 +225,50 @@ class AddOwnerKeyViewController: UITableViewController {
     }
 
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        BasicHeaderView.headerHeight
+        return 0
+    }
+
+    private func startTangemActivationFlow() {
+        let vc = TangemActivationViewController(service: .shared)
+        vc.onActivationComplete = { [weak self] info in
+            guard let self else { return }
+            // Skip re-scan: we already have cardId + wallet pubkey from activation.
+            let flow = TangemKeyFlow(activatedCardInfo: info, service: TangemService.shared) { [weak self] _ in
+                self?.cardKeyFlow = nil
+                self?.completion()
+            }
+            self.cardKeyFlow = flow
+            self.push(flow: flow)
+        }
+        show(vc, sender: self)
+    }
+
+    private func startBurnerActivationFlow() {
+        // Burner cards don't require a distinct "activation" step in-app today.
+        // Proceed to connect/import the owner key via Burner scan.
+        let flow = BurnerKeyFlow { [weak self] _ in
+            self?.cardKeyFlow = nil
+            self?.completion()
+        }
+        cardKeyFlow = flow
+        push(flow: flow)
+    }
+
+    private func presentCardKeyManufacturerChoice() {
+        let title = NSLocalizedString("ui_card_key_connect_title", comment: "Title for connecting a card key")
+        let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: NSLocalizedString("ui_tangem_connect_card_title", comment: "Title for connecting a Tangem card"), style: .default) { [weak self] _ in
+            self?.startTangemActivationFlow()
+        })
+        alert.addAction(UIAlertAction(title: NSLocalizedString("ui_burner_connect_card_title", comment: "Title for the burner owner key connect flow"), style: .default) { [weak self] _ in
+            self?.startBurnerActivationFlow()
+        })
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        present(alert, animated: true)
     }
 }

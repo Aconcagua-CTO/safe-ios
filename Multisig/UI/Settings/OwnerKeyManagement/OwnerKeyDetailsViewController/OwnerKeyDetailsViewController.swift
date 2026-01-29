@@ -87,15 +87,15 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
         super.viewDidLoad()
         assert(keyInfo != nil, "Developer error: expect to have a key")
 
-        navigationItem.title = "Owner Key"
+        navigationItem.title = NSLocalizedString("ui_owner_key_title", comment: "Title for owner key details screen")
 
-        if KeyType.privateKeyTypes.contains(keyInfo.keyType) {
-            exportButton = UIBarButtonItem(title: "Export", style: .done, target: self, action: #selector(didTapExportButton))
-            navigationItem.rightBarButtonItem = exportButton
-        }
+        navigationItem.rightBarButtonItem = nil
 
         if completion != nil {
-            let doneButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(pop))
+            let doneButton = UIBarButtonItem(title: NSLocalizedString("button_done", comment: "Done button title"),
+                                             style: .done,
+                                             target: self,
+                                             action: #selector(pop))
             navigationItem.leftBarButtonItem = doneButton
         }
 
@@ -211,32 +211,10 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
         }
 
         sections = [
-            (section: .name("OWNER NAME"), items: [Section.Name.name])]
-
-        if KeyType.socialKeyTypes.contains(keyInfo.keyType) {
-            sections.append((section: .email("EMAIL ADDRESS"), items: [Section.Email.email]))
-        }
-
-        sections.append(contentsOf: [(section: .keyAddress("OWNER ADDRESS"), items: [Section.KeyAddress.address]),
-                                     (section: .ownerKeyType("OWNER TYPE"), items: [Section.OwnerKeyType.type])])
-
-        if keyInfo.keyType == .walletConnect {
-            sections.append((section: .connected("WC CONNECTION"), items: [Section.Connected.connected]))
-        }
-
-        sections.append((section: .pushNotificationConfiguration("PUSH NOTIFICATIONS"),
-                         items: [Section.PushNotificationConfiguration.enabled]))
-
-        if keyInfo.delegateAddress != nil {
-            sections.append((section: .delegateKey("DELEGATE KEY ADDRESS"),
-                    items: [Section.DelegateKey.address, Section.DelegateKey.helpLink]))
-        }
-
-        sections.append((section: .advanced, items: [Section.Advanced.remove]))
-
-        if keyInfo.needsBackup {
-            sections.insert((section: .backedup, items: [Section.Backedup.backedup]), at: 0)
-        }
+            (section: .name("OWNER NAME"), items: [Section.Name.name]),
+            (section: .keyAddress("OWNER ADDRESS"), items: [Section.KeyAddress.address]),
+            (section: .advanced, items: [Section.Advanced.remove])
+        ]
 
         tableView.reloadData()
     }
@@ -260,7 +238,9 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
         let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
             OwnerKeyController.remove(keyInfo: self.keyInfo)
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         present(alertController, animated: true)
@@ -288,7 +268,10 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
             nameCell.selectionStyle = .none
             return nameCell
         case Section.KeyAddress.address:
-            return tableView.addressDetailsCell(address: keyInfo.address, showQRCode: true, indexPath: indexPath)
+            return tableView.addressDetailsCell(address: keyInfo.address,
+                                                showIdenticon: false,
+                                                showQRCode: false,
+                                                indexPath: indexPath)
         case Section.OwnerKeyType.type:
             return keyTypeCell(type: keyInfo.keyType, indexPath: indexPath)
         case Section.Connected.connected:
@@ -513,21 +496,21 @@ extension KeyType {
         case .deviceImported:
             return "Imported"
         case .ledgerNanoX:
-            return "Ledger Nano X"
+            return NSLocalizedString("ui_owner_key_type_ledger", comment: "Owner key type label for Ledger")
         case .walletConnect:
             return "WalletConnect"
         case .keystone:
-            return "Keystone"
+            return NSLocalizedString("ui_owner_key_type_keystone", comment: "Owner key type label for Keystone")
         case .web3AuthApple:
             return "Social Key"
         case .web3AuthGoogle:
             return "Social Key"
         case .tangem:
-            return "Tangem Card"
+            return NSLocalizedString("ui_owner_key_type_tangem", comment: "Owner key type label for Tangem")
         case .tangem0:
-            return "Tangem0 Card"
+            return NSLocalizedString("ui_owner_key_type_tangem0", comment: "Owner key type label for Tangem0")
         case .burner:
-            return "Burner Card"
+            return NSLocalizedString("ui_burner_card_label", comment: "Label for Burner card key type")
         }
     }
 }

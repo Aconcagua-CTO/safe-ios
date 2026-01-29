@@ -98,7 +98,7 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
 
     func buildEstimatedGasFee(_ model: EstimatedFeeCellState, tableView: UITableView, sponsoredPayment: Bool) -> UITableViewCell {
         let cell = tableView.dequeueCell(DisclosureWithContentCell.self)
-        cell.setText("Estimated fee")
+        cell.setText(NSLocalizedString("ui_tx_estimated_fee_title", comment: "Estimated fee title"))
         cell.setBackgroundColor(.backgroundSecondary)
 
         if sponsoredPayment {
@@ -111,7 +111,7 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
             cell.setContent(content)
 
         case .empty:
-            let content = textView("Not set")
+            let content = textView(NSLocalizedString("ui_not_set_title", comment: "Not set label"))
             cell.setContent(content)
 
         case .loaded(let feeModel):
@@ -153,10 +153,12 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
     func buildAccountPayment(tableView: UITableView) -> UITableViewCell {
         let cell = tableView.dequeueCell(SecondaryDetailDisclosureCell.self)
         if AppSettings.selfHostedExecuteEnabled {
-            cell.setText("Executed by Boveda", hideDisclousre: true)
+            cell.setText(NSLocalizedString("ui_tx_executed_by_boveda_title", comment: "Executed by Boveda title"),
+                         hideDisclousre: true)
             cell.selectionStyle = .none
         } else {
-            cell.setText("With an owner key", hideDisclousre: !chain.isSupported(feature: .relayingMobile))
+            cell.setText(NSLocalizedString("ui_tx_with_owner_key_title", comment: "With an owner key title"),
+                         hideDisclousre: !chain.isSupported(feature: .relayingMobile))
             cell.selectionStyle = chain.isSupported(feature: .relayingMobile) ? .default : .none
         }
         cell.setBackgroundColor(.backgroundPrimary)
@@ -165,7 +167,7 @@ class ExecutionOptionsCellBuilder: TransactionDetailCellBuilder {
 
     func buildExecutedWithAccount(_ model: ExecuteWithAccountCellState, tableView: UITableView) -> UITableViewCell {
         let cell = tableView.dequeueCell(DisclosureWithContentCell.self)
-        cell.setText("Select key")
+        cell.setText(NSLocalizedString("ui_tx_select_key_title", comment: "Select key title"))
         cell.setBackgroundColor(.backgroundPrimary)
         if AppSettings.selfHostedExecuteEnabled {
             cell.selectionStyle = .none

@@ -27,7 +27,7 @@ class ChainSettingsTableViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "Chain Prefix"
+        navigationItem.title = NSLocalizedString("ui_settings_chain_prefix_title", comment: "Settings title for chain prefix")
 
         tableView.registerCell(SwitchTableViewCell.self)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "HelpCell")
@@ -35,7 +35,8 @@ class ChainSettingsTableViewController: UITableViewController {
         tableView.backgroundColor = .backgroundSecondary
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 60
-        sections.append(Section(title: "Address prefix", items: [.prependChainPrefixToAddresses,
+        sections.append(Section(title: NSLocalizedString("ui_settings_chain_prefix_section_title", comment: "Chain prefix section title"),
+                                items: [.prependChainPrefixToAddresses,
                                                                  .prependChainPrefixToAddressesHelp,
                                                                  .copyAddressWithChainPrefix,
                                                                  .copyAddressWithChainPrefixHelp]))
@@ -59,18 +60,20 @@ class ChainSettingsTableViewController: UITableViewController {
         switch sections[indexPath.section].items[indexPath.row] {
         case .copyAddressWithChainPrefix:
             return tableView.switchCell(for: indexPath,
-                                        with: "Copy addresses with chain prefix",
+                                        with: NSLocalizedString("ui_settings_chain_copy_prefix_title", comment: "Chain prefix setting title"),
                                         isOn: AppSettings.copyAddressWithChainPrefix)
         case .copyAddressWithChainPrefixHelp:
-            return tableView.helpCell(for: indexPath, with: "When you copy any address, the app will prepend the chain according to standard EIP-3770")
+            return tableView.helpCell(for: indexPath,
+                                      with: NSLocalizedString("ui_settings_chain_copy_prefix_help", comment: "Chain prefix setting help"))
 
         case .prependChainPrefixToAddresses:
             return tableView.switchCell(for: indexPath,
-                                        with: "Prepend chain prefix to addresses",
+                                        with: NSLocalizedString("ui_settings_chain_prepend_prefix_title", comment: "Chain prefix setting title"),
                                         isOn: AppSettings.prependingChainPrefixToAddresses)
 
         case .prependChainPrefixToAddressesHelp:
-            return tableView.helpCell(for: indexPath, with: "When enabled, all chain-specific addresses will have the chain prefix displayed before them")
+            return tableView.helpCell(for: indexPath,
+                                      with: NSLocalizedString("ui_settings_chain_prepend_prefix_help", comment: "Chain prefix setting help"))
         }
     }
 

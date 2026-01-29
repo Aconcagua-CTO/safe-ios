@@ -28,15 +28,18 @@ class ClaimNotAvailableViewController: UIViewController {
 
         descriptionLabel.setStyle(.body)
 
-        safeDAOLink.setText("Safe DAO", underlined: false)
+        safeDAOLink.setText(NSLocalizedString("ui_claim_safe_dao_link", comment: "Safe DAO link title"),
+                            underlined: false)
         safeDAOLink.url = App.configuration.contact.safeDAOURL
         safeDAOLink.trackingEvent = .userClaimNotDao
 
-        forumLink.setText("Forum", underlined: false)
+        forumLink.setText(NSLocalizedString("ui_claim_forum_link", comment: "Forum link title"),
+                          underlined: false)
         forumLink.url = App.configuration.contact.forumURL
         forumLink.trackingEvent = .userClaimNotForum
 
-        okButton.setText("OK, I Understand", .filled)
+        okButton.setText(NSLocalizedString("ui_claim_ok_understand_action", comment: "Claim not available OK action"),
+                         .filled)
     }
 
     @IBAction func didTapOkButton(_ sender: Any) {

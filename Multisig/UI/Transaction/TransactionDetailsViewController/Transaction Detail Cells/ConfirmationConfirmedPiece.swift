@@ -18,9 +18,10 @@ class ConfirmationConfirmedPiece: UINibView {
         titleLabel.setStyle(.headlinePrimary)
         // I wish the XIB would allow to set the height constraint to
         // the file owner, but it doesn't, so we set it in code here
-        NSLayoutConstraint.activate([
-            heightAnchor.constraint(equalToConstant: 88)
-        ])
+        let heightConstraint = heightAnchor.constraint(equalToConstant: 88)
+        // Allow UITableView's calculated row height to win (prevents constraint-breaking / flicker).
+        heightConstraint.priority = UILayoutPriority(999)
+        heightConstraint.isActive = true
     }
 
     func setText(_ text: String) {

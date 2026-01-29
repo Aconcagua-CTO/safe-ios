@@ -20,7 +20,7 @@ class ImportInProgressViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Importing data..."
+        title = NSLocalizedString("ui_data_importing_title", comment: "Importing data title")
     }
     
     override func viewDidAppear(_ animated: Bool) {

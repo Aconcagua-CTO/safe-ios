@@ -20,17 +20,19 @@ class SuggestToAddSignerViewController: AccountActionCompletedViewController {
     override func viewDidLoad() {
         do {
             safe = try Safe.getSelected()!
-            descriptionText = "\((safe.name ?? "Safe Account")) is read-only. Would you like to add owner key for this Safe Account to confirm transactions?"
+            let safeName = safe.name ?? NSLocalizedString("ui_safe_load_account_title", comment: "Safe account fallback name")
+            descriptionText = String(format: NSLocalizedString("ui_safe_read_only_prompt_format", comment: "Read-only Safe prompt"),
+                                     safeName)
             accountName = safe.name
             accountAddress = safe.addressValue
             prefix = safe.chain?.shortName
         } catch {
             fatalError()
         }
-        titleText = "Load Safe Account"
-        headerText = "Safe Account loaded"
-        primaryActionName = "Add owner key"
-        secondaryActionName = "Skip"
+        titleText = NSLocalizedString("ui_safe_load_account_title", comment: "Title for loading Safe account")
+        headerText = NSLocalizedString("ui_safe_loaded_title", comment: "Safe account loaded title")
+        primaryActionName = NSLocalizedString("ui_safe_add_owner_key_action", comment: "Add owner key action")
+        secondaryActionName = NSLocalizedString("button_skip", comment: "Skip button title")
 
         super.viewDidLoad()
     }

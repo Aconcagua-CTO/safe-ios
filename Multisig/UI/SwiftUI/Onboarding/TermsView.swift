@@ -27,37 +27,29 @@ struct TermsView: View {
     private let bottomPadding: CGFloat = Spacing.large
     let interItemSpacing: CGFloat = Spacing.small
 
-    private let legal = App.configuration.legal
+    private let termsAndConditionsURL = URL(string: "https://boveda.ai/policy")!
 
     var body: some View {
         VStack(spacing: interItemSpacing) {
-            Text("Our Terms of Use and Privacy Policy")
+            Text(NSLocalizedString("ui_terms_title", comment: "Terms of Use and Privacy Policy screen title"))
                 .headline()
                 .multilineTextAlignment(.center)
 
             VStack(alignment: .leading) {
-                BulletText("We collect anonymized app usage data and crash reports to ensure the quality of our app.")
-                BulletText("We do not collect demographic data such as age or gender.")
+                BulletText(NSLocalizedString("ui_terms_collect_data", comment: "Data collection explanation"))
+                BulletText(NSLocalizedString("ui_terms_no_demographic_data", comment: "No demographic data collection"))
                 HStack (spacing: 0) {
-                    BulletText("Read more in")
-                    LinkButton("Privacy Policy", url: legal.privacyURL).padding(0)
-                    Text("and").body(.labelSecondary)
-                    LinkButton("Terms of Use", url: legal.termsURL).padding(0)
+                    BulletText(NSLocalizedString("ui_terms_read_more", comment: "Read more prefix text"))
+                    LinkButton(NSLocalizedString("ui_terms_conditions_link", comment: "Terms and Conditions link text"), url: termsAndConditionsURL).padding(0)
                 }
             }
 
-            Button("Get Started") {
+            Button(NSLocalizedString("ui_terms_get_started", comment: "Get Started button")) {
                 agreeWithTerms()
                 AppSettings.trackingEnabled = true
             }
-            .buttonStyle(GNOFilledButtonStyle()).preferredColorScheme(.dark)
-
-            Button("Accept without sharing data") {
-                agreeWithTerms()
-                AppSettings.trackingEnabled = false
-            }
             .padding(.bottom)
-            .buttonStyle(GNOPlainButtonStyle())
+            .buttonStyle(GNOFilledButtonStyle()).preferredColorScheme(.dark)
         }
         .padding(.top, topPadding)
         .padding(.bottom, bottomPadding)

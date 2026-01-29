@@ -89,13 +89,16 @@ class TransactionDetailCellBuilder {
         if let factory = creationTx.factory?.value.address {
             let info = NamingPolicy.name(for: factory, chainId: chain.id!)
             address(factory,
-                    label: info.name ?? creationTx.factory?.name ?? "Unknown",
-                    title: "Factory used",
+                    label: info.name ?? creationTx.factory?.name ?? NSLocalizedString("ui_unknown_title", comment: "Unknown label"),
+                    title: NSLocalizedString("ui_tx_factory_used_title", comment: "Factory used title"),
                     imageUri: info.imageUri ?? creationTx.factory?.logoUri,
                     browseURL: chain.browserURL(address: factory.checksummed),
                     prefix: chain.shortName)
         } else {
-            text("No factory used", title: "Factory used", expandableTitle: nil, copyText: nil)
+            text(NSLocalizedString("ui_tx_no_factory_used_title", comment: "No factory used title"),
+                 title: NSLocalizedString("ui_tx_factory_used_title", comment: "Factory used title"),
+                 expandableTitle: nil,
+                 copyText: nil)
         }
     }
 
@@ -104,15 +107,15 @@ class TransactionDetailCellBuilder {
             let info = NamingPolicy.name(for: implementation, chainId: chain.id!)
             address(
                 implementation,
-                label: info.name ?? creationTx.implementation?.name ?? "Unknown",
-                title: "Base contract used",
+                label: info.name ?? creationTx.implementation?.name ?? NSLocalizedString("ui_unknown_title", comment: "Unknown label"),
+                title: NSLocalizedString("ui_tx_base_contract_used_title", comment: "Base contract used title"),
                 imageUri: info.imageUri ?? creationTx.implementation?.logoUri,
                 browseURL: chain.browserURL(address: implementation.checksummed),
                 prefix: chain.shortName)
         } else {
             text(
-                "Not available",
-                title: "Base contract used",
+                NSLocalizedString("ui_tx_not_available_title", comment: "Not available label"),
+                title: NSLocalizedString("ui_tx_base_contract_used_title", comment: "Base contract used title"),
                 expandableTitle: nil,
                 copyText: nil)
         }
@@ -121,7 +124,7 @@ class TransactionDetailCellBuilder {
     func buildTransactionHash(_ creationTx: SCGModels.TxInfo.Creation) {
         text(
             creationTx.transactionHash.description,
-            title: "Transaction hash",
+            title: NSLocalizedString("ui_tx_transaction_hash_plain_title", comment: "Transaction hash title"),
             expandableTitle: nil,
             copyText: creationTx.transactionHash.description)
     }
@@ -131,7 +134,7 @@ class TransactionDetailCellBuilder {
         let creator = creationTx.creator.value.address
         return address(creator,
                        label: info.name,
-                       title: "Creator address",
+                       title: NSLocalizedString("ui_tx_creator_address_title", comment: "Creator address title"),
                        imageUri: info.imageUri,
                        browseURL: chain.browserURL(address: creator.checksummed),
                        prefix: chain.shortName)
@@ -219,12 +222,14 @@ class TransactionDetailCellBuilder {
                 let handler: Address = fallbackTx.handler.value.address
                 var (label, imageUri) = NamingPolicy.name(for: fallbackTx.handler, chainId: chain.id!)
                 if label == nil {
-                    label = handler.isZero ? "Not set" : "Unknown"
+                    label = handler.isZero
+                        ? NSLocalizedString("ui_not_set_title", comment: "Not set label")
+                        : NSLocalizedString("ui_unknown_title", comment: "Unknown label")
                 }
                 address(
                     handler,
                     label: label,
-                    title: "Set fallback handler:",
+                    title: NSLocalizedString("ui_tx_set_fallback_handler_title", comment: "Set fallback handler title"),
                     imageUri: imageUri,
                     browseURL: chain.browserURL(address: handler.checksummed),
                     prefix: chain.shortName,
@@ -237,9 +242,9 @@ class TransactionDetailCellBuilder {
                     addOwnerTx.owner.value.address,
                     label: label,
                     imageUri: imgageUri,
-                    addressTitle: "Add owner:",
+                    addressTitle: NSLocalizedString("ui_tx_add_owner_title", comment: "Add owner title"),
                     text: "\(addOwnerTx.threshold)",
-                    textTitle: "Change required confirmations:",
+                    textTitle: NSLocalizedString("ui_tx_change_confirmations_title", comment: "Change required confirmations title"),
                     browseURL: chain.browserURL(address: addOwnerTx.owner.value.address.checksummed),
                     prefix: chain.shortName)
 
@@ -249,9 +254,9 @@ class TransactionDetailCellBuilder {
                     removeOwnerTx.owner.value.address,
                     label: label,
                     imageUri: imageUri,
-                    addressTitle: "Remove owner:",
+                    addressTitle: NSLocalizedString("ui_tx_remove_owner_title", comment: "Remove owner title"),
                     text: "\(removeOwnerTx.threshold)",
-                    textTitle: "Change required confirmations:",
+                    textTitle: NSLocalizedString("ui_tx_change_confirmations_title", comment: "Change required confirmations title"),
                     browseURL: chain.browserURL(address: removeOwnerTx.owner.value.address.checksummed),
                     prefix: chain.shortName)
 
@@ -262,13 +267,13 @@ class TransactionDetailCellBuilder {
                     [(address: swapOwnerTx.oldOwner.value.address,
                       label: oldOwnerLabel,
                       imageUri: oldOwnerImgageUri,
-                      title: "Remove owner:",
+                      title: NSLocalizedString("ui_tx_remove_owner_title", comment: "Remove owner title"),
                       browseURL: chain.browserURL(address: swapOwnerTx.oldOwner.value.address.checksummed),
                       prefix: chain.shortName),
                      (address: swapOwnerTx.newOwner.value.address,
                       label: newOwnerLabel,
                       imageUri: newOwnerImgageUri,
-                      title: "Add owner:",
+                      title: NSLocalizedString("ui_tx_add_owner_title", comment: "Add owner title"),
                       browseURL: chain.browserURL(address: swapOwnerTx.newOwner.value.address.checksummed),
                       prefix: chain.shortName)
                     ])
@@ -276,7 +281,7 @@ class TransactionDetailCellBuilder {
             case .changeThreshold(let thresholdTx):
                 text(
                     "\(thresholdTx.threshold)",
-                    title: "Change required confirmations:",
+                    title: NSLocalizedString("ui_tx_change_confirmations_title", comment: "Change required confirmations title"),
                     expandableTitle: nil,
                     copyText: nil)
 
@@ -284,11 +289,11 @@ class TransactionDetailCellBuilder {
                 let implementation = implementationTx.implementation.value.address
                 var (label, imageUri) = NamingPolicy.name(for: implementationTx.implementation, chainId: chain.id!)
                 if label == nil {
-                    label = implementationTx.implementation.name ?? "Unknown"
+                    label = implementationTx.implementation.name ?? NSLocalizedString("ui_unknown_title", comment: "Unknown label")
                 }
                 address(implementation,
                         label: label,
-                        title: "New mastercopy:",
+                        title: NSLocalizedString("ui_tx_new_mastercopy_title", comment: "New mastercopy title"),
                         imageUri: imageUri,
                         browseURL: chain.browserURL(address: implementation.checksummed),
                         prefix: chain.shortName,
@@ -300,7 +305,7 @@ class TransactionDetailCellBuilder {
                 let module = moduleTx.module.value.address
                 address(module,
                         label: label,
-                        title: "Enable module:",
+                        title: NSLocalizedString("ui_tx_enable_module_title", comment: "Enable module title"),
                         imageUri: imageUri,
                         browseURL: chain.browserURL(address: module.checksummed),
                         prefix: chain.shortName,
@@ -312,7 +317,7 @@ class TransactionDetailCellBuilder {
                 let module = moduleTx.module.value.address
                 address(module,
                         label: label,
-                        title: "Disable module:",
+                        title: NSLocalizedString("ui_tx_disable_module_title", comment: "Disable module title"),
                         imageUri: imageUri,
                         browseURL: chain.browserURL(address: module.checksummed),
                         prefix: chain.shortName,
@@ -324,7 +329,7 @@ class TransactionDetailCellBuilder {
                 let guardContract = guardTx.guard.value.address
                 address(guardContract,
                         label: label,
-                        title: "Set guard:",
+                        title: NSLocalizedString("ui_tx_set_guard_title", comment: "Set guard title"),
                         imageUri: imageUri,
                         browseURL: chain.browserURL(address: guardContract.checksummed),
                         prefix: chain.shortName,
@@ -332,15 +337,21 @@ class TransactionDetailCellBuilder {
                 )
                 
             case .deleteGuard:
-                text("Delete Guard", title: "Settings change:", expandableTitle: nil, copyText: nil)
+                text(NSLocalizedString("ui_tx_delete_guard_title", comment: "Delete guard title"),
+                     title: NSLocalizedString("ui_tx_settings_change_title", comment: "Settings change title"),
+                     expandableTitle: nil,
+                     copyText: nil)
 
             case .unknown:
-                text("Unknown operation", title: "Settings change:", expandableTitle: nil, copyText: nil)
+                text(NSLocalizedString("ui_tx_unknown_operation_title", comment: "Unknown operation title"),
+                     title: NSLocalizedString("ui_tx_settings_change_title", comment: "Settings change title"),
+                     expandableTitle: nil,
+                     copyText: nil)
             }
 
         case .custom(let customTx):
             let (label, addressLogoUri) = NamingPolicy.name(for: customTx.to, chainId: chain.id!)
-            var title = "Interact with: "
+            var title = NSLocalizedString("ui_tx_interact_with_prefix", comment: "Prefix label for custom transaction interaction, shown before the contract name/address")
             let amount = Int256(customTx.value.value)
             if customTx.value != "0"  {
                 let nativeCoinDecimals = chain.nativeCurrency!.decimals
@@ -354,9 +365,9 @@ class TransactionDetailCellBuilder {
                 )
                 
                 if let currencySymbol = chain.nativeCurrency?.symbol {
-                    title = "Interact with (Send \(amount) \(currencySymbol) to): "
+                    title = String(format: NSLocalizedString("ui_tx_interact_send_amount_currency_title_format", comment: "Interact with send amount and currency title"), amount, currencySymbol)
                 } else {
-                    title = "Interact with (Send \(amount) to): "
+                    title = String(format: NSLocalizedString("ui_tx_interact_send_amount_title_format", comment: "Interact with send amount title"), amount)
                 }
             }
 
@@ -377,15 +388,27 @@ class TransactionDetailCellBuilder {
                 rejectionHeader(nonce: nil, isQueued: tx.txStatus.isInQueue)
             }
         case .swapOrder(let orderInfo):
-            text(orderInfo.swapOrderDisplayName, title: "Contract Interaction", expandableTitle: nil, copyText: nil)
-            externalURL(text: "Order details", url: orderInfo.explorerUrl)
+            text(orderInfo.swapOrderDisplayName,
+                 title: NSLocalizedString("ui_tx_contract_interaction_section_title", comment: "Contract interaction section title"),
+                 expandableTitle: nil,
+                 copyText: nil)
+            externalURL(text: NSLocalizedString("ui_tx_order_details_title", comment: "Order details title"), url: orderInfo.explorerUrl)
         case .swapTransfer(let orderInfo):
-            text(orderInfo.swapTransferDisplayName, title: "Contract Interaction", expandableTitle: nil, copyText: nil)
-            externalURL(text: "Order details", url: orderInfo.explorerUrl)
+            text(orderInfo.swapTransferDisplayName,
+                 title: NSLocalizedString("ui_tx_contract_interaction_section_title", comment: "Contract interaction section title"),
+                 expandableTitle: nil,
+                 copyText: nil)
+            externalURL(text: NSLocalizedString("ui_tx_order_details_title", comment: "Order details title"), url: orderInfo.explorerUrl)
         case .twapOrder(let order):
-            text(order.displayName, title: "Contract Interaction", expandableTitle: nil, copyText: nil)
+            text(order.displayName,
+                 title: NSLocalizedString("ui_tx_contract_interaction_section_title", comment: "Contract interaction section title"),
+                 expandableTitle: nil,
+                 copyText: nil)
         case .stake(let stake):
-            text(stake.displayName, title: "Contract Interaction", expandableTitle: nil, copyText: nil)
+            text(stake.displayName,
+                 title: NSLocalizedString("ui_tx_contract_interaction_section_title", comment: "Contract interaction section title"),
+                 expandableTitle: nil,
+                 copyText: nil)
         
         case .creation(_):
             // ignore
@@ -425,7 +448,7 @@ class TransactionDetailCellBuilder {
 
             tokenText = "\(amount) \(symbol)"
         } else {
-            tokenText = "Unknown token"
+            tokenText = NSLocalizedString("ui_tx_unknown_token_title", comment: "Unknown token title")
         }
 
 
@@ -468,14 +491,14 @@ class TransactionDetailCellBuilder {
         }
         
         guard !txMultisigInfo.confirmations.isEmpty else {
-            throw "Transaction has no confirmations."
+            throw NSLocalizedString("ui_tx_no_confirmations_error", comment: "Transaction has no confirmations error")
         }
         
         // all confirming addresses are from safe owners
         guard txMultisigInfo.confirmations.allSatisfy({ confirmation in
             ownerAddresses.contains(confirmation.signer.value.address)
         }) else {
-            throw "Not all confirmations are from safe owners."
+            throw NSLocalizedString("ui_tx_confirmations_not_owners_error", comment: "Confirmations not owners error")
         }
         
         // transaction hash is valid
@@ -494,7 +517,7 @@ class TransactionDetailCellBuilder {
             let computedSafeTxHash = transaction.safeTransactionHash(),
             transaction.safeTxHash == computedSafeTxHash
         else {
-            throw "Invalid safeTxHash. This may be a dangerous transaction."
+            throw NSLocalizedString("ui_tx_invalid_safetxhash_error", comment: "Invalid safeTxHash error")
         }
         
         // all confirming signatures are from a confirming addresses
@@ -567,7 +590,7 @@ class TransactionDetailCellBuilder {
         guard txMultisigInfo.confirmations.allSatisfy({ confirmation in
             signer(of: confirmation.signature.data) == confirmation.signer.value.address
         }) else {
-            throw "Not all signatures are from safe's owners. This may be a dangerous transaction."
+            throw NSLocalizedString("ui_tx_signatures_not_owners_error", comment: "Signatures not owners error")
         }
     }
     
@@ -579,7 +602,8 @@ class TransactionDetailCellBuilder {
             try validate(tx: tx, safe: aSafe)
         } catch {
             let cell = newCell(WarningTableViewCell.self)
-            cell.set(title: "Warning!", description: error.localizedDescription)
+            cell.set(title: NSLocalizedString("ui_warning_title", comment: "Warning title"),
+                     description: error.localizedDescription)
             result.append(cell)
         }
     }
@@ -594,7 +618,8 @@ class TransactionDetailCellBuilder {
                param.type == "bytes",
                case let SCGModels.DataDecoded.Parameter.ValueDecoded.multiSend(multiSendTxs)? = param.valueDecoded {
 
-                disclosure(text: "Multisend (\(multiSendTxs.count) actions)") { [weak self] in
+                disclosure(text: String(format: NSLocalizedString("ui_tx_multisend_actions_title_format", comment: "Multisend actions title"),
+                                        multiSendTxs.count)) { [weak self] in
                     guard let `self` = self else { return }
                     let root = MultiSendListTableViewController(transactions: multiSendTxs,
                                                                 addressInfoIndex: addressInfoIndex,
@@ -604,7 +629,8 @@ class TransactionDetailCellBuilder {
                     self.vc.show(vc, sender: self)
                 }
             } else {
-                disclosure(text: "Action (\(dataDecoded.method))") { [weak self] in
+                disclosure(text: String(format: NSLocalizedString("ui_tx_action_method_title_format", comment: "Action title with method"),
+                                        dataDecoded.method)) { [weak self] in
                     guard let `self` = self else { return }
                     let root = ActionDetailViewController(decoded: dataDecoded,
                                                           addressInfoIndex: addressInfoIndex,
@@ -620,7 +646,11 @@ class TransactionDetailCellBuilder {
 
     func buildHexData(_ tx: SCGModels.TransactionDetails) {
         if let data = tx.txData?.hexData {
-            text("\(data)", title: "Data", expandableTitle: "\(data.data.count) Bytes", copyText: "\(data)")
+            text("\(data)",
+                 title: NSLocalizedString("ui_tx_data_title", comment: "Transaction data title"),
+                 expandableTitle: String(format: NSLocalizedString("ui_tx_bytes_title_format", comment: "Bytes count title"),
+                                         "\(data.data.count)"),
+                 copyText: "\(data)")
         }
     }
 
@@ -631,7 +661,7 @@ class TransactionDetailCellBuilder {
             case .erc721(let erc721Tx):
                 let tokenAddress = erc721Tx.tokenAddress.address
                 address(tokenAddress,
-                        label: "Asset Contract",
+                        label: NSLocalizedString("ui_tx_asset_contract_title", comment: "Asset contract label"),
                         title: nil,
                         browseURL: chain.browserURL(address: tokenAddress.checksummed),
                         prefix: chain.shortName)
@@ -652,26 +682,28 @@ class TransactionDetailCellBuilder {
         switch tx.txInfo {
         case .transfer(let transferTx):
             let isOutgoing = transferTx.direction == .outgoing
-            type = isOutgoing ? "Outgoing transfer" : "Incoming transfer"
+            type = isOutgoing
+                ? NSLocalizedString("ui_tx_outgoing_transfer_title", comment: "Outgoing transfer title")
+                : NSLocalizedString("ui_tx_incoming_transfer_title", comment: "Incoming transfer title")
             icon = isOutgoing ? UIImage(named: "ico-outgoing-tx") : UIImage(named: "ico-incomming-tx")?.withTintColor(.success)
         case .settingsChange(_):
-            type = "Modify settings"
+            type = NSLocalizedString("ui_tx_modify_settings_title", comment: "Modify settings title")
             icon = UIImage(named: "ico-settings-tx")
         case .custom(_):
             if let safeAppInfo = tx.safeAppInfo {
                 type = safeAppInfo.name
                 imageURL = URL(string: safeAppInfo.logoUri)
-                tag = "App"
+                tag = NSLocalizedString("ui_tx_app_tag", comment: "Transaction app tag")
                 icon = UIImage(named: "ico-custom-tx")
             } else {
-                type = "Contract interaction"
+            type = NSLocalizedString("ui_tx_contract_interaction_title", comment: "Contract interaction title")
                 icon = UIImage(named: "ico-custom-tx")
             }
         case .rejection(_):
-            type = "On-chain rejection"
+            type = NSLocalizedString("ui_tx_onchain_rejection_title", comment: "Transaction type label for on-chain rejection")
             icon = UIImage(named: "ico-rejection-tx")
         case .creation(_):
-            type = "Safe Account created"
+            type = NSLocalizedString("ui_tx_safe_account_created_title", comment: "Transaction type label for Safe Account creation")
             icon = UIImage(named: "ico-settings-tx")
         case .swapOrder(let order):
             type = order.swapOrderDisplayName
@@ -686,7 +718,7 @@ class TransactionDetailCellBuilder {
             type = stake.displayName
             icon = UIImage(named: "ico-custom-tx")
         case .unknown:
-            type = "Unknown operation"
+            type = NSLocalizedString("ui_tx_unknown_operation_title", comment: "Unknown operation title")
             icon = UIImage(named: "ico-custom-tx")
         }
 
@@ -713,7 +745,7 @@ class TransactionDetailCellBuilder {
         guard let date = date else { return }
         text(
             dateFormatter.string(from: date),
-            title: "Created:",
+            title: NSLocalizedString("ui_tx_created_title", comment: "Created date title"),
             expandableTitle: nil,
             copyText: nil)
     }
@@ -722,7 +754,7 @@ class TransactionDetailCellBuilder {
         guard let executedAt = tx.executedAt else { return }
         text(
             dateFormatter.string(from: executedAt),
-            title: "Executed:",
+            title: NSLocalizedString("ui_tx_executed_title", comment: "Executed date title"),
             expandableTitle: nil,
             copyText: nil)
     }
@@ -733,7 +765,7 @@ class TransactionDetailCellBuilder {
             guard transferTx.direction != .incoming else { return }
             fallthrough
         default:
-            disclosure(text: "Advanced") { [weak self] in
+            disclosure(text: NSLocalizedString("ui_tx_advanced_title", comment: "Advanced details title")) { [weak self] in
                 guard let `self` = self else { return }
                 let vc = AdvancedTransactionDetailsViewController(tx, chain: self.chain)
                 let ribbonVC = RibbonViewController(rootViewController: vc)
@@ -748,7 +780,7 @@ class TransactionDetailCellBuilder {
             let txHash = hash?.description
         else { return }
         let url = chain.browserURL(txHash: txHash)
-        externalURL(text: "View on block explorer", url: url)
+        externalURL(text: NSLocalizedString("ui_tx_view_on_block_explorer_title", comment: "View on block explorer title"), url: url)
     }
 
     // MARK: - Cell Builder

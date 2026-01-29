@@ -32,7 +32,9 @@ class AddSafeTableViewCell: UITableViewCell {
     }
     
     func configureForRefresh(isRefreshing: Bool) {
-        let title = isRefreshing ? "Refrescando bóvedas…" : "Refrescar bóvedas"
+        let title = isRefreshing
+            ? NSLocalizedString("ui_safe_refreshing_title", comment: "Refreshing vaults title")
+            : NSLocalizedString("ui_safe_refresh_title", comment: "Refresh vaults title")
         button.setTitle(title, for: .normal)
         button.alpha = isRefreshing ? 0.6 : 1.0
         

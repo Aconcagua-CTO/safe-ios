@@ -12,6 +12,7 @@ enum LeadProvisioningAction: String {
     case existingUser = "existing_user"
     case copiedFromLead = "copied_from_lead"
     case leadMissingNames = "lead_missing_names"
+    case leadMissingCardManufacturer = "lead_missing_card_manufacturer"
     case leadCreated = "lead_created"
     case none = "none"
 }
@@ -33,6 +34,9 @@ final class UserProvisioningService {
             switch result {
             case .success(let data):
                 let leadAction = Self.parseLeadAction(from: data)
+                if let manufacturer = Self.parseCardManufacturer(from: data) {
+                    AppSettings.leadCardManufacturer = manufacturer
+                }
                 #if DEBUG
                 let preview = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
                 LogService.shared.info("[UserProvisioning] sign-up-federated-auth OK. leadAction=\(leadAction.rawValue) bodyPreview=\(preview)")
@@ -57,6 +61,19 @@ final class UserProvisioningService {
             return .none
         }
         return parsed
+    }
+
+    private static func parseCardManufacturer(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        guard
+            let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+            let raw = json["cardManufacturer"] as? String
+        else {
+            return nil
+        }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return trimmed.lowercased()
     }
 }
 

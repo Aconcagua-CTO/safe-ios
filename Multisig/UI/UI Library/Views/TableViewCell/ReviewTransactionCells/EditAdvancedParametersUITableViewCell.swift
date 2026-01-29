@@ -27,15 +27,15 @@ class EditAdvancedParametersUITableViewCell: UITableViewCell {
         super.awakeFromNib()
 
         titleLabel.setStyle(.headline)
-        nonceInfoLabel.setText("Safe nonce",
-                               description: "Safe nonce determines an order in which transactions are executed.",
+        nonceInfoLabel.setText(NSLocalizedString("ui_tx_nonce_title", comment: "Safe nonce title"),
+                               description: NSLocalizedString("ui_tx_nonce_description", comment: "Safe nonce description"),
                                style: .headline)
-        safeTxGasInfoLabel.setText("SafeTxGas",
-                                   description: "SafeTxGas specifies the gas that should be used for the Safe transaction.",
+        safeTxGasInfoLabel.setText(NSLocalizedString("ui_tx_safetxgas_title", comment: "SafeTxGas title"),
+                                   description: NSLocalizedString("ui_tx_safetxgas_description", comment: "SafeTxGas description"),
                                    style: .headline)
         nonceLabel.setStyle(.headline)
         safeTxGasLabel.setStyle(.headline)
-        editButton.setText("Edit", .plain)
+        editButton.setText(NSLocalizedString("button_edit", comment: "Edit button title"), .plain)
         updateExpanded()
     }
 

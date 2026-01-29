@@ -16,7 +16,14 @@ extension UITableView {
     ///   - reuseID: if not nil, the supplied value is used as reuse identifier
     ///     if nil (default), then class's name is used as reuse identifier.
     func registerCell<T: UITableViewCell>(_ aClass: T.Type, reuseID: String? = nil) {
-        register(aClass.nib(), forCellReuseIdentifier: reuseID ?? aClass.reuseID)
+        let identifier = reuseID ?? aClass.reuseID
+        // Prefer nib registration when the nib exists; otherwise fall back to class registration.
+        // This allows programmatic cells to use the same helpers without requiring a .xib.
+        if Bundle(for: aClass).path(forResource: aClass.reuseID, ofType: "nib") != nil {
+            register(aClass.nib(), forCellReuseIdentifier: identifier)
+        } else {
+            register(aClass, forCellReuseIdentifier: identifier)
+        }
     }
 
     /// Registers a HeaderFooterView using a nib named the same as the view's class and

@@ -19,9 +19,11 @@ class GuardianCountTableViewCell: UITableViewCell {
 
     func setCount(_ count: Int) {
         if count > 1 {
-            countLabel.text = "\(count) delegates"
+            countLabel.text = String(format: NSLocalizedString("ui_claim_delegates_count_plural_format", comment: "Delegates count plural"),
+                                     count)
         } else {
-            countLabel.text = "\(count) delegate"
+            countLabel.text = String(format: NSLocalizedString("ui_claim_delegates_count_singular_format", comment: "Delegates count singular"),
+                                     count)
         }
     }
 }

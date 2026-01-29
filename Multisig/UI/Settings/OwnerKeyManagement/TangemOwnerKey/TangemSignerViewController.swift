@@ -55,15 +55,15 @@ private enum TangemSignerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingMetadata:
-            return "Tangem card metadata is missing. Please re-import the card."
+            return NSLocalizedString("ui_tangem_error_missing_metadata", comment: "Tangem signer error for missing metadata")
         case .walletNotFound:
-            return "The selected Tangem card does not contain the expected wallet."
+            return NSLocalizedString("ui_tangem_error_wallet_mismatch", comment: "Tangem signer error for wallet mismatch")
         case .invalidHashLength:
             return "Expected a 32-byte hash to sign."
         case .invalidSignature:
-            return "Tangem returned an invalid signature."
+            return NSLocalizedString("ui_tangem_error_invalid_signature", comment: "Tangem signer error for invalid signature")
         case .signerMismatch:
-            return "The Tangem card signed with a different address than expected."
+            return NSLocalizedString("ui_tangem_error_address_mismatch", comment: "Tangem signer error for address mismatch")
         }
     }
 }
@@ -160,7 +160,7 @@ private final class TangemSignContentViewController: UIViewController {
 
         activityIndicator.hidesWhenStopped = true
 
-        actionButton.setTitle("Try Again", for: .normal)
+        actionButton.setTitle(NSLocalizedString("button_retry", comment: "Retry button title"), for: .normal)
         actionButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
         actionButton.isHidden = true
 
@@ -212,7 +212,7 @@ private final class TangemSignContentViewController: UIViewController {
 
                 let signingMessage = Message(
                     header: "Safe Wallet",
-                    body: "Hold your Tangem card near the top of your iPhone to sign."
+                    body: NSLocalizedString("ui_tangem_sign_message_body", comment: "Tangem sign NFC message body")
                 )
                 
                 TangemLogger.debug("TangemSigner ▶️ Invoking signing service \(String(describing: type(of: self.service)))")
@@ -427,10 +427,10 @@ private final class TangemSignContentViewController: UIViewController {
 
     private func message(for error: Error) -> String {
         if let tangemError = error as? TangemServiceError {
-            return tangemError.errorDescription ?? "Tangem operation failed."
+            return tangemError.errorDescription ?? NSLocalizedString("ui_tangem_error_operation_failed", comment: "Tangem signer generic error")
         }
         if let signerError = error as? TangemSignerError {
-            return signerError.errorDescription ?? "Tangem operation failed."
+            return signerError.errorDescription ?? NSLocalizedString("ui_tangem_error_operation_failed", comment: "Tangem signer generic error")
         }
         return error.localizedDescription
     }
@@ -444,25 +444,25 @@ private final class TangemSignContentViewController: UIViewController {
             detailLabel.text = nil
 
         case .verifyingCard:
-            statusLabel.text = "Verifying Tangem Card"
-            detailLabel.text = "Hold your Tangem card near the top edge of your iPhone."
+            statusLabel.text = NSLocalizedString("ui_tangem_sign_verify_title", comment: "Tangem signing verification title")
+            detailLabel.text = NSLocalizedString("ui_tangem_hold_near_top_edge", comment: "Tangem signer hold near top detail")
             actionButton.isHidden = true
             activityIndicator.startAnimating()
 
         case .waitingForSignature:
-            statusLabel.text = "Ready to Sign"
-            detailLabel.text = "Hold your Tangem card again to approve the signature."
+            statusLabel.text = NSLocalizedString("ui_tangem_sign_ready_title", comment: "Tangem signing ready title")
+            detailLabel.text = NSLocalizedString("ui_tangem_sign_hold_again_detail", comment: "Tangem signing hold again detail")
             actionButton.isHidden = true
             activityIndicator.startAnimating()
 
         case .signing:
-            statusLabel.text = "Completing Signature"
-            detailLabel.text = "Please wait while we process the Tangem signature."
+            statusLabel.text = NSLocalizedString("ui_tangem_sign_completing_title", comment: "Tangem signing completing title")
+            detailLabel.text = NSLocalizedString("ui_tangem_sign_completing_detail", comment: "Tangem signing completing detail")
             actionButton.isHidden = true
             activityIndicator.startAnimating()
 
         case .error(let message):
-            statusLabel.text = "Unable to Sign"
+            statusLabel.text = NSLocalizedString("ui_tangem_sign_unable_title", comment: "Tangem signing unable title")
             detailLabel.text = message
             activityIndicator.stopAnimating()
             actionButton.isHidden = false

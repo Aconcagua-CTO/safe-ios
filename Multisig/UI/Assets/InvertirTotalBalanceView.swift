@@ -24,12 +24,12 @@ final class InvertirTotalBalanceView: TotalBalanceView {
     override func awakeFromNib() {
         super.awakeFromNib()
 
-        receiveButton.setText("+ Comprar", .filled)
+        receiveButton.setText(NSLocalizedString("ui_invertir_buy_plus_action", comment: "Invertir buy action with plus"), .filled)
         receiveButton.setImage(nil, for: .normal)
         receiveButton.titleEdgeInsets = .zero
         receiveButton.imageEdgeInsets = .zero
 
-        sendButton.setText("- Vender", .filled)
+        sendButton.setText(NSLocalizedString("ui_invertir_sell_minus_action", comment: "Invertir sell action with minus"), .filled)
         sendButton.setImage(nil, for: .normal)
         sendButton.titleEdgeInsets = .zero
         sendButton.imageEdgeInsets = .zero

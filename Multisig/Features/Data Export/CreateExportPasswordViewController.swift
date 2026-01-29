@@ -51,7 +51,7 @@ class CreateExportPasswordViewController: UIViewController {
         descriptionLabel.text = prompt
         descriptionLabel.setStyle(.body)
 
-        continueButton.setText("Continue", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
         
         passwordMeter.isHidden = !passwordMeterEnabled
 

@@ -23,7 +23,7 @@ class ChoosePaymentViewController: UIViewController, UITableViewDelegate, UITabl
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "Choose how to pay"
+        navigationItem.title = NSLocalizedString("ui_payment_choose_how_to_pay_title", comment: "Title for choosing payment method")
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .close, target: self, action: #selector(didTapCloseButton))

@@ -38,7 +38,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Execute Transaction Request"
+        title = NSLocalizedString("ui_ctw_execute_tx_request_title", comment: "Execute transaction request title")
 
         chain = controller.chain(for: request)!
         keyInfo = try! KeyInfo.firstKey(address: connection.accounts.first!)
@@ -60,7 +60,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             headerView.isHidden = true
         }
 
-        actionPanelView.setConfirmText("Submit")
+        actionPanelView.setConfirmText(NSLocalizedString("ui_ctw_submit_action", comment: "Submit action"))
 
         controller.attach(observer: self, to: request)
 
@@ -97,7 +97,9 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
     }
 
     override func didReject() {
-        controller.respond(request: request, errorCode: WebConnectionRequest.ErrorCode.requestRejected.rawValue, message: "User rejected to send transaction.")
+        controller.respond(request: request,
+                           errorCode: WebConnectionRequest.ErrorCode.requestRejected.rawValue,
+                           message: NSLocalizedString("ui_ctw_user_rejected_tx_request", comment: "User rejected transaction request"))
         Tracker.trackEvent(.webConnectionSendRequestRejected)
     }
 
@@ -122,7 +124,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
 
     func checkBalance() {
         if let balance = balance, balance < transaction.requiredBalance, error == nil {
-            error = "Insufficient balance for network fees"
+            error = NSLocalizedString("ui_ctw_insufficient_balance_fees", comment: "Insufficient balance for fees")
         }
     }
 
@@ -298,7 +300,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             })
         }
 
-        formVC.navigationItem.title = "Edit transaction fee"
+        formVC.navigationItem.title = NSLocalizedString("ui_ctw_edit_transaction_fee_title", comment: "Edit transaction fee title")
         let ribbon = RibbonViewController(rootViewController: formVC)
         ribbon.storedChain = chain
         let nav = UINavigationController(rootViewController: ribbon)
@@ -358,7 +360,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                 let txHash = transaction.hashForSigning().storage.storage
 
                 guard let pk = try keyInfo.privateKey() else {
-                    App.shared.snackbar.show(message: "Private key not available")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_private_key_not_available_error", comment: "Private key not available error"))
                     return
                 }
                 let signature = try pk._store.sign(hash: Array(txHash))
@@ -369,7 +371,8 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                     s: Sol.UInt256(Data(signature.s))
                 )
             } catch {
-                let gsError = GSError.error(description: "Signing failed", error: error)
+                let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"),
+                                            error: error)
                 App.shared.snackbar.show(error: gsError)
                 return
             }
@@ -377,7 +380,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
 
         case .walletConnect:
             guard let clientTx = walletConnectTransaction() else {
-                let gsError = GSError.error(description: "Unsupported transaction type")
+                let gsError = GSError.error(description: NSLocalizedString("ui_tx_unsupported_transaction_type_error", comment: "Unsupported transaction type error"))
                 App.shared.snackbar.show(error: gsError)
                 return
             }
@@ -403,7 +406,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             let chainId = Int(chain.id!)!
             let isLegacy = transaction is Eth.TransactionLegacy
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action" : "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -420,7 +423,8 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                         s: Sol.UInt256(Data(Array(signature.s)))
                     )
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"),
+                                                error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -434,7 +438,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             let chainId = Int(chain.id!)!
             let isLegacy = transaction is Eth.TransactionLegacy
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action": "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -452,7 +456,8 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                         s: Sol.UInt256(Data(Array(signature.s)))
                     )
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"),
+                                                error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -466,7 +471,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             let chainId = Int(chain.id!)!
             let isLegacy = transaction is Eth.TransactionLegacy
 
-            let request = SignRequest(title: "Sign Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_sign_transaction_title", comment: "Sign transaction title"),
                                       tracking: ["action": "signTx"],
                                       signer: keyInfo,
                                       payload: .rawTx(data: rawTransaction, chainId: chainId, isLegacy: isLegacy))
@@ -483,7 +488,8 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                         s: Sol.UInt256(Data(Array(signature.s)))
                     )
                 } catch {
-                    let gsError = GSError.error(description: "Signing failed", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"),
+                                                error: error)
                     App.shared.snackbar.show(error: gsError)
                     return
                 }
@@ -523,7 +529,8 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
                     )
                     self?.submit()
                 } catch {
-                    App.shared.snackbar.show(error: GSError.error(description: "Signing failed", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_signing_failed_error", comment: "Signing failed error"),
+                                                                  error: error))
                 }
             }
             present(flow: keystoneSignFlow)
@@ -635,7 +642,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             guard let self = self else { return }
 
             guard let response = response else {
-                let error = TransactionExecutionError(code: -4, message: "No response from server")
+                let error = TransactionExecutionError(code: -4, message: NSLocalizedString("ui_ctw_no_response_server", comment: "No response from server"))
                 dispatchOnMainThread(completion(.failure(error)))
                 return
             }
@@ -647,7 +654,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
             }
 
             guard let result = response.result else {
-                let error = TransactionExecutionError(code: -5, message: "No result from server")
+                let error = TransactionExecutionError(code: -5, message: NSLocalizedString("ui_ctw_no_result_server", comment: "No result from server"))
                 dispatchOnMainThread(completion(.failure(error)))
                 return
             }
@@ -673,7 +680,7 @@ class SendTransactionRequestViewController: WebConnectionContainerViewController
     }
 
     func didSubmitFailed(_ error: Error?) {
-        let gsError = GSError.error(description: "Submitting failed", error: error)
+        let gsError = GSError.error(description: NSLocalizedString("ui_tx_submitting_failed_error", comment: "Submitting failed error"), error: error)
         App.shared.snackbar.show(error: gsError)
 
         Tracker.trackEvent(.executeFailure, parameters: [

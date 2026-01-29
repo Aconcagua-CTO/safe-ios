@@ -198,11 +198,12 @@ extension BluetoothController: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         guard let device = deviceFor(deviceId: peripheral.identifier) else { return }
         let detailedError: DetailedLocalizedError? =
-            error == nil ? nil : GSError.error(description: "The Bluetooth device disconnected", error: error!)
+            error == nil ? nil : GSError.error(description: NSLocalizedString("ui_bluetooth_disconnected_error", comment: "Bluetooth disconnected error"),
+                                               error: error!)
         removeDevices(peripheral: peripheral)
 
         responses.forEach { deviceId, completion in
-            completion(.failure("The Bluetooth device disconnected"))
+            completion(.failure(NSLocalizedString("ui_bluetooth_disconnected_error", comment: "Bluetooth disconnected error")))
         }
 
         delegate?.bluetoothControllerDidDisconnect(device: device, error: detailedError)

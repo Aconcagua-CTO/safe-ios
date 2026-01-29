@@ -37,7 +37,7 @@ class WebConnectionRequestViewController: WebConnectionContainerViewController, 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Connection requested"
+        title = NSLocalizedString("ui_ctw_connection_requested_title", comment: "Connection requested title")
 
         assert(connection != nil)
         assert(connectionController != nil)
@@ -113,10 +113,12 @@ class WebConnectionRequestViewController: WebConnectionContainerViewController, 
             actionPanelView.setEnabled(false)
 
         case .connected:
-            App.shared.snackbar.show(message: "Connected to Safe.", icon: .success)
+            App.shared.snackbar.show(message: NSLocalizedString("ui_ctw_connected_to_safe_message", comment: "Connected to Safe message"),
+                                     icon: .success)
 
         case .failed:
-            let message = ["Failed to connect.", (connection.lastError ?? "")].joined(separator: " ")
+            let message = [NSLocalizedString("ui_ctw_failed_connect_message", comment: "Failed to connect message"),
+                           (connection.lastError ?? "")].joined(separator: " ")
             App.shared.snackbar.show(message: message)
         }
     }

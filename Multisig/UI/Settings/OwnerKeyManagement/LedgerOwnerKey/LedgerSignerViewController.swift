@@ -80,7 +80,8 @@ class LedgerSignerViewController: UINavigationController {
 
                 switch result {
                 case .failure(let error):
-                    let gsError = GSError.error(description: "The operation failed.", error: error)
+                    let gsError = GSError.error(description: NSLocalizedString("ui_operation_failed_error", comment: "Operation failed error"),
+                                                error: error)
                     App.shared.snackbar.show(error: gsError)
 
                     vc.reloadData()

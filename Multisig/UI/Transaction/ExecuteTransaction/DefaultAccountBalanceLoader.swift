@@ -60,14 +60,15 @@ class DefaultAccountBalanceLoader: AccountBalanceLoader {
             }
             batch = try JsonRpc2.BatchRequest(requests: requests)
         } catch {
-            let gsError = GSError.error(description: "Failed to load balances due to internal error", error: error)
+            let gsError = GSError.error(description: NSLocalizedString("ui_balances_failed_internal_error", comment: "Balances internal error"),
+                                       error: error)
             dispatchOnMainThread(completion(.failure(gsError)))
             return nil
         }
 
         // send request
         return client.send(request: batch) { responseOrNil in
-            let serverErrorMessage = "Failed to load balances due to server error"
+            let serverErrorMessage = NSLocalizedString("ui_balances_failed_server_error", comment: "Balances server error")
             switch responseOrNil {
             case .none:
                 // we expect to have response because all of the requests are not notifications (have id)

@@ -18,14 +18,14 @@ class AddOwnerFirstViewController: UIViewController {
 
     var onSuccess: (() -> ())?
 
-    var descriptionText: String = "To start sending funds import at least one owner key. Keys are used to confirm transactions."
+    var descriptionText: String = NSLocalizedString("ui_owner_add_first_description", comment: "Description for adding the first owner key")
     
     var trackingEvent: TrackingEvent?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        navigationItem.title = "Add Owner Key"
+        navigationItem.title = NSLocalizedString("ui_owner_key_add_title", comment: "Title for adding an owner key")
 
         if showsCloseButton {
             navigationItem.leftBarButtonItem = UIBarButtonItem(
@@ -37,7 +37,7 @@ class AddOwnerFirstViewController: UIViewController {
         titleLabel.setStyle(.headline)
         messageLabel.setStyle(.body)
         messageLabel.text = descriptionText
-        addOwnerKeyButton.setText("Add owner key", .filled)
+        addOwnerKeyButton.setText(NSLocalizedString("ui_owner_key_add_title", comment: "Add owner key button title"), .filled)
     }
 
     override func viewDidAppear(_ animated: Bool) {

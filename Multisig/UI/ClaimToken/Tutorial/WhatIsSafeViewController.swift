@@ -35,19 +35,19 @@ class WhatIsSafeViewController: UIViewController {
         ViewControllerFactory.removeNavigationBarBorder(self)
         navigationItem.largeTitleDisplayMode = .never
 
-        screenTitle.text = "What is Safe?"
+        screenTitle.text = NSLocalizedString("ui_claim_what_is_safe_title", comment: "What is Safe title")
         screenTitle.setStyle(.title2)
 
         firstParagraph.setStyle(.body)
-        firstParagraph.text = "Safe is critical infrastructure for Web3.  It is a programmable account standard that enables secure management of digital assets, data and identity.\n\nWith this token launch, Safe is now a community-driven ownership platform."
+        firstParagraph.text = NSLocalizedString("ui_claim_what_is_safe_body", comment: "What is Safe body")
 
-        paragraphTitle.text = "Why are we launching a token?"
+        paragraphTitle.text = NSLocalizedString("ui_claim_token_launch_title", comment: "Token launch title")
         paragraphTitle.setStyle(.headline)
 
         secondParagraph.setStyle(.body)
-        secondParagraph.text = "As critical Web3 infrastructure, Safe needs to be a community-owned, censorship resistant project, with a committed ecosystem stewarding its decisions. A governance token is needed to help coordinate this effort."
+        secondParagraph.text = NSLocalizedString("ui_claim_token_launch_body", comment: "Token launch body")
 
-        nextButton.setText("Next", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
 
         totalSafesCreatedLabel.setStyle(.callout)
         totalSafesCreatedStackView.layer.cornerRadius = 10

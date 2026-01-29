@@ -22,7 +22,6 @@ struct AppleFirebaseSignInPayload {
 enum AppleFirebaseSignInCoordinatorError: LocalizedError {
     case missingIdentityToken
     case invalidIdentityTokenEncoding
-    case emailRelayNotAllowed(message: String)
     case authorizationFailed(underlying: Error)
 
     var errorDescription: String? {
@@ -31,8 +30,6 @@ enum AppleFirebaseSignInCoordinatorError: LocalizedError {
             return "Missing Apple identity token"
         case .invalidIdentityTokenEncoding:
             return "Invalid Apple identity token"
-        case .emailRelayNotAllowed(let message):
-            return message
         case .authorizationFailed(let underlying):
             return underlying.localizedDescription
         }
@@ -40,8 +37,6 @@ enum AppleFirebaseSignInCoordinatorError: LocalizedError {
 }
 
 final class AppleFirebaseSignInCoordinator: NSObject {
-    private static let relayEmailSuffix = "@privaterelay.appleid.com"
-
     private var currentNonce: String?
     private var completion: ((Result<AppleFirebaseSignInPayload, Error>) -> Void)?
     private var presentationAnchor: ASPresentationAnchor?
@@ -140,14 +135,6 @@ extension AppleFirebaseSignInCoordinator: ASAuthorizationControllerDelegate {
         let appleEmail = credential.email
         AuthLogger.debug("Apple credential email present? \(appleEmail != nil)")
         NSLog("[AUTH][AppleCoordinator] credential emailPresent=%d", appleEmail != nil ? 1 : 0)
-        if let email = appleEmail, email.lowercased().hasSuffix(Self.relayEmailSuffix) {
-            AuthLogger.warning("Apple provided relay email; blocking per Policy A")
-            NSLog("[AUTH][AppleCoordinator] relay email blocked")
-            completion?(.failure(AppleFirebaseSignInCoordinatorError.emailRelayNotAllowed(
-                message: NSLocalizedString("auth_apple_share_email_required", comment: "")
-            )))
-            return
-        }
 
         AuthLogger.debug("Apple payload ready; returning idTokenStringLen=\(idTokenString.count)")
         NSLog("[AUTH][AppleCoordinator] returning payload idTokenLen=%d", idTokenString.count)

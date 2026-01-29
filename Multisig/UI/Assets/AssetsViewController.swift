@@ -185,7 +185,10 @@ class AssetsViewController: ContainerViewController {
         }
 
         guard !withdrawableBalances.isEmpty else { return }
-        let selectAssetVC = SelectAssetViewController(balances: withdrawableBalances)
+        let selectAssetVC = SelectAssetViewController(
+            balances: withdrawableBalances,
+            chainId: safe?.chain?.id
+        )
         let vc = ViewControllerFactory.modalWithRibbon(viewController: selectAssetVC)
         present(vc, animated: true)
         return
@@ -198,11 +201,13 @@ class AssetsViewController: ContainerViewController {
     @objc private func updateBalances(_ notification: Notification) {
         totalBalanceView.loading = false
         let userInfo = notification.userInfo
-        totalBalanceView.amount = userInfo?["total"] as? String
+        let total = userInfo?["total"] as? String
+        totalBalanceView.amount = total
         self.balances = userInfo?["balances"] as? [TokenBalance]
         // Keep a shared "latest real balances" cache updated so other screens (e.g. Invertir markets)
         // can reuse real balances without reacting to zero-balance market lists.
         LatestBalancesCache.shared.update(balances: self.balances ?? [], allowAllZero: true)
+        LatestBalancesCache.shared.updateTotalFiat(totalFiat: total, chainId: safe?.chain?.id)
         self.withdrawableBalances = (self.balances ?? []).filter { $0.balanceValue.value > 0 }
         if AppSettings.multiVaultBalancesEnabled {
             self.transferSelectableAssets = userInfo?["transferSelectableAssets"] as? [TransferSelectableAsset]

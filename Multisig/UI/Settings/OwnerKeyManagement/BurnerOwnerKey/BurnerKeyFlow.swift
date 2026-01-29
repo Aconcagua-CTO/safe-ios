@@ -54,17 +54,17 @@ final class BurnerKeyFlowFactory: AddKeyFlowFactory {
         let introVC = super.intro(completion: completion)
         introVC.cards = [
             .init(image: UIImage(named: "ico-hardware-wallet"),
-                  title: "Tap your Burner Card",
-                  body: "Hold your Burner (HaLo) card near the top of your iPhone and follow the on-screen instructions."),
+                  title: NSLocalizedString("ui_burner_onboarding_tap_title", comment: "Burner onboarding card title"),
+                  body: NSLocalizedString("ui_burner_onboarding_tap_body", comment: "Burner onboarding card body")),
             .init(image: UIImage(named: "ico-hardware-wallet"),
-                  title: "Choose a Slot",
-                  body: "Each Burner card exposes multiple key slots. Pick the one you want to add as an owner."),
+                  title: NSLocalizedString("ui_burner_onboarding_pick_slot_title", comment: "Burner onboarding card title"),
+                  body: NSLocalizedString("ui_burner_onboarding_pick_slot_body", comment: "Burner onboarding card body")),
             .init(image: UIImage(named: "ico-hardware-wallet"),
-                  title: "Secure By Design",
-                  body: "Keys never leave the Burner card. We only store metadata required to use the card for signing.")
+                  title: NSLocalizedString("ui_burner_onboarding_secure_title", comment: "Burner onboarding card title"),
+                  body: NSLocalizedString("ui_burner_onboarding_secure_body", comment: "Burner onboarding card body"))
         ]
         introVC.viewTrackingEvent = .burnerOwnerOnboarding
-        introVC.navigationItem.title = "Connect Burner Card"
+        introVC.navigationItem.title = NSLocalizedString("ui_burner_connect_card_title", comment: "Title for the burner owner key connect flow")
         introVC.navigationItem.largeTitleDisplayMode = .never
         return introVC
     }
@@ -80,12 +80,18 @@ final class BurnerKeyFlowFactory: AddKeyFlowFactory {
     func defaultName(cardId: String, slot: Int) -> String {
         let ordinal = KeyInfo.count(.burner) + 1
         let suffix = cardId.suffix(4)
-        return "Burner \(ordinal) · \(suffix)#\(slot)"
+        return String(
+            format: NSLocalizedString("ui_burner_default_name_format", comment: "Default name format for Burner keys, e.g. 'Burner 1 · 1234#1'"),
+            ordinal,
+            String(suffix),
+            slot
+        )
     }
 }
 
 final class BurnerKeyFlow: AddKeyFlow {
     private let burnerService: BurnerService
+    private let defaultKeyName = "Card Key"
     
     private var burnerFactory: BurnerKeyFlowFactory {
         factory as! BurnerKeyFlowFactory
@@ -103,6 +109,12 @@ final class BurnerKeyFlow: AddKeyFlow {
     override func didIntro() {
         showScan()
     }
+
+    override func didGetKey() {
+        // Skip the "Enter Key Name" screen for Burner cards.
+        keyParameters.name = defaultKeyName
+        importKey()
+    }
     
     private func showScan() {
         let controller = burnerFactory.scan { [weak self] selection in
@@ -112,13 +124,16 @@ final class BurnerKeyFlow: AddKeyFlow {
             self?.stop(success: false)
         }
         
+        // Always pick the first slot (no user selection).
+        controller.autoSelectFirstSlot = true
+        
         show(controller)
     }
     
     private func handle(selection: BurnerKeySelection) {
-        let defaultName = burnerFactory.defaultName(cardId: selection.cardId, slot: selection.slot)
+        registerPrimaryCardInBackend(cardId: selection.cardId)
         let parameters = AddBurnerKeyParameters(address: selection.address,
-                                                defaultName: defaultName,
+                                                defaultName: defaultKeyName,
                                                 cardId: selection.cardId,
                                                 tagIdentifier: selection.tagIdentifier,
                                                 slot: selection.slot,
@@ -128,6 +143,33 @@ final class BurnerKeyFlow: AddKeyFlow {
         keyParameters = parameters
         BurnerLogger.info("Prepared Burner key import cardId=\(selection.cardId) slot=\(selection.slot)")
         didGetKey()
+    }
+
+    private func registerPrimaryCardInBackend(cardId: String) {
+        guard App.shared.authRepository.isAuthenticated() else {
+            BurnerLogger.debug("Burner key flow: Skipping primary card registration (user not authenticated)")
+            return
+        }
+
+        let payload = RegisterPrimaryCardPayload(
+            manufacturer: "burner",
+            cardId: cardId,
+            firmwareLevel: nil,
+            state: 1
+        )
+        let service = PrimaryCardRegistrationService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+
+        service.registerPrimaryCard(payload: payload) { result in
+            switch result {
+            case .success:
+                BurnerLogger.info("Burner key flow: Registered primary Burner card (cardId=\(cardId))")
+            case .failure(let error):
+                BurnerLogger.error("Burner key flow: Failed to register primary Burner card", error: error)
+            }
+        }
     }
     
     override func doImport() -> Bool {

@@ -54,7 +54,7 @@ class SuccessViewController: UIViewController {
 
         wasNavBarHidden = navigationController?.isNavigationBarHidden ?? false
         navigationController?.isNavigationBarHidden = true
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
 
         titleLabel.setStyle(.headline)
         bodyLabel.setStyle(.body)
@@ -72,7 +72,7 @@ class SuccessViewController: UIViewController {
             secondaryButton.setText(secondary, .plain)
             primaryButton.isHidden = true
         } else {
-            primaryButton.setText("Done", .filled)
+            primaryButton.setText(NSLocalizedString("button_done", comment: "Done button title"), .filled)
             secondaryButton.isHidden = true
         }
 

@@ -39,6 +39,24 @@ class IdenticonView: UINibView {
         let identiconStart = Date()
         VaultLogger.debug("[IDENTICON] Setting identicon for address \(address.hexadecimal.prefix(10))... with imageURL: \(imageURL?.absoluteString ?? "nil")")
 
+        let hasOwnerCount = (reqConfirmations != nil && owners != nil)
+        let shouldShow =
+            imageURL != nil ||
+            placeholderImage != nil ||
+            badgeName != nil ||
+            hasOwnerCount
+
+        // If nothing meaningful is provided, hide the entire view so stack views collapse it.
+        isHidden = !shouldShow
+        guard shouldShow else {
+            VaultLogger.debug("[IDENTICON] Hiding identicon (no imageURL/placeholder/badge/ownerCount) for \(address.hexadecimal.prefix(10))...")
+            identiconImageView.image = nil
+            badgeImageView.image = nil
+            badgeFrameView.isHidden = true
+            ownerCountFrameView.isHidden = true
+            return
+        }
+
         identiconImageView.setCircleImage(url: imageURL, placeholderName: placeholderImage, address: address)
 
         let identiconTime = Date().timeIntervalSince(identiconStart)
@@ -62,11 +80,23 @@ class IdenticonView: UINibView {
 
 extension KeyType {
     var imageName: String {
-        "ico-" + imageSuffix
+        switch self {
+        case .deviceImported, .deviceGenerated:
+            return "ico-mobile"
+        default:
+            return "ico-" + imageSuffix
+        }
     }
 
     var badgeName: String {
-        "bdg-" + imageSuffix
+        switch self {
+        case .deviceImported, .deviceGenerated:
+            return "ico-mobile"
+        case .tangem, .tangem0, .burner:
+            return "ico-nfc"
+        default:
+            return "bdg-" + imageSuffix
+        }
     }
 
     private var imageSuffix: String {

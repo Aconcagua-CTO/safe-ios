@@ -32,45 +32,45 @@ class WhatIsSafeTokenViewController: UIViewController {
 
         ViewControllerFactory.removeNavigationBarBorder(self)
 
-        safeProtocolView.set("Safe Protocol") { [unowned self] in
+        safeProtocolView.set(NSLocalizedString("ui_claim_safe_protocol_title", comment: "Safe protocol title")) { [unowned self] in
             Tracker.trackEvent(.userClaimGovProto)
 
             let content: [(title: String?, description: String?)] = [
-                (title: nil, description: "Safe Deployments (core smart contract deployments across multiple networks)\nCuration of “trusted lists” (Token lists, dApp lists, module lists)")]
-            let vc = DetailedInfoListViewController(title: "Safe protocol", content: content)
+                (title: nil, description: NSLocalizedString("ui_claim_safe_protocol_description", comment: "Safe protocol description"))]
+            let vc = DetailedInfoListViewController(title: NSLocalizedString("ui_claim_safe_protocol_title", comment: "Safe protocol title"), content: content)
 
             let viewController = ViewControllerFactory.modal(viewController: vc, halfScreen: true)
             present(viewController, animated: true)
         }
 
-        interfacesView.set("Interfaces") { [unowned self] in
+        interfacesView.set(NSLocalizedString("ui_claim_interfaces_title", comment: "Interfaces title")) { [unowned self] in
             Tracker.trackEvent(.userClaimGovInterface)
 
             let content: [(title: String?, description: String?)] = [
-                (title: nil, description: "Decentralized hosting of a Safe frontend using the safe.eth domain\nDecentralized hosting of governance frontends")]
-            let vc = DetailedInfoListViewController(title: "Interfaces", content: content)
+                (title: nil, description: NSLocalizedString("ui_claim_interfaces_description", comment: "Interfaces description"))]
+            let vc = DetailedInfoListViewController(title: NSLocalizedString("ui_claim_interfaces_title", comment: "Interfaces title"), content: content)
 
             let viewController = ViewControllerFactory.modal(viewController: vc, halfScreen: true)
             present(viewController, animated: true)
         }
 
-        assetsView.set("On-chain assets") { [unowned self] in
+        assetsView.set(NSLocalizedString("ui_claim_onchain_assets_title", comment: "On-chain assets title")) { [unowned self] in
             Tracker.trackEvent(.userClaimGovAssets)
 
             let content: [(title: String?, description: String?)] = [
-                (title: nil, description: "ENS names\nOutstanding Safe token supply\nOther Safe Treasury assets (NFTs, tokens, etc.)")]
-            let vc = DetailedInfoListViewController(title: "On-chain assets", content: content)
+                (title: nil, description: NSLocalizedString("ui_claim_onchain_assets_description", comment: "On-chain assets description"))]
+            let vc = DetailedInfoListViewController(title: NSLocalizedString("ui_claim_onchain_assets_title", comment: "On-chain assets title"), content: content)
 
             let viewController = ViewControllerFactory.modal(viewController: vc, halfScreen: true)
             present(viewController, animated: true)
         }
 
-        tokenomicsView.set("Tokenomics") { [unowned self] in
+        tokenomicsView.set(NSLocalizedString("ui_claim_tokenomics_title", comment: "Tokenomics title")) { [unowned self] in
             Tracker.trackEvent(.userClaimGovToken)
 
             let content: [(title: String?, description: String?)] = [
-                (title: nil, description: "Ecosystem reward programs\nUser rewards\nValue capture\nFuture token utility")]
-            let vc = DetailedInfoListViewController(title: "Tokenomics", content: content)
+                (title: nil, description: NSLocalizedString("ui_claim_tokenomics_description", comment: "Tokenomics description"))]
+            let vc = DetailedInfoListViewController(title: NSLocalizedString("ui_claim_tokenomics_title", comment: "Tokenomics title"), content: content)
 
             let viewController = ViewControllerFactory.modal(viewController: vc, halfScreen: true)
             present(viewController, animated: true)
@@ -79,7 +79,7 @@ class WhatIsSafeTokenViewController: UIViewController {
         tokenNonTrnasferableLabel.setStyle(.callout.color(.labelSecondary))
         titleLabel.setStyle(.title2)
         descriptionLabel.setStyle(.body)
-        nextButton.setText("Next", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
     }
 
     @IBAction func didTapNext(_ sender: Any) {

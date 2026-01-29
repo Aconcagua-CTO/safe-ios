@@ -39,8 +39,8 @@ final class TransferAmountViewController: UIViewController {
         safe = try? Safe.getSelected()
         assert(safe != nil)
 
-        navigationItem.title = "Send " + tokenBalance.symbol
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.title = String(format: NSLocalizedString("ui_send_token_title_format", comment: "Title for sending a specific token"), tokenBalance.symbol)
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         navigationItem.rightBarButtonItem = nil
 
         view.backgroundColor = .backgroundPrimary
@@ -91,7 +91,7 @@ final class TransferAmountViewController: UIViewController {
 
         // Balance row
         balanceTitleLabel.setStyle(.bodyMedium)
-        balanceTitleLabel.text = "Balance:"
+        balanceTitleLabel.text = NSLocalizedString("ui_balance_title", comment: "Balance label title")
 
         balanceValueLabel.setStyle(.bodyPrimary)
         balanceValueLabel.text = tokenBalance.balanceWithSymbol
@@ -100,7 +100,7 @@ final class TransferAmountViewController: UIViewController {
         tooltipSource?.message = tokenBalance.fullBalanceWithSymbol
         tooltipSource?.aboveTarget = false
 
-        maxButton.setText("Send max", .primary)
+        maxButton.setText(NSLocalizedString("ui_tx_send_max_action", comment: "Send max action"), .primary)
         maxButton.contentHorizontalAlignment = .right
         maxButton.addTarget(self, action: #selector(maxButtonTouched), for: .touchUpInside)
 
@@ -115,7 +115,7 @@ final class TransferAmountViewController: UIViewController {
         amountField.delegate = self
 
         // Bottom button
-        nextButton.setText("Siguiente", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
         nextButton.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
 
         // Content stack (inside scroll view)
@@ -162,11 +162,12 @@ final class TransferAmountViewController: UIViewController {
 
         var message: String? = nil
         if amountField.balance.numberOfDecimals > tokenBalance.decimals {
-            message = "Should be 1 to \(tokenBalance.decimals) decimals"
+            message = String(format: NSLocalizedString("ui_amount_decimals_format", comment: "Amount decimals format"),
+                             "\(tokenBalance.decimals)")
         } else if amount.value <= 0 {
-            message = "Amount should be greater than 0"
+            message = NSLocalizedString("ui_amount_greater_than_zero_error", comment: "Amount must be greater than zero error")
         } else if amount.value > tokenBalance.balanceValue.value {
-            message = "Insufficient funds"
+            message = NSLocalizedString("ui_insufficient_funds_error", comment: "Insufficient funds error")
         }
 
         nextButton.isEnabled = (message == nil)

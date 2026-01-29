@@ -21,6 +21,6 @@ class DesktopPairingHeaderView: UITableViewHeaderFooterView {
     override func awakeFromNib() {
         super.awakeFromNib()
         titleLabel.setStyle(.body)
-        scanButton.setText("Scan Code", .filled)
+        scanButton.setText(NSLocalizedString("ui_ctw_scan_code_action", comment: "Scan code action"), .filled)
     }
 }

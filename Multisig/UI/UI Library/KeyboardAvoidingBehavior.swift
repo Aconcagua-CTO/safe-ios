@@ -50,7 +50,10 @@ class KeyboardAvoidingBehavior {
         }
 
         if hidesKeyboardOnTap {
-            scrollView.gestureRecognizers?.forEach { touchRecognizer.require(toFail: $0) }
+            scrollView.gestureRecognizers?.forEach { recognizer in
+                guard recognizer !== touchRecognizer else { return }
+                touchRecognizer.require(toFail: recognizer)
+            }
             scrollView.addGestureRecognizer(touchRecognizer)
         } else {
             scrollView.removeGestureRecognizer(touchRecognizer)

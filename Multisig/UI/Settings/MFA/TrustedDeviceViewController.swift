@@ -45,7 +45,7 @@ class TrustedDeviceViewController: LoadableViewController, UITableViewDelegate, 
         tableView.tableFooterView = UIView()
         tableView.separatorStyle = .none
 
-        title = "Device"
+        title = NSLocalizedString("ui_trusted_device_title", comment: "Title for trusted device screen")
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0

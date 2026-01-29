@@ -18,8 +18,8 @@ class KeychainItemFactory {
         KeychainItem.ecPubKey(tag: ProtectedKeyStore.publicKeyTag, service: protectionClass.service(), publicKey: publicKey)
     }
 
-    func generic(account: String, data: Data? = nil) -> KeychainItem {
-        KeychainItem.generic(account: account, service: protectionClass.service(), data: data)
+    func generic(account: String, data: Data? = nil, access: SecAccessControlCreateFlags? = nil, authPrompt: String? = nil) -> KeychainItem {
+        KeychainItem.generic(account: account, service: protectionClass.service(), data: data, access: access, authPrompt: authPrompt)
     }
 
     func enclaveKey(password: Data? = nil, access: SecAccessControlCreateFlags? = nil) -> KeychainItem {
@@ -35,7 +35,7 @@ private let TAG_SERVICE_DELIMITER = ":"
 
 enum KeychainItem {
     // Encrypted blob. Can be a password or a cec secret key
-    case generic(account: String, service: String, data: Data? = nil)
+    case generic(account: String, service: String, data: Data? = nil, access: SecAccessControlCreateFlags? = nil, authPrompt: String? = nil)
     // Key stays in the Secure Enclave
     case enclaveKey(tag: String, service: String, password: Data? = nil, access: SecAccessControlCreateFlags? = nil)
     // Elliptic Curve Public Key
@@ -48,7 +48,7 @@ enum KeychainItem {
         var result: NSMutableDictionary
 
         switch self {
-        case let .generic(id, service, _):
+        case let .generic(id, service, _, _, authPrompt):
             result = [
                 kSecAttrService: service,
                 kSecAttrAccount: id,
@@ -56,6 +56,9 @@ enum KeychainItem {
                 kSecReturnAttributes: false,
                 kSecReturnData: true,
             ]
+            if let authPrompt {
+                result[kSecUseOperationPrompt] = authPrompt
+            }
 
         case let .enclaveKey(tag, service, password, _):
             result = [
@@ -87,12 +90,13 @@ enum KeychainItem {
     func creationAttributes() throws -> NSDictionary {
         var result: NSMutableDictionary = [:]
         switch self {
-        case let .generic(id, service, data):
+        case let .generic(id, service, data, access, _):
             var protectionAttribubte = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
             if service == ProtectionClass.data.service() {
                 protectionAttribubte = kSecAttrAccessibleAfterFirstUnlock
             }
-            let accessControl = try accessControl(flags: SecAccessControlCreateFlags(), protection: protectionAttribubte)
+            let accessFlags = access ?? SecAccessControlCreateFlags()
+            let accessControl = try accessControl(flags: accessFlags, protection: protectionAttribubte)
             result = [
                 kSecAttrService: service,
                 kSecAttrAccount: id,

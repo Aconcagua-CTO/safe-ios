@@ -17,7 +17,7 @@ class ExportViewController: ContainerViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Export"
+        navigationItem.title = NSLocalizedString("ui_export_title", comment: "Title for exporting an owner key or seed phrase")
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             image: UIImage(systemName: "square.and.arrow.up"),
             style: .done,
@@ -35,8 +35,10 @@ class ExportViewController: ContainerViewController {
 
             segmentVC = SegmentViewController(namedClass: nil)
             segmentVC.segmentItems = [
-                SegmentBarItem(image: UIImage(named: "ico-seed-phrase")!, title: "SEED PHRASE"),
-                SegmentBarItem(image: UIImage(named: "ico-private-key")!, title: "PRIVATE KEY")
+                SegmentBarItem(image: UIImage(named: "ico-seed-phrase")!,
+                               title: NSLocalizedString("ui_owner_seed_phrase_tab_title", comment: "Tab title for seed phrase")),
+                SegmentBarItem(image: UIImage(named: "ico-private-key")!,
+                               title: NSLocalizedString("ui_owner_private_key_tab_title", comment: "Tab title for private key"))
             ]
             segmentVC.viewControllers = [
                 seedPhraseVC,

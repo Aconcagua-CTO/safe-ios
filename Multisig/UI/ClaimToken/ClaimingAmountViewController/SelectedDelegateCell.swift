@@ -19,9 +19,9 @@ class SelectedDelegateCell: UITableViewCell {
         super.awakeFromNib()
         headerLabel.setStyle(.body)
         detailLabel.setStyle(.footnote)
-        editButton.setText("Edit", .primary)
-        headerLabel.text = "Delegating to:"
-        detailLabel.text = "You only delegate your voting power and not the ownership over your tokens."
+        editButton.setText(NSLocalizedString("button_edit", comment: "Edit button title"), .primary)
+        headerLabel.text = NSLocalizedString("ui_claim_delegating_to_title", comment: "Delegating to title")
+        detailLabel.text = NSLocalizedString("ui_claim_delegating_detail", comment: "Delegating detail text")
     }
 
     override func layoutSubviews() {

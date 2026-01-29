@@ -38,13 +38,13 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         tableView.register(NetworkInfoTableViewCell.self, forCellReuseIdentifier: NetworkInfoTableViewCell.reuseID)
 
         // Spanish UI copy + button label
-        confirmButtonView.actionTitle = "Retirar"
+        confirmButtonView.actionTitle = NSLocalizedString("ui_tx_confirm_action", comment: "Confirm transaction action")
         // Ensure the underlying UIButton text updates (it is set when state changes).
         confirmButtonView.state = .normal
 
         // Replace the default footer message
         (self.value(forKey: "descriptionLabel") as? UILabel)?.text =
-            "Asegúrate que la red de origen y destino sean la misma o podés perder los fondos"
+            NSLocalizedString("ui_tx_network_match_warning", comment: "Network match warning")
 
         // Hide the top ribbon bar; we show network below the "A" section instead.
         ribbonView.isHidden = true
@@ -62,6 +62,21 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
                     amount: UInt256String(amount.value),
                     safeTxGas: safeTxGas,
                     nonce: nonce)
+    }
+
+    override func transactionWithFee() -> Transaction? {
+        guard var transaction = createTransaction() else { return nil }
+        let balance: UInt256 = tokenBalance.balanceValue.value.magnitude
+        if let batch = TransactionBatchBuilder.build(transaction: transaction,
+                                                     safe: safe,
+                                                     availableBalance: balance) {
+            feeBatchResult = batch
+            transaction = batch.transaction
+        } else {
+            feeBatchResult = nil
+        }
+        preparedTransaction = transaction
+        return transaction
     }
 
     override func headerCell() -> UITableViewCell {
@@ -87,14 +102,16 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
 
         let token = tokenBalance.symbol
 
-        let title = "Your transaction is queued!"
-        let body = "Your request to send \(formattedAmount) \(token) is submitted and needs to be confirmed by other owners."
+        let title = NSLocalizedString("ui_tx_queued_title", comment: "Title shown after submitting a transaction that is queued")
+        let body = String(format: NSLocalizedString("ui_tx_send_request_body_format", comment: "Send request submitted body"),
+                          formattedAmount,
+                          token)
 
         let successVC = SuccessViewController(
             titleText: title,
             bodyText: body,
-            primaryAction: "View details",
-            secondaryAction: "Done",
+            primaryAction: NSLocalizedString("ui_tx_view_details_action", comment: "View details action"),
+            secondaryAction: NSLocalizedString("button_done", comment: "Done button title"),
             trackingEvent: .assetsTransferSuccess)
         successVC.onDone = { [weak self] isPrimaryAction in
             guard let self = self else { return }
@@ -133,7 +150,7 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
             vaultEvmAddress: safe.addressValue.checksummed,
             chainId: safe.chain?.id,
             payload: payload
-        ) { result in
+        ) { [service] result in
             switch result {
             case .success:
                 LogService.shared.info("[TransactionRequests][send] created")
@@ -207,10 +224,16 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         let formatter = TokenFormatter()
         let decimals = tokenBalance.decimals
         let original = formatter.string(from: BigDecimal(Int256(batch.originalAmount), decimals), shortFormat: false)
-        let net = formatter.string(from: BigDecimal(Int256(batch.netAmount), decimals), shortFormat: false)
-        cell.set(title: "Amount after fee",
-                 valueBefore: "\(original) \(tokenBalance.symbol)",
-                 valueAfter: "\(net) \(tokenBalance.symbol)")
+        if batch.netAmount == batch.originalAmount {
+            cell.set(title: NSLocalizedString("ui_tx_amount_title", comment: "Amount title"),
+                     valueBefore: "\(original) \(tokenBalance.symbol)",
+                     valueAfter: "\(original) \(tokenBalance.symbol)")
+        } else {
+            let net = formatter.string(from: BigDecimal(Int256(batch.netAmount), decimals), shortFormat: false)
+            cell.set(title: NSLocalizedString("ui_tx_amount_after_fee_title", comment: "Amount after fee title"),
+                     valueBefore: "\(original) \(tokenBalance.symbol)",
+                     valueAfter: "\(net) \(tokenBalance.symbol)")
+        }
         cell.selectionStyle = .none
         return cell
     }
@@ -222,7 +245,8 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         let decimals = tokenBalance.decimals
         let fee = formatter.string(from: BigDecimal(Int256(batch.feeAmount), decimals), shortFormat: false)
         let percentage = Double(batch.basisPoints) / 100.0
-        cell.set(title: String(format: "Fee (%.2f%%)", percentage),
+        cell.set(title: String(format: NSLocalizedString("ui_tx_fee_percentage_format", comment: "Fee percentage title"),
+                               percentage),
                  value: "\(fee) \(tokenBalance.symbol)")
         cell.selectionStyle = .none
         return cell
@@ -232,8 +256,8 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
         guard let batch = feeBatchResult else { return nil }
         let cell = tableView.dequeueCell(DetailAccountCell.self)
         cell.setAccount(address: batch.treasury,
-                        label: "Treasury",
-                        title: "Fee recipient",
+                        label: NSLocalizedString("ui_tx_treasury_title", comment: "Treasury label"),
+                        title: NSLocalizedString("ui_tx_fee_recipient_title", comment: "Fee recipient title"),
                         showIdenticon: false,
                         copyEnabled: true,
                         browseURL: nil,

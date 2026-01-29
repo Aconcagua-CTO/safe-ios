@@ -61,6 +61,12 @@ class App {
 
     // It should be lazy as it uses Firebase and coreDataStack that are not yet properly initialized
     lazy var clientGatewayService = SafeClientGatewayService(
+        url: ApiConfig.scgProxyApiURL,
+        logger: LogService.shared,
+        authRepository: authRepository)
+
+    /// Direct Safe Client Gateway (no proxy). Used for push confirmations + delegates.
+    lazy var safeClientGatewayService = SafeClientGatewayService(
         url: App.configuration.services.clientGatewayURL,
         logger: LogService.shared)
 

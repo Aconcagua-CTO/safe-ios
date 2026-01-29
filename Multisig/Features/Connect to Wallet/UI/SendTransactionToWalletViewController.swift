@@ -25,7 +25,8 @@ class SendTransactionToWalletViewController: PendingWalletActionViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        titleLabel.text = "Sending transaction request to \(walletName)"
+        titleLabel.text = String(format: NSLocalizedString("ui_wallet_sending_tx_request_format", comment: "Sending transaction request title"),
+                                 walletName)
     }
 
     override func doRequest() {

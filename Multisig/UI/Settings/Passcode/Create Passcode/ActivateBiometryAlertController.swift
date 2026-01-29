@@ -24,7 +24,9 @@ class ActivateBiometryAlertController: UIAlertController {
             enable()
         }))
 
-        addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: { [unowned self] _ in
+        addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                style: .cancel,
+                                handler: { [unowned self] _ in
             cancel()
         }))
     }

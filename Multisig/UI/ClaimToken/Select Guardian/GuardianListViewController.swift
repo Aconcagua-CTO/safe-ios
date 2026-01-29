@@ -38,7 +38,7 @@ class GuardianListViewController: LoadableViewController {
         super.viewDidLoad()
 
         ViewControllerFactory.removeNavigationBarBorder(self)
-        title = "Choose a delegate"
+        title = NSLocalizedString("ui_claim_choose_delegate_title", comment: "Choose delegate title")
 
         resultsController = GuardianSearchResultController()
 
@@ -49,7 +49,7 @@ class GuardianListViewController: LoadableViewController {
         searchController.searchResultsUpdater = self
         searchController.searchBar.autocapitalizationType = .none
         searchController.searchBar.delegate = self
-        searchController.searchBar.placeholder = "Name, address or ENS"
+        searchController.searchBar.placeholder = NSLocalizedString("ui_claim_guardian_search_placeholder", comment: "Guardian search placeholder")
         searchController.hidesNavigationBarDuringPresentation = false
         
         navigationItem.searchController = searchController
@@ -65,7 +65,7 @@ class GuardianListViewController: LoadableViewController {
         tableView.separatorStyle = .none
 
         // Empty view is never shown. Instead the list is empty, when no results are found
-        emptyView.setTitle("No delegates were found. Try to search again or use a custom address.")
+        emptyView.setTitle(NSLocalizedString("ui_guardians_empty_message", comment: "No delegates found message"))
         emptyView.setImage(UIImage(named: "ico-delegate-placeholder")!)
         extendedLayoutIncludesOpaqueBars = true
     }
@@ -112,7 +112,8 @@ class GuardianListViewController: LoadableViewController {
                     return
                 }
 
-                self.onError(GSError.error(description: "Failed to load guardians", error: error))
+                self.onError(GSError.error(description: NSLocalizedString("ui_guardians_load_failed_error", comment: "Failed to load guardians error"),
+                                           error: error))
                 self.onReloaded?()
             }
         }

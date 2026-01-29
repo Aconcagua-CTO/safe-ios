@@ -22,7 +22,7 @@ class SeedPhraseViewController: UIViewController {
 
         warningView.set(description: "Safe{Wallet} will never ask for your seed phrase! It is encrypted and stored locally on your device.")
 
-        copyToClipboardButton.setText("Export", .primary)
+        copyToClipboardButton.setText(NSLocalizedString("button_export", comment: "Export button title"), .primary)
 
         seedPhraseView.words = seedPhrase.enumerated().map {
             SeedWord(index: $0.offset, value: $0.element)

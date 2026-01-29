@@ -17,6 +17,7 @@ struct AdvancedAppSettings: View {
     var theme: Theme = App.shared.theme
     
     @State var showFCMToken = false
+    @State var forceSpanishLanguage = AppSettings.debugForceSpanishLanguageEnabled
     
     var token: String {
         Multisig.App.shared.notificationHandler.token ?? ""
@@ -49,6 +50,24 @@ struct AdvancedAppSettings: View {
             if !(App.configuration.services.environment == .production) ||
                 FirebaseRemoteConfig.shared.value(key: .crashDebugEnabled) == "YES" {
                 Section(header: SectionHeader("DEBUG")) {
+                    #if DEBUG
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(isOn: $forceSpanishLanguage.didSet { enabled in
+                            AppSettings.debugForceSpanishLanguageEnabled = enabled
+                            AppSettings.applyDebugLanguageOverrideIfNeeded()
+                        }) {
+                            Text("Force Spanish (es-AR)").headline()
+                        }
+                        .frame(height: 60)
+                        .toggleStyle(SwitchToggleStyle(tint: Color.success))
+
+                        Text("May require app restart to fully apply.")
+                            .body(.gray)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 4)
+                    #endif
+
                     Button(action: {
                         let crashlytics = Crashlytics.crashlytics()
                         crashlytics.log("Advanced Settings: force Crashlytics crash triggered by user")
@@ -80,7 +99,7 @@ struct AdvancedAppSettings: View {
                         CopyButton(token) {
                             Text("Copy")
                         }
-                        Button("Close", role: .cancel) { }
+                        Button(NSLocalizedString("button_close", comment: "Close button title"), role: .cancel) { }
                     } message: {
                         Text(token)
                     }
@@ -346,13 +365,13 @@ struct BurnerCardOptionsSection: View {
     @State private var successMessage = ""
     
     var body: some View {
-        Section(header: SectionHeader("BURNER CARD")) {
+        Section(header: SectionHeader(NSLocalizedString("ui_burner_card_section_header", comment: "Section header for Burner card advanced options"))) {
             Button(action: {
                 BurnerLogger.info("📝 BURNER OPTIONS: User tapped Disable Burner URL (TXT NDEF) from Advanced Settings")
                 setNdefUseTextRecord(true)
             }) {
                 HStack {
-                    Text("Disable Burner URL (TXT NDEF)").body()
+                    Text(NSLocalizedString("ui_burner_disable_url_txt_ndef", comment: "Button to disable Burner URL handling by switching to TXT NDEF")).body()
                     if isConfiguringNDEF {
                         Spacer()
                         ProgressView()
@@ -366,17 +385,17 @@ struct BurnerCardOptionsSection: View {
                 BurnerLogger.info("📝 BURNER OPTIONS: User tapped Enable Burner URL (URI NDEF) from Advanced Settings")
                 setNdefUseTextRecord(false)
             }) {
-                Text("Enable Burner URL (URI NDEF)").body()
+                Text(NSLocalizedString("ui_burner_enable_url_uri_ndef", comment: "Button to enable Burner URL handling by switching to URI NDEF")).body()
             }
             .disabled(isConfiguringNDEF)
         }
-        .alert("Success", isPresented: $showSuccess) {
-            Button("OK", role: .cancel) { }
+        .alert(NSLocalizedString("ui_success", comment: "Generic success title"), isPresented: $showSuccess) {
+            Button(NSLocalizedString("ok", comment: "OK"), role: .cancel) { }
         } message: {
             Text(successMessage)
         }
-        .alert("Error", isPresented: .constant(showError != nil)) {
-            Button("OK", role: .cancel) {
+        .alert(NSLocalizedString("ui_error", comment: "Generic error title"), isPresented: .constant(showError != nil)) {
+            Button(NSLocalizedString("ok", comment: "OK"), role: .cancel) {
                 showError = nil
             }
         } message: {
@@ -395,15 +414,15 @@ struct BurnerCardOptionsSection: View {
                 try await BurnerService.shared.setBurnerNDEFUsesTextRecord(
                     enabled,
                     alertMessage: enabled
-                        ? "Hold your Burner card near the top of your iPhone to disable URL handling (TXT NDEF)."
-                        : "Hold your Burner card near the top of your iPhone to enable URL handling (URI NDEF)."
+                        ? NSLocalizedString("nfc_burner_hold_disable_url_txt_ndef", comment: "NFC prompt to disable Burner URL handling (TXT NDEF)")
+                        : NSLocalizedString("nfc_burner_hold_enable_url_uri_ndef", comment: "NFC prompt to enable Burner URL handling (URI NDEF)")
                 )
                 
                 await MainActor.run {
                     isConfiguringNDEF = false
                     successMessage = enabled
-                        ? "Done. This Burner card will now expose a TEXT NDEF record instead of a URL (URI) record."
-                        : "Done. This Burner card will now expose a URL (URI) NDEF record instead of a TEXT record."
+                        ? NSLocalizedString("ui_burner_done_txt_ndef", comment: "Success message after switching Burner to TXT NDEF")
+                        : NSLocalizedString("ui_burner_done_uri_ndef", comment: "Success message after switching Burner to URI NDEF")
                     showSuccess = true
                     BurnerLogger.info("📝 BURNER OPTIONS: ✅ Burner NDEF flags updated successfully (flagUseText=\(enabled))")
                 }

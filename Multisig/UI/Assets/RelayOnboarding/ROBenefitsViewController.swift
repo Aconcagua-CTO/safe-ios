@@ -42,7 +42,7 @@ class ROBenefitsViewController: UIViewController {
             )
         ])
         
-        nextButton.setText("Next", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
     }
 
     override func viewDidAppear(_ animated: Bool) {

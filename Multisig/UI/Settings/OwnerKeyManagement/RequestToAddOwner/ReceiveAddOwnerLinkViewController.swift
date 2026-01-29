@@ -51,9 +51,9 @@ class ReceiveAddOwnerLinkViewController: UIViewController {
             addOwnerView.set(owner: ownerInfo, badgeName: nil, safe: safe, reqConfirmations: Int(safe.threshold!), ownerCount: safe.ownersInfo?.count ?? 0)
         }
 
-        infoBoxView.setText("Make sure you trust this key before confirming.")
-        rejectButton.setText("Reject", .filledError)
-        continueButton.setText("Continue...", .filled)
+        infoBoxView.setText(NSLocalizedString("ui_owner_link_trust_warning", comment: "Owner link trust warning"))
+        rejectButton.setText(NSLocalizedString("ui_tx_reject_action", comment: "Reject action"), .filledError)
+        continueButton.setText(NSLocalizedString("ui_continue_ellipsis_action", comment: "Continue with ellipsis action"), .filled)
      }
 
     @IBAction func didTapReject(_ sender: Any) {
@@ -68,11 +68,14 @@ class ReceiveAddOwnerLinkViewController: UIViewController {
             onAddOwner(safe, owner)
         }
 
-        let replace = UIAlertAction(title: "Replace owner", style: .default) { [unowned self] _ in
+        let replace = UIAlertAction(title: NSLocalizedString("ui_owner_replace_title", comment: "Replace owner action title"),
+                                    style: .default) { [unowned self] _ in
             onReplaceOwner(safe, owner)
         }
 
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
 
         let alertController = UIAlertController(
             title: nil,

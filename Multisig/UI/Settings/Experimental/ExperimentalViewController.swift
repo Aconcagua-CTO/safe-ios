@@ -38,7 +38,7 @@ class ExperimentalViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Experimental"
+        title = NSLocalizedString("ui_experimental_title", comment: "Title for experimental settings screen")
 
         tableView.backgroundColor = .backgroundSecondary
         tableView.rowHeight = UITableView.automaticDimension

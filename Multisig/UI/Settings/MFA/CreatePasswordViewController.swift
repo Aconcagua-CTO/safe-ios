@@ -29,11 +29,11 @@ class CreatePasswordViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Create password"
+        title = NSLocalizedString("ui_password_create_title", comment: "Title for creating a password")
 
         titleLabel.setStyle(.body)
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
-        createButton.setText("Set password", .filled)
+        createButton.setText(NSLocalizedString("ui_set_password_action", comment: "Set password action"), .filled)
 
         passwordInputField.onTextBeginEditing = { [weak self] in
             self?.keyboardBehavior.activeTextField = self?.passwordInputField.textField

@@ -48,7 +48,7 @@ class CollectiblesViewController: LoadableViewController, UITableViewDelegate, U
         tableView.sectionHeaderHeight = headerHeight
         tableView.sectionFooterHeight = footerHeight
         tableView.separatorStyle = .none
-        emptyView.setTitle("Collectibles will appear here")
+        emptyView.setTitle(NSLocalizedString("ui_collectibles_empty_title", comment: "Collectibles empty title"))
         emptyView.setImage(UIImage(named: "ico-no-collectibles")!)
     }
 
@@ -77,7 +77,8 @@ class CollectiblesViewController: LoadableViewController, UITableViewDelegate, U
                         (error as NSError).domain == NSURLErrorDomain {
                         return
                     }
-                    self.onError(GSError.error(description: "Failed to load collectibles", error: error))
+                    self.onError(GSError.error(description: NSLocalizedString("ui_collectibles_load_failed_error", comment: "Failed to load collectibles error"),
+                                               error: error))
                 }
             case .success(let page):
                 var model = FlatCollectiblesListViewModel(page.results)
@@ -113,7 +114,8 @@ class CollectiblesViewController: LoadableViewController, UITableViewDelegate, U
                             self.pageLoadingState = .idle
                             return
                         }
-                        self.onError(GSError.error(description: "Failed to load more collectibles", error: error))
+                        self.onError(GSError.error(description: NSLocalizedString("ui_collectibles_load_more_failed_error", comment: "Failed to load more collectibles error"),
+                                                   error: error))
                         self.pageLoadingState = .retry
                     }
                 case .success(let page):
@@ -131,7 +133,8 @@ class CollectiblesViewController: LoadableViewController, UITableViewDelegate, U
                 self.loadNextPageDataTask = nil
             }
         } catch {
-            onError(GSError.error(description: "Failed to load more collectibles", error: error))
+            onError(GSError.error(description: NSLocalizedString("ui_collectibles_load_more_failed_error", comment: "Failed to load more collectibles error"),
+                                  error: error))
             pageLoadingState = .retry
         }
     }

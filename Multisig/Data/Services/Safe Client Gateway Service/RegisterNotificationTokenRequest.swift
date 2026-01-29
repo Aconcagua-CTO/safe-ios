@@ -9,6 +9,7 @@
 import Foundation
 import SafeWeb3
 
+/// Per-chain device registration for push notifications
 struct RegisterNotificationTokenRequest: JSONRequest {
     var uuid: String
     var cloudMessagingToken: String
@@ -17,11 +18,13 @@ struct RegisterNotificationTokenRequest: JSONRequest {
     let deviceType: String = "IOS"
     var version: String
     var timestamp: String
-
-    var safeRegistrations: [SafeRegistration]
+    var safes: [String]
+    var signatures: [String]
+    
+    let chainId: String
 
     var httpMethod: String { return "POST" }
-    var urlPath: String { return "/v1/register/notifications/" }
+    var urlPath: String { return "/v1/chains/\(chainId)/notifications/devices/" }
 
     typealias ResponseType = EmptyResponse
 
@@ -32,22 +35,28 @@ struct RegisterNotificationTokenRequest: JSONRequest {
 
 extension SafeClientGatewayService {
     @discardableResult
-    func registerNotification(
+    func registerDeviceForChain(
         uuid: String,
         cloudMessagingToken: String,
         buildNumber: String,
         bundle: String,
         version: String,
         timestamp: String,
-        safeRegistrations: [SafeRegistration],
+        chainId: String,
+        safes: [String],
+        signatures: [String],
         completion: @escaping (Result<RegisterNotificationTokenRequest.ResponseType, Error>) -> Void) -> URLSessionTask? {
-        asyncExecute(request:RegisterNotificationTokenRequest(uuid: uuid,
-                                                              cloudMessagingToken: cloudMessagingToken,
-                                                              buildNumber: buildNumber,
-                                                              bundle: bundle,
-                                                              version: version,
-                                                              timestamp: timestamp,
-                                                              safeRegistrations: safeRegistrations), completion: completion)
+        asyncExecute(request: RegisterNotificationTokenRequest(
+            uuid: uuid,
+            cloudMessagingToken: cloudMessagingToken,
+            buildNumber: buildNumber,
+            bundle: bundle,
+            version: version,
+            timestamp: timestamp,
+            safes: safes,
+            signatures: signatures,
+            chainId: chainId
+        ), completion: completion)
     }
 }
 

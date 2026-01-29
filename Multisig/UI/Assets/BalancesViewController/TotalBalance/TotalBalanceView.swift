@@ -59,10 +59,10 @@ class TotalBalanceView: UINibView {
         ribbonView.show()
         amountLabel.skeletonTextLineHeight = .relativeToConstraints
         amountLabel.setStyle(.title1Medium)
-        sendButton.setText("Retirar", .filled)
+        sendButton.setText(NSLocalizedString("ui_balance_withdraw_action", comment: "Withdraw action"), .filled)
         sendButton.setImage(UIImage(named: "ico-arrow-down"), for: .normal)
         sendButton.tintColor = UIColor.primaryInverted
-        receiveButton.setText("Ingresar", .filled)
+        receiveButton.setText(NSLocalizedString("ui_balance_deposit_action", comment: "Deposit action"), .filled)
         receiveButton.setImage(rotatedUpArrow(), for: .normal)
         receiveButton.tintColor = UIColor.primaryInverted
         receiveButton.isEnabled = true

@@ -41,7 +41,11 @@ extension UIImageView {
         VaultLogger.debug("[IMAGE] setCircleImage called for address \(address.hexadecimal.prefix(10))... with URL: \(url?.absoluteString ?? "nil")")
 
         let circleProcessor = RoundCornerImageProcessor(radius: .widthFraction(0.5))
-        let placeholderImage = (placeholderName.flatMap { UIImage(named: $0) } ?? UIImage(named: "ico-safe-bar-logo"))?
+        // IMPORTANT:
+        // Do not default to a global "Safe/Bóveda" placeholder here.
+        // Callers must provide a placeholderName explicitly if they want one.
+        let placeholderImage = placeholderName
+            .flatMap { UIImage(named: $0) }?
             .circleShape()
 
         // If we have a URL, try to load it first, fallback to placeholder if it fails
@@ -80,18 +84,10 @@ extension UIImageView {
     }
     
     private func applyPlaceholderIdenticon(grayscale: Bool) {
-        guard let baseImage = UIImage(named: "ico-safe-bar-logo") else {
-            image = nil
-            return
-        }
-        var processedImage = baseImage.circleShape() ?? baseImage
-        if grayscale {
-            processedImage = processedImage.grayscale() ?? processedImage
-            alpha = 0.3
-        } else {
-            alpha = 1.0
-        }
-        image = processedImage
+        // Blockies/placeholder identicons are intentionally disabled.
+        // Keep this API as a no-op so legacy call sites don't crash.
+        image = nil
+        alpha = grayscale ? 0.3 : 1.0
     }
 }
 

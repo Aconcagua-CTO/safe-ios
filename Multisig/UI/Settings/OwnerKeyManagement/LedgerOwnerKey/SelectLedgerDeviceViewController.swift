@@ -60,9 +60,9 @@ class SelectLedgerDeviceViewController: LoadableViewController, UITableViewDeleg
             tableView.sectionHeaderTopPadding = 0
         }
 
-        loadingView.set(title: "Searching for Ledger Nano X devices")
+        loadingView.set(title: NSLocalizedString("ui_ledger_searching_devices_title", comment: "Ledger device search title"))
 
-        emptyView.setTitle("No Ledger Nano X device found. Please make sure your Ledger Nano X is unlocked, Bluetooth is enabled, and the Ethereum app is installed and opened.")
+        emptyView.setTitle(NSLocalizedString("ui_ledger_no_device_found_detail", comment: "Ledger no device found message"))
         emptyView.setImage(UIImage(named: "enable-ledger")!)
     }
 
@@ -114,7 +114,7 @@ class SelectLedgerDeviceViewController: LoadableViewController, UITableViewDeleg
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         if !isEmpty {
             let tableHeaderView = TableHeaderView()
-            tableHeaderView.set("Select your device")
+            tableHeaderView.set(NSLocalizedString("ui_ledger_select_device_header", comment: "Ledger select device header"))
             return tableHeaderView
         }
         return nil
@@ -126,10 +126,11 @@ extension SelectLedgerDeviceViewController: BluetoothControllerDelegate {
         onSuccess()
         if error is GSError.BluetoothIsNotAuthorized {
             let alertVC = UIAlertController(title: nil,
-                                            message: "Please enable Bluetooth in App Settings",
+                                            message: NSLocalizedString("ui_ledger_enable_bluetooth_message", comment: "Enable Bluetooth message"),
                                             preferredStyle: .alert)
-            let cancel = UIAlertAction(title: "Cancel", style: .cancel)
-            let settings = UIAlertAction(title: "Settings", style: .default) { _ in
+            let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                       style: .cancel)
+            let settings = UIAlertAction(title: NSLocalizedString("settings", comment: "Settings button title"), style: .default) { _ in
                 let url = URL(string: UIApplication.openSettingsURLString)!
                 if UIApplication.shared.canOpenURL(url) {
                     UIApplication.shared.open(url)

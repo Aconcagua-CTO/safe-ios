@@ -17,7 +17,7 @@ final class InvertirInProgressViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .black
-        title = "Invertir"
+        title = NSLocalizedString("ui_invertir_progress_title", comment: "Invertir progress title")
 
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.setStyle(.title3)
@@ -27,7 +27,7 @@ final class InvertirInProgressViewController: UIViewController {
         titleLabel.text = "Inversión en progreso"
 
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setText("Volver al principio", .filled)
+        button.setText(NSLocalizedString("ui_invertir_back_to_top_action", comment: "Invertir back to top action"), .filled)
         button.addTarget(self, action: #selector(didTapFinish), for: .touchUpInside)
 
         view.addSubview(titleLabel)

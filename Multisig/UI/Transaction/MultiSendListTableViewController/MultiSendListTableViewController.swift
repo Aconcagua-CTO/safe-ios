@@ -27,7 +27,7 @@ class MultiSendListTableViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Multisend"
+        navigationItem.title = NSLocalizedString("ui_multisend_title", comment: "Title for multisend action list")
 
         tableView.estimatedRowHeight = 72
         tableView.rowHeight = UITableView.automaticDimension

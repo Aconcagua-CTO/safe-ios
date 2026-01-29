@@ -43,7 +43,7 @@ final class InvertirConfirmViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = "Confirmar"
+        title = NSLocalizedString("ui_invertir_confirm_title", comment: "Invertir confirm title")
 
         configureLayout()
         configureValues()
@@ -105,7 +105,7 @@ final class InvertirConfirmViewController: UIViewController {
             label.numberOfLines = 0
         }
 
-        confirmButton.setText("Confirmar Inversión", .filled)
+        confirmButton.setText(NSLocalizedString("ui_invertir_confirm_investment_action", comment: "Confirm investment action"), .filled)
         confirmButton.addTarget(self, action: #selector(didTapConfirm), for: .touchUpInside)
 
         stack.addArrangedSubview(titleLabel)

@@ -46,7 +46,11 @@ class HTTPClient {
     }
 
     deinit {
-        session.invalidateAndCancel()
+        // Avoid cancelling in-flight requests on deallocation.
+        // If a service/client isn't strongly retained by the caller, cancelling here turns into
+        // NSURLErrorDomain -999 ("Operation cancelled") and the backend never sees the request.
+        logger?.debug("[HTTPClient] deinit - finishing tasks and invalidating session (\(baseURL))")
+        session.finishTasksAndInvalidate()
     }
 
     /// Executes request and returns server response. The call is synchronous.
@@ -95,15 +99,22 @@ class HTTPClient {
             #endif
         } else {
             var urlComponents = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
-            // Properly append path instead of replacing it
+            // Append request path to base path (preserve baseURL.path).
+            // This is critical for base URLs that already contain a path segment (e.g. Firebase Functions
+            // `.../vaultsPolygon/scg/`) where request.urlPath begins with `/v1/...`.
             let basePath = urlComponents.path
             let requestPath = request.urlPath
-            if requestPath.hasPrefix("/") {
-                urlComponents.path = requestPath
-            } else {
-                let combinedPath = (basePath.hasSuffix("/") ? basePath : basePath + "/") + requestPath
-                urlComponents.path = combinedPath
+
+            func joinPaths(_ a: String, _ b: String) -> String {
+                let a2 = a.isEmpty ? "/" : a
+                let left = a2.hasSuffix("/") ? String(a2.dropLast()) : a2
+                let right = b.hasPrefix("/") ? String(b.dropFirst()) : b
+                // Special-case: if base is "/" then avoid double slash.
+                if left == "/" { return "/" + right }
+                return left + "/" + right
             }
+
+            urlComponents.path = joinPaths(basePath, requestPath)
             urlComponents.query = request.query
             guard let constructedURL = urlComponents.url else {
                 fatalError("Failed to construct URL from baseURL: \(baseURL), path: \(request.urlPath), query: \(request.query ?? "nil")")

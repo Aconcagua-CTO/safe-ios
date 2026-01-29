@@ -22,8 +22,8 @@ class ActionPanelView: UINibView {
 
     override func commonInit() {
         super.commonInit()
-        confirmButton.setText("Confirm", .filled)
-        rejectButton.setText("Reject", .filledError)
+        confirmButton.setText(NSLocalizedString("ui_tx_confirm_action", comment: "Confirm action"), .filled)
+        rejectButton.setText(NSLocalizedString("ui_tx_reject_action", comment: "Reject action"), .filledError)
     }
 
     func setConfirmText(_ text: String) {

@@ -20,7 +20,7 @@ class FaceIDUnlockViewController: UIViewController {
         super.viewDidLoad()
         navigationController?.isNavigationBarHidden = true
         label.setStyle(.slogan)
-        unlockButton.setText("Unlock", .filled)
+        unlockButton.setText(NSLocalizedString("ui_unlock_action", comment: "Unlock action"), .filled)
         unlockDataStore()
     }
 
@@ -41,7 +41,7 @@ class FaceIDUnlockViewController: UIViewController {
             #if DEBUG
             LogService.shared.debug("[FaceIDUnlock] User cancelled biometry")
             #endif
-            if App.shared.securityCenter.lockMethod.isPasscodeRequired() {
+            if App.shared.securityCenter.shouldShowPasscode() {
                 // Fall back to passcode entry
                 #if DEBUG
                 LogService.shared.debug("[FaceIDUnlock] Falling back to passcode entry")
@@ -59,7 +59,7 @@ class FaceIDUnlockViewController: UIViewController {
             #if DEBUG
             LogService.shared.debug("[FaceIDUnlock] Biometry failed with error: \(error.localizedDescription)")
             #endif
-            if App.shared.securityCenter.lockMethod.isPasscodeRequired() {
+            if App.shared.securityCenter.shouldShowPasscode() {
                 // Fall back to passcode entry
                 #if DEBUG
                 LogService.shared.debug("[FaceIDUnlock] Falling back to passcode entry")

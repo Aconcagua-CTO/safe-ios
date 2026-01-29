@@ -47,19 +47,16 @@ extension UIView {
         let nib = UINib(nibName: name, bundle: bundle)
         let content = nib.instantiate(withOwner: owner, options: nil)
         let view = content.first as! UIView
-        if view is UIStackView {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(view)
-            NSLayoutConstraint.activate([
-                view.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
-                view.topAnchor.constraint(equalTo: topAnchor),
-                widthAnchor.constraint(equalTo: view.widthAnchor),
-                heightAnchor.constraint(equalTo: view.heightAnchor)
-            ])
-        } else {
-            view.frame = self.bounds
-            view.autoresizingMask = [.flexibleHeight, .flexibleWidth]
-            addSubview(view)
-        }
+        // Prefer Auto Layout pinning over autoresizing-mask constraints.
+        // This avoids NSLayoutConstraint breakage when these views are used inside
+        // self-sizing UITableView/UICollectionView cells.
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: trailingAnchor),
+            view.topAnchor.constraint(equalTo: topAnchor),
+            view.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
 }

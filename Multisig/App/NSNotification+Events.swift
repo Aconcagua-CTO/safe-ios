@@ -38,6 +38,9 @@ extension NSNotification.Name {
     
     static let transactionNamesUpdated = NSNotification.Name("io.gnosis.safe.transactionNamesUpdated")
 
+    // Posted after TokenWhitelist sync completes successfully.
+    static let tokenWhitelistUpdated = NSNotification.Name("io.gnosis.safe.tokenWhitelistUpdated")
+
     static let biometricsActivated = NSNotification.Name("io.gnosis.safe.biometricsActivated")
 
     // MARK: - WalletConnect

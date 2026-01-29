@@ -1,7 +1,7 @@
 import UIKit
 
 /// MoneyMarket (Aave) token details.
-/// Shows LAST_YEAR supply APY chart, current APY, and total supplied (USD).
+/// Shows supply APY chart for the selected interval, current APY, and total supplied (USD).
 final class MoneyMarketTokenDetailViewController: UIViewController {
     private let token: TokenBalance
     private weak var balancesProvider: TokenDetailBalancesProvider?
@@ -11,9 +11,17 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
 
     private let aaveClient = AaveV3GraphQLClient()
     private let yieldService = MoneyMarketYieldService()
+    private let ondoUSDYClient = OndoUSDYPageClient()
 
     private var reserveTask: URLSessionDataTask?
     private var historyTask: URLSessionDataTask?
+    private var ondoUSDYTask: URLSessionDataTask?
+
+    private enum HistoryMode {
+        case aaveYield
+        case ondoYield
+        case ondoPrice
+    }
 
     private enum Row: Int, CaseIterable {
         case network
@@ -26,9 +34,11 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
     private var selectedMarketPoolAddress: String?
     private var selectedUnderlyingTokenAddress: String?
     private var selectionReason: String?
+    private var selectedHistoryMode: HistoryMode?
 
     private var apyText: String = "—"
     private var totalSuppliedUsdText: String = "—"
+    private var selectedInterval: TokenPriceHistoryHeaderView.Interval = .week
 
     init(token: TokenBalance, balancesProvider: TokenDetailBalancesProvider?) {
         self.token = token
@@ -43,6 +53,7 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
     deinit {
         reserveTask?.cancel()
         historyTask?.cancel()
+        ondoUSDYTask?.cancel()
     }
 
     override func viewDidLoad() {
@@ -58,7 +69,7 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         if tableView.tableHeaderView === headerView {
-            let targetHeight: CGFloat = 220
+            let targetHeight: CGFloat = 260
             if headerView.frame.width != tableView.bounds.width || headerView.frame.height != targetHeight {
                 headerView.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: targetHeight)
                 tableView.tableHeaderView = headerView
@@ -82,16 +93,24 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
     }
 
     private func configureHeader() {
-        headerView.frame = CGRect(x: 0, y: 0, width: view.bounds.width, height: 220)
+        let fallbackWidth = max(view.bounds.width, UIScreen.main.bounds.width)
+        headerView.frame = CGRect(x: 0, y: 0, width: fallbackWidth, height: 260)
         tableView.tableHeaderView = headerView
-        headerView.showPlaceholder(text: "Loading yield chart…")
+        headerView.onIntervalChanged = { [weak self] interval in
+            self?.selectedInterval = interval
+            self?.fetchHistoryIfPossible()
+        }
+        headerView.setSelectedInterval(selectedInterval)
+        headerView.showPlaceholder(text: NSLocalizedString("ui_chart_loading_yield", comment: "Loading yield chart"))
     }
 
     private func reloadData() {
         reserveTask?.cancel()
         historyTask?.cancel()
+        ondoUSDYTask?.cancel()
         reserveTask = nil
         historyTask = nil
+        ondoUSDYTask = nil
 
         headerView.showLoading()
         apyText = "—"
@@ -101,17 +120,24 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
         selectedATokenAddress = nil
         selectedMarketPoolAddress = nil
         selectedUnderlyingTokenAddress = nil
+        selectedHistoryMode = nil
         tableView.reloadData()
 
         let holdings = balancesProvider?.moneyMarketHoldings(for: token) ?? []
         guard !holdings.isEmpty else {
-            headerView.showPlaceholder(text: "No MoneyMarket holdings found")
+            headerView.showPlaceholder(text: NSLocalizedString("ui_chart_no_moneymarket_holdings", comment: "No MoneyMarket holdings"))
             tableView.reloadData()
             return
         }
 
         if holdings.count == 1 {
             selectionReason = "single network"
+            selectHolding(holdings[0])
+            return
+        }
+
+        if hasOndoUSDYSources(holdings) {
+            selectionReason = "first network"
             selectHolding(holdings[0])
             return
         }
@@ -140,65 +166,192 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
         selectedChainId = holding.chainId
         selectedATokenAddress = holding.aTokenAddress
 
-        // Resolve Aave mapping from enriched whitelist (preferred).
-        let chainIdStr = String(holding.chainId)
-        guard let entry = TokenWhitelist.by(chainId: chainIdStr, networkAddress: holding.aTokenAddress) else {
-            headerView.showPlaceholder(text: "Yield data unavailable (missing whitelist entry)")
+        guard let meta = balancesProvider?.tokenMetadata(chainId: holding.chainId, tokenAddress: holding.aTokenAddress) else {
+            headerView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable_missing_whitelist", comment: "Yield data unavailable (missing whitelist entry)"))
             tableView.reloadData()
             return
         }
-        let yieldSource = (entry.yieldSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let market = (entry.aaveMarketPoolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let underlying = (entry.aaveUnderlyingTokenAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let yieldSource = (meta.yieldSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let priceSource = (meta.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let market = (meta.aaveMarketPoolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let underlying = (meta.aaveUnderlyingTokenAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard yieldSource == "aave_v3", !market.isEmpty, !underlying.isEmpty else {
-            headerView.showPlaceholder(text: "Yield data unavailable (not enriched)")
+        if yieldSource == "aave_v3", !market.isEmpty, !underlying.isEmpty {
+            selectedHistoryMode = .aaveYield
+            selectedMarketPoolAddress = market
+            selectedUnderlyingTokenAddress = underlying
             tableView.reloadData()
-            return
-        }
 
-        selectedMarketPoolAddress = market
-        selectedUnderlyingTokenAddress = underlying
-        tableView.reloadData()
+            // Fetch snapshot + history.
+            headerView.showLoading()
 
-        // Fetch snapshot + history.
-        headerView.showLoading()
-
-        reserveTask = aaveClient.fetchReserveSnapshot(
-            chainId: holding.chainId,
-            marketPoolAddress: market,
-            underlyingTokenAddress: underlying
-        ) { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .failure:
-                self.apyText = "—"
-                self.totalSuppliedUsdText = "—"
-            case .success(let snap):
-                self.apyText = Self.formatPercent(snap.supplyApyPercent)
-                self.totalSuppliedUsdText = Self.formatCompactUsd(snap.totalSuppliedUsd)
+            reserveTask = aaveClient.fetchReserveSnapshot(
+                chainId: holding.chainId,
+                marketPoolAddress: market,
+                underlyingTokenAddress: underlying
+            ) { [weak self] result in
+                guard let self else { return }
+                switch result {
+                case .failure:
+                    self.apyText = "—"
+                    self.totalSuppliedUsdText = "—"
+                case .success(let snap):
+                    self.apyText = Self.formatPercent(snap.supplyApyPercent)
+                    self.totalSuppliedUsdText = Self.formatCompactUsd(snap.totalSuppliedUsd)
+                }
+                self.tableView.reloadData()
             }
-            self.tableView.reloadData()
+
+            fetchHistoryIfPossible()
+            return
         }
 
-        historyTask = aaveClient.fetchSupplyApyHistory(
-            chainId: holding.chainId,
-            marketPoolAddress: market,
-            underlyingTokenAddress: underlying,
-            window: .lastYear
-        ) { [weak self] result in
-            guard let self else { return }
-            switch result {
-            case .failure:
-                self.headerView.showPlaceholder(text: "Yield chart unavailable")
-            case .success(let points):
-                let chartPoints = points.map { TokenPriceHistoryHeaderView.Point(time: $0.time, value: $0.apyPercent) }
-                if chartPoints.count >= 2 {
-                    self.headerView.showChart(points: chartPoints)
-                } else {
-                    self.headerView.showPlaceholder(text: "Yield chart unavailable")
+        if yieldSource == "ondousdy" {
+            selectedHistoryMode = .ondoYield
+            selectedMarketPoolAddress = nil
+            selectedUnderlyingTokenAddress = nil
+            totalSuppliedUsdText = "—"
+            tableView.reloadData()
+            fetchHistoryIfPossible()
+            return
+        }
+
+        if priceSource == "ondousdy" {
+            selectedHistoryMode = .ondoPrice
+            selectedMarketPoolAddress = nil
+            selectedUnderlyingTokenAddress = nil
+            totalSuppliedUsdText = "—"
+            tableView.reloadData()
+            fetchHistoryIfPossible()
+            return
+        }
+
+        headerView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable_not_enriched", comment: "Yield data unavailable (not enriched)"))
+        tableView.reloadData()
+    }
+
+    private func fetchHistoryIfPossible() {
+        guard let mode = selectedHistoryMode else { return }
+        switch mode {
+        case .aaveYield:
+            guard let chainId = selectedChainId,
+                  let market = selectedMarketPoolAddress,
+                  let underlying = selectedUnderlyingTokenAddress else {
+                return
+            }
+            historyTask?.cancel()
+            historyTask = nil
+            headerView.showLoading()
+
+            historyTask = aaveClient.fetchSupplyApyHistory(
+                chainId: chainId,
+                marketPoolAddress: market,
+                underlyingTokenAddress: underlying,
+                window: aaveWindow(for: selectedInterval)
+            ) { [weak self] result in
+                guard let self else { return }
+                switch result {
+                case .failure:
+                    self.headerView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable", comment: "Yield chart unavailable"))
+                case .success(let points):
+                    let chartPoints = points.map { TokenPriceHistoryHeaderView.Point(time: $0.time, value: $0.apyPercent) }
+                    if chartPoints.count >= 2 {
+                        self.headerView.showChart(points: chartPoints)
+                    } else {
+                        self.headerView.showPlaceholder(text: NSLocalizedString("ui_chart_yield_unavailable", comment: "Yield chart unavailable"))
+                    }
                 }
             }
+        case .ondoYield:
+            fetchOndoUSDYHistory(mode: .yield)
+        case .ondoPrice:
+            fetchOndoUSDYHistory(mode: .price)
+        }
+    }
+
+    private enum OndoUSDYMode {
+        case price
+        case yield
+    }
+
+    private func fetchOndoUSDYHistory(mode: OndoUSDYMode) {
+        ondoUSDYTask?.cancel()
+        ondoUSDYTask = nil
+        headerView.showLoading()
+
+        ondoUSDYTask = ondoUSDYClient.fetchSnapshot { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .failure:
+                let placeholderKey = (mode == .yield)
+                    ? "ui_chart_yield_unavailable"
+                    : "ui_chart_coming_soon"
+                self.headerView.showPlaceholder(text: NSLocalizedString(placeholderKey, comment: "Chart unavailable"))
+            case .success(let snapshot):
+                let filtered = self.filterHistory(snapshot.history, for: self.selectedInterval)
+                let points = filtered.map { point in
+                    let value = (mode == .yield) ? point.apyPercent : point.priceUsd
+                    return TokenPriceHistoryHeaderView.Point(time: point.time, value: value)
+                }
+
+                if let last = filtered.last {
+                    self.apyText = Self.formatPercent(last.apyPercent)
+                } else {
+                    self.apyText = "—"
+                }
+                self.totalSuppliedUsdText = "—"
+                self.tableView.reloadData()
+
+                if points.count >= 2 {
+                    self.headerView.showChart(points: points)
+                } else {
+                    let placeholderKey = (mode == .yield)
+                        ? "ui_chart_yield_unavailable"
+                        : "ui_chart_coming_soon"
+                    self.headerView.showPlaceholder(text: NSLocalizedString(placeholderKey, comment: "Chart unavailable"))
+                }
+            }
+        }
+    }
+
+    private func filterHistory(_ history: [OndoUSDYPageClient.HistoryPoint],
+                               for interval: TokenPriceHistoryHeaderView.Interval) -> [OndoUSDYPageClient.HistoryPoint] {
+        let secondsBack: TimeInterval = {
+            switch interval {
+            case .week:
+                return 7 * 24 * 60 * 60
+            case .month:
+                return 30 * 24 * 60 * 60
+            case .year:
+                return 365 * 24 * 60 * 60
+            }
+        }()
+        let cutoff = Date().timeIntervalSince1970 - secondsBack
+        return history.filter { $0.time >= cutoff }
+    }
+
+    private func hasOndoUSDYSources(_ holdings: [(chainId: Int, aTokenAddress: String)]) -> Bool {
+        for holding in holdings {
+            guard let meta = balancesProvider?.tokenMetadata(chainId: holding.chainId, tokenAddress: holding.aTokenAddress) else {
+                continue
+            }
+            let yieldSource = (meta.yieldSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let priceSource = (meta.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if yieldSource == "ondousdy" || priceSource == "ondousdy" {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func aaveWindow(for interval: TokenPriceHistoryHeaderView.Interval) -> AaveV3GraphQLClient.TimeWindow {
+        switch interval {
+        case .week:
+            return .lastWeek
+        case .month:
+            return .lastMonth
+        case .year:
+            return .lastYear
         }
     }
 

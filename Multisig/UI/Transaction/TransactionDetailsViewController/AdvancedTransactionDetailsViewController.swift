@@ -27,7 +27,7 @@ class AdvancedTransactionDetailsViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Advanced"
+        navigationItem.title = NSLocalizedString("ui_tx_advanced_title", comment: "Title for advanced transaction details screen")
 
         tableView.registerCell(DetailAccountCell.self)
         tableView.registerCell(DetailExpandableTextCell.self)
@@ -60,14 +60,17 @@ class AdvancedTransactionDetailsViewController: UITableViewController {
 
     func buildSections(_ tx: SCGModels.TransactionDetails) {
         if let hash = tx.txHash?.description {
-            sections.append(Section(title: "Chain transaction data",
-                                    items: [SectionItem(title: "Transaction hash:", value: hash)]))
+            sections.append(Section(title: NSLocalizedString("ui_tx_chain_transaction_data_title", comment: "Chain transaction data section title"),
+                                    items: [SectionItem(title: NSLocalizedString("ui_tx_transaction_hash_title", comment: "Transaction hash title"),
+                                                        value: hash)]))
         }
 
         if let txData = tx.txData {
             var safeTransactionData: [SectionItem] = []
-            safeTransactionData.append(SectionItem(title: "To:", value: txData.to))
-            safeTransactionData.append(SectionItem(title: "Value:", value: txData.value.description))
+            safeTransactionData.append(SectionItem(title: NSLocalizedString("ui_tx_to_title", comment: "Transaction to title"),
+                                                   value: txData.to))
+            safeTransactionData.append(SectionItem(title: NSLocalizedString("ui_tx_value_title", comment: "Transaction value title"),
+                                                   value: txData.value.description))
 
             if let dataDecoded = txData.dataDecoded {
                 let addressInfoIndex = txData.addressInfoIndex
@@ -75,49 +78,65 @@ class AdvancedTransactionDetailsViewController: UITableViewController {
                    let param = dataDecoded.parameters?.first,
                    param.type == "bytes",
                    case let SCGModels.DataDecoded.Parameter.ValueDecoded.multiSend(multiSendTxs)? = param.valueDecoded {
-                    safeTransactionData.append(SectionItem(title: "Multisend (\(multiSendTxs.count) actions)",
+                    safeTransactionData.append(SectionItem(title: String(format: NSLocalizedString("ui_tx_multisend_actions_title_format", comment: "Multisend actions title"),
+                                                                         multiSendTxs.count),
                                                            value: (multiSendTxs, addressInfoIndex)))
                 } else {
-                    safeTransactionData.append(SectionItem(title: "Action (\(dataDecoded.method))",
+                    safeTransactionData.append(SectionItem(title: String(format: NSLocalizedString("ui_tx_action_method_title_format", comment: "Action title with method"),
+                                                                         dataDecoded.method),
                                                            value: (dataDecoded, addressInfoIndex, tx.txData?.hexData)))
                 }
             }
 
             if let data = txData.hexData {
-                safeTransactionData.append(SectionItem(title: "Data:", value: data))
+                safeTransactionData.append(SectionItem(title: NSLocalizedString("ui_tx_data_title", comment: "Transaction data title"),
+                                                       value: data))
             }
 
-            safeTransactionData.append(SectionItem(title: "Operation:", value: "\(txData.operation.rawValue) (\(txData.operation.name))"))
+            safeTransactionData.append(SectionItem(title: NSLocalizedString("ui_tx_operation_title", comment: "Transaction operation title"),
+                                                   value: "\(txData.operation.rawValue) (\(txData.operation.name))"))
 
-            sections.append(Section(title: "Safe Account transaction data", items: safeTransactionData))
+            sections.append(Section(title: NSLocalizedString("ui_tx_safe_account_transaction_data_title", comment: "Safe account transaction data title"),
+                                    items: safeTransactionData))
         }
 
         if case SCGModels.TransactionDetails.DetailedExecutionInfo.multisig(let multisigTx)? =
             tx.detailedExecutionInfo {
             sections.append(Section(title: "",
-                                    items: [SectionItem(title: "safeTxHash:", value: multisigTx.safeTxHash.description),
-                                            SectionItem(title: "Nonce:", value: multisigTx.nonce.description)]))
+                                    items: [SectionItem(title: NSLocalizedString("ui_tx_safe_tx_hash_title", comment: "safeTxHash title"),
+                                                        value: multisigTx.safeTxHash.description),
+                                            SectionItem(title: NSLocalizedString("ui_tx_nonce_title_label", comment: "Nonce title"),
+                                                        value: multisigTx.nonce.description)]))
         }
 
         switch tx.detailedExecutionInfo {
         case .multisig(let multisigInfo):
             var multiSigTransactionInfo: [SectionItem] = []
-            multiSigTransactionInfo.append(SectionItem(title: "safeTxGas:", value: multisigInfo.safeTxGas.description))
-            multiSigTransactionInfo.append(SectionItem(title: "baseGas:", value: multisigInfo.baseGas.description))
-            multiSigTransactionInfo.append(SectionItem(title: "gasPrice:", value: multisigInfo.gasPrice.description))
-            multiSigTransactionInfo.append(SectionItem(title: "gasToken:", value: multisigInfo.gasToken.address.addressInfo))
-            multiSigTransactionInfo.append(SectionItem(title: "refundReceiver:", value: multisigInfo.refundReceiver))
+            multiSigTransactionInfo.append(SectionItem(title: NSLocalizedString("ui_tx_safe_tx_gas_title", comment: "safeTxGas title"),
+                                                       value: multisigInfo.safeTxGas.description))
+            multiSigTransactionInfo.append(SectionItem(title: NSLocalizedString("ui_tx_base_gas_title", comment: "baseGas title"),
+                                                       value: multisigInfo.baseGas.description))
+            multiSigTransactionInfo.append(SectionItem(title: NSLocalizedString("ui_tx_gas_price_title", comment: "gasPrice title"),
+                                                       value: multisigInfo.gasPrice.description))
+            multiSigTransactionInfo.append(SectionItem(title: NSLocalizedString("ui_tx_gas_token_title", comment: "gasToken title"),
+                                                       value: multisigInfo.gasToken.address.addressInfo))
+            multiSigTransactionInfo.append(SectionItem(title: NSLocalizedString("ui_tx_refund_receiver_title", comment: "refundReceiver title"),
+                                                       value: multisigInfo.refundReceiver))
 
-            sections.append(Section(title: "Multisig Data", items: multiSigTransactionInfo))
+            sections.append(Section(title: NSLocalizedString("ui_tx_multisig_data_title", comment: "Multisig data section title"),
+                                    items: multiSigTransactionInfo))
 
             var signatures: [SectionItem] = []
             multisigInfo.confirmations.forEach { confirmation in
                 signatures.append(SectionItem(title: nil, value: confirmation.signature))
             }
 
-            sections.append(Section(title: "Signatures", items: signatures))
+            sections.append(Section(title: NSLocalizedString("ui_tx_signatures_title", comment: "Signatures section title"),
+                                    items: signatures))
         case .module(let moduleInfo):
-            sections.append(Section(title: "Module Data", items: [SectionItem(title: "Module Address:", value: moduleInfo.address)]))
+            sections.append(Section(title: NSLocalizedString("ui_tx_module_data_title", comment: "Module data section title"),
+                                    items: [SectionItem(title: NSLocalizedString("ui_tx_module_address_title", comment: "Module address title"),
+                                                        value: moduleInfo.address)]))
         default:
             break
         }
@@ -178,7 +197,8 @@ class AdvancedTransactionDetailsViewController: UITableViewController {
             return text(string, title: item.title, expandableTitle: nil, copyText: string, indexPath: indexPath)
         } else if let data = item.value as? DataString {
             return text("\(data)", title: item.title,
-                        expandableTitle: "\(data.data.count) Bytes",
+                        expandableTitle: String(format: NSLocalizedString("ui_tx_bytes_title_format", comment: "Bytes count title"),
+                                                "\(data.data.count)"),
                         copyText: "\(data)",
                         indexPath: indexPath)
         } else if let multiSendDataDecoded = item.value as? ([SCGModels.DataDecoded.Parameter.ValueDecoded.MultiSendTx],

@@ -41,18 +41,15 @@ final class TangemKeyFlowFactory: AddKeyFlowFactory {
     override func intro(completion: @escaping () -> Void) -> AddKeyOnboardingViewController {
         let introVC = super.intro(completion: completion)
         introVC.cards = [
-            .init(image: UIImage(named: "ico-onboarding-key"),
-                  title: "Tap your Tangem Card",
-                  body: "Hold your Tangem card near the top of your iPhone and follow the on-screen instructions."),
-            .init(image: UIImage(named: "ico-onboarding-key"),
-                  title: "Choose the Wallet",
-                  body: "Select which wallet on your Tangem card you would like to add as an owner."),
-            .init(image: UIImage(named: "ico-onboarding-key"),
-                  title: "Keep Control",
-                  body: "Your private keys never leave the Tangem card. We only store metadata required to use the card for signing.")
+            .init(image: UIImage(named: "ico-nfc"),
+                  title: "",
+                  body: NSLocalizedString("ui_tangem_card_key_intro_body", comment: "Intro body for Tangem card key activation")),
+            .init(image: UIImage(named: "ico-lock"),
+                  title: NSLocalizedString("ui_tangem_card_key_secure_title", comment: "Security title for Tangem card key activation"),
+                  body: NSLocalizedString("ui_tangem_card_key_secure_body", comment: "Security body for Tangem card key activation"))
         ]
         introVC.viewTrackingEvent = .tangemOwnerOnboarding
-        introVC.navigationItem.title = "Connect Tangem Card"
+        introVC.navigationItem.title = NSLocalizedString("ui_tangem_activate_card_key_title", comment: "Title for the Tangem card key activation flow")
         introVC.navigationItem.largeTitleDisplayMode = .never
         return introVC
     }
@@ -66,19 +63,20 @@ final class TangemKeyFlowFactory: AddKeyFlowFactory {
     }
 
     func defaultName(cardId: String, walletIndex: Int?) -> String {
-        let ordinal = KeyInfo.count(keyType) + 1
-        let suffix = cardId.suffix(4)
-        let prefix = keyType == .tangem0 ? "Tangem0" : "Tangem"
-        if let walletIndex = walletIndex {
-            return "\(prefix) \(ordinal) · \(suffix)#\(walletIndex)"
-        }
-        return "\(prefix) \(ordinal) · \(suffix)"
+        return "Card Key"
     }
 }
 
 final class TangemKeyFlow: AddKeyFlow {
     private let tangemService: TangemCardService
     private let keyType: KeyType
+    private var prefilledSelection: TangemWalletSelection?
+    private let defaultKeyName = "Card Key"
+    var onKeyImported: ((Address) -> Void)?
+    var onWalletSelected: ((TangemWalletSelection) -> Void)?
+    var skipIntro: Bool = false
+    var skipPostImportFlow: Bool = false
+    var skipWalletSelection: Bool = false
 
     private var tangemFactory: TangemKeyFlowFactory {
         factory as! TangemKeyFlowFactory
@@ -94,8 +92,54 @@ final class TangemKeyFlow: AddKeyFlow {
         super.init(factory: TangemKeyFlowFactory(service: service, keyType: keyType), completion: completion)
     }
 
+    /// Starts a Tangem import flow using an already-activated card wallet.
+    /// The intro screen will be shown, but the scan step will be skipped.
+    convenience init(activatedCardInfo: ActivatedCardInfo,
+                     service: TangemCardService = TangemService.shared,
+                     keyType: KeyType = .tangem,
+                     completion: @escaping (Bool) -> Void) {
+        self.init(service: service, keyType: keyType, completion: completion)
+        self.prefilledSelection = TangemWalletSelection(
+            cardId: activatedCardInfo.cardId,
+            walletPublicKey: activatedCardInfo.wallet.publicKey,
+            address: activatedCardInfo.ethereumAddress,
+            derivationPath: nil,
+            walletIndex: activatedCardInfo.wallet.index
+        )
+    }
+
+    override func start() {
+        if skipIntro {
+            didIntro()
+        } else {
+            // Always show the intro screen, even when we have prefilled selection from activation
+            super.start()
+        }
+    }
+
     override func didIntro() {
-        showScan()
+        // If we have a prefilled selection from activation, use it instead of scanning
+        if let selection = prefilledSelection {
+            prefilledSelection = nil
+            handle(selection: selection)
+        } else {
+            showScan()
+        }
+    }
+
+    override func didGetKey() {
+        // Skip the "Enter Key Name" screen for Tangem cards.
+        // Always use a consistent local name.
+        keyParameters.name = defaultKeyName
+        importKey()
+    }
+
+    override func didImport() {
+        if skipPostImportFlow {
+            stop(success: true)
+        } else {
+            super.didImport()
+        }
     }
 
     private func showScan() {
@@ -105,11 +149,13 @@ final class TangemKeyFlow: AddKeyFlow {
             TangemLogger.info("Tangem key flow cancelled during scan")
             self?.stop(success: false)
         }
+        controller.autoSelectFirstWallet = skipWalletSelection
 
         show(controller)
     }
 
     private func handle(selection: TangemWalletSelection) {
+        onWalletSelected?(selection)
         let defaultName = tangemFactory.defaultName(cardId: selection.cardId, walletIndex: selection.walletIndex)
         let parameters = AddTangemKeyParameters(address: selection.address,
                                                 defaultName: defaultName,
@@ -132,25 +178,30 @@ final class TangemKeyFlow: AddKeyFlow {
 
         let walletIndexStr = params.walletIndex.map { String($0) } ?? "nil"
         TangemLogger.info("Importing Tangem key cardId=\(params.cardId) walletIndex=\(walletIndexStr)")
+        let imported: Bool
         switch keyType {
         case .tangem:
-            return OwnerKeyController.importKey(tangemCardId: params.cardId,
-                                                walletPublicKey: params.walletPublicKey,
-                                                address: params.address,
-                                                name: name,
-                                                derivationPath: params.derivationPath,
-                                                walletIndex: params.walletIndex)
+            imported = OwnerKeyController.importKey(tangemCardId: params.cardId,
+                                                    walletPublicKey: params.walletPublicKey,
+                                                    address: params.address,
+                                                    name: name,
+                                                    derivationPath: params.derivationPath,
+                                                    walletIndex: params.walletIndex)
         case .tangem0:
-            return OwnerKeyController.importKey(tangem0CardId: params.cardId,
-                                                walletPublicKey: params.walletPublicKey,
-                                                address: params.address,
-                                                name: name,
-                                                derivationPath: params.derivationPath,
-                                                walletIndex: params.walletIndex)
+            imported = OwnerKeyController.importKey(tangem0CardId: params.cardId,
+                                                    walletPublicKey: params.walletPublicKey,
+                                                    address: params.address,
+                                                    name: name,
+                                                    derivationPath: params.derivationPath,
+                                                    walletIndex: params.walletIndex)
         default:
             assertionFailure("Unsupported Tangem key type \(keyType)")
-            return false
+            imported = false
         }
+        if imported {
+            onKeyImported?(params.address)
+        }
+        return imported
     }
 }
 

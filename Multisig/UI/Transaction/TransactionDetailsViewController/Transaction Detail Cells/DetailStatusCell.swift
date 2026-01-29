@@ -45,7 +45,9 @@ class DetailStatusCell: UITableViewCell {
     }
 
     func setStatus(_ status: SCGModels.TxStatus, isReplaced: Bool = false) {
-        let statusText = isReplaced ? "Replaced" : status.title
+        let statusText = isReplaced
+            ? NSLocalizedString("ui_tx_status_replaced", comment: "Transaction replaced status")
+            : localizedStatusTitle(for: status)
         statusLabel.text = statusText
         appendixLabel.text = statusText
 
@@ -58,6 +60,19 @@ class DetailStatusCell: UITableViewCell {
         appendixLabel.textColor = color
 
         applyStrikethrough(titleLabel, enabled: isReplaced)
+    }
+
+    private func localizedStatusTitle(for status: SCGModels.TxStatus) -> String {
+        switch status {
+        case .awaitingExecution, .awaitingConfirmations, .awaitingYourConfirmation, .pending:
+            return NSLocalizedString("ui_tx_status_pending", comment: "Transaction pending status")
+        case .failed:
+            return NSLocalizedString("ui_tx_status_failed", comment: "Transaction failed status")
+        case .cancelled:
+            return NSLocalizedString("ui_tx_status_cancelled", comment: "Transaction cancelled status")
+        case .success:
+            return NSLocalizedString("ui_tx_status_executed", comment: "Transaction executed status")
+        }
     }
 
     func statusColor(status: SCGModels.TxStatus) -> UIColor {
@@ -79,7 +94,14 @@ class DetailStatusCell: UITableViewCell {
     }
 
     private func applyStrikethrough(_ label: UILabel, enabled: Bool) {
-        guard let text = label.text else { return }
+        // When `attributedText` is set, `label.text` can be nil. Always rebuild from the
+        // current rendered string to ensure we clear strike-through on reused views.
+        let text = label.attributedText?.string ?? label.text ?? ""
+        if text.isEmpty {
+            label.attributedText = nil
+            label.text = ""
+            return
+        }
         var attributes: [NSAttributedString.Key: Any] = [:]
         if let font = label.font {
             attributes[.font] = font

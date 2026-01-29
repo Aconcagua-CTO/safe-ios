@@ -54,7 +54,8 @@
                         <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Y8J-QG-QAN">
                             <rect key="frame" x="275" y="31" width="50" height="20.333333333333329"/>
                             <constraints>
-                                <constraint firstAttribute="width" relation="lessThanOrEqual" constant="50" id="ZKV-ih-YpQ"/>
+                                <!-- Avoid constraint breakage during fitting-size layout passes -->
+                                <constraint firstAttribute="width" relation="lessThanOrEqual" constant="50" priority="250" id="ZKV-ih-YpQ"/>
                             </constraints>
                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                             <nil key="textColor"/>

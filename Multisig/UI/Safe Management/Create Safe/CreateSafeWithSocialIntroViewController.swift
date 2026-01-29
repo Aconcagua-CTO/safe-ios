@@ -26,19 +26,19 @@ class CreateSafeWithSocialIntroViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Create a Safe Account"
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.title = NSLocalizedString("ui_safe_create_account_title", comment: "Title for creating a Safe account")
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         ribbonView.update(chain: chain)
         orLabel.setStyle(.caption1)
-        appleButton.setText("Continue with Apple ID", .filled)
-        googleButton.setText("Continue with Google", .filled)
-        addressButton.setText("Continue with a wallet address", .bordered)
-        infoView1.set(text: "Create a Safe Account now and add more owners later for better security")
-        infoView2.set(text: "Your owner key is secured by your social login only")
-        infoView3.set(text: "No need to keep seed phrases")
-        headerLabel.hyperLinkLabel("Select a social login to create your Safe Account.",
+        appleButton.setText(NSLocalizedString("ui_social_continue_apple", comment: "Continue with Apple ID button title"), .filled)
+        googleButton.setText(NSLocalizedString("ui_social_continue_google", comment: "Continue with Google button title"), .filled)
+        addressButton.setText(NSLocalizedString("ui_safe_continue_wallet_address", comment: "Continue with wallet address button title"), .bordered)
+        infoView1.set(text: NSLocalizedString("ui_safe_create_social_info_1", comment: "Create Safe social info 1"))
+        infoView2.set(text: NSLocalizedString("ui_safe_create_social_info_2", comment: "Create Safe social info 2"))
+        infoView3.set(text: NSLocalizedString("ui_safe_create_social_info_3", comment: "Create Safe social info 3"))
+        headerLabel.hyperLinkLabel(NSLocalizedString("ui_safe_social_header_text", comment: "Create Safe social header"),
                                    prefixStyle: .body,
-                                   linkText: "How does it work?",
+                                   linkText: NSLocalizedString("ui_safe_social_how_it_works", comment: "Create Safe social how it works"),
                                    linkStyle: .button,
                                    linkIcon: nil,
                                    underlined: false)

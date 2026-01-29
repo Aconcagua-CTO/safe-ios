@@ -50,7 +50,7 @@ final class VenderAmountViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "¿Cuánto querés vender?"
+        navigationItem.title = NSLocalizedString("ui_vender_amount_title", comment: "Vender amount title")
         navigationItem.backButtonTitle = "Back"
 
         view.backgroundColor = .backgroundPrimary
@@ -109,7 +109,7 @@ final class VenderAmountViewController: UIViewController {
         tooltipSource?.message = tokenBalance.fullBalanceWithSymbol
         tooltipSource?.aboveTarget = false
 
-        maxButton.setText("Send max", .primary)
+        maxButton.setText(NSLocalizedString("ui_tx_send_max_action", comment: "Send max action"), .primary)
         maxButton.contentHorizontalAlignment = .right
         maxButton.addTarget(self, action: #selector(maxButtonTouched), for: .touchUpInside)
 
@@ -124,7 +124,7 @@ final class VenderAmountViewController: UIViewController {
         amountField.delegate = self
 
         // Bottom button
-        nextButton.setText("Siguiente", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
         nextButton.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
 
         let stack = UIStackView(arrangedSubviews: [balanceRow, amountField])

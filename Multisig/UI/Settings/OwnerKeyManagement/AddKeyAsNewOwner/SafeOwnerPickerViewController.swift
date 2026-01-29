@@ -43,7 +43,7 @@ class SafeOwnerPickerViewController: ContainerViewController {
         safe = try! Safe.getSelected()
         client = JsonRpc2.Client(transport: JsonRpc2.ClientHTTPTransport(url: safe.chain!.authenticatedRpcUrl.absoluteString), serializer: JsonRpc2.DefaultSerializer())
 
-        navigationItem.title = "Replace owner"
+        navigationItem.title = NSLocalizedString("ui_owner_replace_title", comment: "Title for replacing an owner")
 
         headerLabel.setStyle(.body)
 
@@ -51,7 +51,9 @@ class SafeOwnerPickerViewController: ContainerViewController {
         stepLabel.textAlignment = .right
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: stepLabel)
         stepLabel.setStyle(.calloutTertiary)
-        stepLabel.text = "\(stepNumber) of \(maxSteps)"
+        stepLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                stepNumber,
+                                maxSteps)
 
         ownerListViewController = ChooseSafeOwnerViewController(safe: safe)
         ownerListViewController.onOwnerSelected = { [unowned self] position in
@@ -66,7 +68,7 @@ class SafeOwnerPickerViewController: ContainerViewController {
                 for: .valueChanged)
         ownerListViewController.setRefreshControl(pullToRefreshControl)
 
-        continueButton.setText("Continue", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
         continueButton.isEnabled = false
     }
 
@@ -91,7 +93,8 @@ class SafeOwnerPickerViewController: ContainerViewController {
 
             case .failure(let error):
 
-                self.ownerListViewController.onError(GSError.error(description: "Failed to load Safe Account owners", error: GSError.detailedError(from: error)))
+                self.ownerListViewController.onError(GSError.error(description: NSLocalizedString("ui_safe_owners_load_failed_error", comment: "Failed to load Safe owners error"),
+                                                                  error: GSError.detailedError(from: error)))
                 self.pullToRefreshControl.endRefreshing()
 
             case .success(let owners):

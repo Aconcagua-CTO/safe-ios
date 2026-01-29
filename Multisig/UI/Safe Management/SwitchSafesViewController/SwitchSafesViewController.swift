@@ -18,7 +18,7 @@ final class SwitchSafesViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Cambiar bóveda"
+        title = NSLocalizedString("ui_safe_switch_title", comment: "Title for switching safes")
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .close, target: self, action: #selector(didTapCloseButton))
         
@@ -98,12 +98,14 @@ final class SwitchSafesViewController: UITableViewController {
 
         case .deploying, .indexing:
             cell.setAddress(safe.addressValue, grayscale: true)
-            cell.setDetail(text: "Creating in progress...", style: .bodyTertiary)
+            cell.setDetail(text: NSLocalizedString("ui_safe_creating_in_progress", comment: "Safe creation in progress"),
+                           style: .bodyTertiary)
             cell.setProgress(enabled: true)
 
         case .deploymentFailed:
             cell.setAddress(safe.addressValue, grayscale: true)
-            cell.setDetail(text: "Failed to create", style: .bodyError)
+            cell.setDetail(text: NSLocalizedString("ui_safe_failed_to_create", comment: "Safe failed to create"),
+                           style: .bodyError)
         }
 
         cell.setSelection(safe.isSelected)
@@ -154,7 +156,8 @@ final class SwitchSafesViewController: UITableViewController {
 
         var actions = [UIContextualAction]()
 
-        let deleteAction = UIContextualAction(style: .destructive, title: "Remove") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(style: .destructive,
+                                              title: NSLocalizedString("ui_safe_remove_action", comment: "Remove safe action")) { [weak self] _, _, completion in
             self?.remove(safe: safe, sourceIndexPath: indexPath)
             completion(true)
         }
@@ -164,18 +167,21 @@ final class SwitchSafesViewController: UITableViewController {
     }
 
     private func remove(safe: Safe, sourceIndexPath: IndexPath) {
-        let title = safe.safeStatus == .deployed ?
-        "Removing a Safe only removes it from this app. It does not delete the Safe from the blockchain. Funds will not get lost." :
-        "Are you sure you want to remove this Safe? The transaction fees will not be returned."
+        let title = safe.safeStatus == .deployed
+            ? NSLocalizedString("ui_safe_remove_message_ready", comment: "Remove safe message when created")
+            : NSLocalizedString("ui_safe_remove_message_not_ready", comment: "Remove safe message when creating")
         let alertController = UIAlertController(
             title: nil,
             message: title,
             preferredStyle: .multiplatformActionSheet)
 
-        let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
+        let remove = UIAlertAction(title: NSLocalizedString("ui_safe_remove_action", comment: "Remove safe action"),
+                                   style: .destructive) { _ in
             Safe.remove(safe: safe)
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         
@@ -190,43 +196,70 @@ final class SwitchSafesViewController: UITableViewController {
     private func refreshVaultList() {
         guard App.shared.authRepository.isAuthenticated() else {
             VaultLogger.warning("[Manual Refresh] User attempted to refresh vaults without authentication")
-            SnackbarViewController.show("Please log in before refreshing vaults.", duration: 3.0)
+            SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_login_required", comment: "Login required to refresh vaults"),
+                                        duration: 3.0)
             return
         }
         
         guard !isManualVaultRefreshInProgress else {
             VaultLogger.debug("[Manual Refresh] Ignoring duplicate refresh request – already refreshing")
-            SnackbarViewController.show("Vault refresh already in progress…", duration: 2.0)
+            SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_in_progress", comment: "Vault refresh in progress"),
+                                        duration: 2.0)
             return
         }
         
         isManualVaultRefreshInProgress = true
         updateRefreshCellAppearance()
         VaultLogger.info("[Manual Refresh] User triggered vault refresh from SwitchSafesViewController")
-        
-        App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+        VaultLogger.info("[Manual Refresh] Refreshing chain registry before vault sync")
+
+        ChainManager.updateChainsInfo { [weak self] chainResult in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isManualVaultRefreshInProgress = false
-                self.updateRefreshCellAppearance()
-                
-                switch result {
-                case .success:
-                    VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
-                    SnackbarViewController.show("Vault list refreshed", duration: 3.0)
-                    // Also refresh token whitelist
-                    LogService.shared.info("[Manual Refresh] Triggering token whitelist sync")
-                    App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { whitelistResult in
-                        if case .failure(let error) = whitelistResult {
-                            LogService.shared.error("[Manual Refresh] Whitelist sync failed: \(error.localizedDescription)")
-                        } else {
-                            LogService.shared.info("[Manual Refresh] Whitelist sync completed")
+                switch chainResult {
+                case .success(let count):
+                    VaultLogger.success("[Manual Refresh] Chain registry refreshed (\(count) chain(s))")
+                case .failure(let error):
+                    VaultLogger.warning("[Manual Refresh] Chain registry refresh failed: \(error.localizedDescription)")
+                }
+
+                App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        self.isManualVaultRefreshInProgress = false
+                        self.updateRefreshCellAppearance()
+
+                        switch result {
+                        case .success:
+                            VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
+                            SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_success", comment: "Vault refresh success"),
+                                                        duration: 3.0)
+                            // Also refresh token whitelist
+                            LogService.shared.info("[Manual Refresh] Triggering token whitelist sync")
+                            App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { whitelistResult in
+                                if case .failure(let error) = whitelistResult {
+                                    LogService.shared.error("[Manual Refresh] Whitelist sync failed: \(error.localizedDescription)")
+                                } else {
+                                    LogService.shared.info("[Manual Refresh] Whitelist sync completed")
+                                }
+                            }
+                            // Also refresh transaction names
+                            LogService.shared.info("[Manual Refresh] Triggering transaction names sync")
+                            App.shared.transactionNamesRepository.syncTransactionNames(force: true) { namesResult in
+                                if case .failure(let error) = namesResult {
+                                    LogService.shared.error("[Manual Refresh] Transaction names sync failed: \(error.localizedDescription)")
+                                } else {
+                                    LogService.shared.info("[Manual Refresh] Transaction names sync completed")
+                                }
+                            }
+                            self.reloadData()
+                        case .failure(let error):
+                            VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)
+                            SnackbarViewController.show(String(format: NSLocalizedString("ui_safe_refresh_failed_format", comment: "Vault refresh failed format"),
+                                                               error.localizedDescription),
+                                                        duration: 4.0)
                         }
                     }
-                    self.reloadData()
-                case .failure(let error):
-                    VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)
-                    SnackbarViewController.show("Failed to refresh vaults: \(error.localizedDescription)", duration: 4.0)
                 }
             }
         }
@@ -259,7 +292,7 @@ final class GroupedSwitchSafesViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Cambiar bóveda"
+        title = NSLocalizedString("ui_safe_switch_title", comment: "Title for switching safes")
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .close, target: self, action: #selector(didTapCloseButton))
 
@@ -336,12 +369,14 @@ final class GroupedSwitchSafesViewController: UITableViewController {
 
         case .deploying, .indexing:
             cell.setAddress(entry.address, grayscale: true)
-            cell.setDetail(text: "Creating in progress...", style: .bodyTertiary)
+            cell.setDetail(text: NSLocalizedString("ui_safe_creating_in_progress", comment: "Safe creation in progress"),
+                           style: .bodyTertiary)
             cell.setProgress(enabled: true)
 
         case .deploymentFailed:
             cell.setAddress(entry.address, grayscale: true)
-            cell.setDetail(text: "Failed to create", style: .bodyError)
+            cell.setDetail(text: NSLocalizedString("ui_safe_failed_to_create", comment: "Safe failed to create"),
+                           style: .bodyError)
         }
 
         cell.setSelection(entry.isSelected)
@@ -381,7 +416,8 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         guard indexPath.section != refreshSection else { return nil }
         let entry = groupedEntries[indexPath.row]
 
-        let deleteAction = UIContextualAction(style: .destructive, title: "Remove") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(style: .destructive,
+                                              title: NSLocalizedString("ui_safe_remove_action", comment: "Remove safe action")) { [weak self] _, _, completion in
             self?.remove(safes: entry.safes, sourceIndexPath: indexPath)
             completion(true)
         }
@@ -391,18 +427,21 @@ final class GroupedSwitchSafesViewController: UITableViewController {
 
     private func remove(safes: [Safe], sourceIndexPath: IndexPath) {
         let hasDeployed = safes.contains(where: { $0.safeStatus == .deployed })
-        let title = hasDeployed ?
-        "Removing a Safe only removes it from this app. It does not delete the Safe from the blockchain. Funds will not get lost." :
-        "Are you sure you want to remove this Safe? The transaction fees will not be returned."
+        let title = hasDeployed
+            ? NSLocalizedString("ui_safe_remove_message_ready", comment: "Remove safe message when created")
+            : NSLocalizedString("ui_safe_remove_message_not_ready", comment: "Remove safe message when creating")
         let alertController = UIAlertController(
             title: nil,
             message: title,
             preferredStyle: .multiplatformActionSheet)
 
-        let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
+        let remove = UIAlertAction(title: NSLocalizedString("ui_safe_remove_action", comment: "Remove safe action"),
+                                   style: .destructive) { _ in
             safes.forEach { Safe.remove(safe: $0) }
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
 
@@ -417,43 +456,70 @@ final class GroupedSwitchSafesViewController: UITableViewController {
     private func refreshVaultList() {
         guard App.shared.authRepository.isAuthenticated() else {
             VaultLogger.warning("[Manual Refresh] User attempted to refresh vaults without authentication")
-            SnackbarViewController.show("Please log in before refreshing vaults.", duration: 3.0)
+            SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_login_required", comment: "Login required to refresh vaults"),
+                                        duration: 3.0)
             return
         }
 
         guard !isManualVaultRefreshInProgress else {
             VaultLogger.debug("[Manual Refresh] Ignoring duplicate refresh request – already refreshing")
-            SnackbarViewController.show("Vault refresh already in progress…", duration: 2.0)
+            SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_in_progress", comment: "Vault refresh in progress"),
+                                        duration: 2.0)
             return
         }
 
         isManualVaultRefreshInProgress = true
         updateRefreshCellAppearance()
         VaultLogger.info("[Manual Refresh] User triggered vault refresh from GroupedSwitchSafesViewController")
+        VaultLogger.info("[Manual Refresh] Refreshing chain registry before vault sync")
 
-        App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+        ChainManager.updateChainsInfo { [weak self] chainResult in
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.isManualVaultRefreshInProgress = false
-                self.updateRefreshCellAppearance()
+                switch chainResult {
+                case .success(let count):
+                    VaultLogger.success("[Manual Refresh] Chain registry refreshed (\(count) chain(s))")
+                case .failure(let error):
+                    VaultLogger.warning("[Manual Refresh] Chain registry refresh failed: \(error.localizedDescription)")
+                }
 
-                switch result {
-                case .success:
-                    VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
-                    SnackbarViewController.show("Vault list refreshed", duration: 3.0)
-                    // Also refresh token whitelist
-                    LogService.shared.info("[Manual Refresh] Triggering token whitelist sync")
-                    App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { whitelistResult in
-                        if case .failure(let error) = whitelistResult {
-                            LogService.shared.error("[Manual Refresh] Whitelist sync failed: \(error.localizedDescription)")
-                        } else {
-                            LogService.shared.info("[Manual Refresh] Whitelist sync completed")
+                App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        self.isManualVaultRefreshInProgress = false
+                        self.updateRefreshCellAppearance()
+
+                        switch result {
+                        case .success:
+                            VaultLogger.success("[Manual Refresh] Vault refresh finished successfully")
+                            SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_success", comment: "Vault refresh success"),
+                                                        duration: 3.0)
+                            // Also refresh token whitelist
+                            LogService.shared.info("[Manual Refresh] Triggering token whitelist sync")
+                            App.shared.tokenWhitelistRepository.syncWhitelist(force: true, network: nil) { whitelistResult in
+                                if case .failure(let error) = whitelistResult {
+                                    LogService.shared.error("[Manual Refresh] Whitelist sync failed: \(error.localizedDescription)")
+                                } else {
+                                    LogService.shared.info("[Manual Refresh] Whitelist sync completed")
+                                }
+                            }
+                            // Also refresh transaction names
+                            LogService.shared.info("[Manual Refresh] Triggering transaction names sync")
+                            App.shared.transactionNamesRepository.syncTransactionNames(force: true) { namesResult in
+                                if case .failure(let error) = namesResult {
+                                    LogService.shared.error("[Manual Refresh] Transaction names sync failed: \(error.localizedDescription)")
+                                } else {
+                                    LogService.shared.info("[Manual Refresh] Transaction names sync completed")
+                                }
+                            }
+                            self.reloadData()
+                        case .failure(let error):
+                            VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)
+                            SnackbarViewController.show(String(format: NSLocalizedString("ui_safe_refresh_failed_format", comment: "Vault refresh failed format"),
+                                                               error.localizedDescription),
+                                                        duration: 4.0)
                         }
                     }
-                    self.reloadData()
-                case .failure(let error):
-                    VaultLogger.error("[Manual Refresh] Vault refresh failed", error: error)
-                    SnackbarViewController.show("Failed to refresh vaults: \(error.localizedDescription)", duration: 4.0)
                 }
             }
         }

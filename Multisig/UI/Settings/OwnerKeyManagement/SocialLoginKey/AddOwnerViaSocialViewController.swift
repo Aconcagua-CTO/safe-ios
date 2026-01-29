@@ -20,12 +20,12 @@ class AddOwnerViaSocialViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Continue with…"
+        title = NSLocalizedString("ui_social_continue_with", comment: "Title for selecting a social login provider")
         
         ViewControllerFactory.removeNavigationBarBorder(self)
         
-        appleButton.setText("Continue with Apple ID", .filled)
-        googleButton.setText("Continue with Google", .filled)
+        appleButton.setText(NSLocalizedString("ui_social_continue_apple", comment: "Continue with Apple ID button title"), .filled)
+        googleButton.setText(NSLocalizedString("ui_social_continue_google", comment: "Continue with Google button title"), .filled)
         titleLabel.setStyle(.body)
     }
 

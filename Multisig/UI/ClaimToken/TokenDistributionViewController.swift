@@ -28,23 +28,28 @@ class TokenDistributionViewController: UIViewController {
 
         ViewControllerFactory.removeNavigationBarBorder(self)
         navigationItem.largeTitleDisplayMode = .never
-        distributionView.set("Distribution details") { [unowned self] in
+        distributionView.set(NSLocalizedString("ui_claim_distribution_details_title", comment: "Distribution details title")) { [unowned self] in
             Tracker.trackEvent(.userClaimDistrDetails)
 
             let content: [(title: String?, description: String?)] = [
-                (title: "60% — Community Treasuries", description: "40% SafeDAO Treasury\n15% GnosisDAO Treasury\n5% Joint Treasury (GNO <> SAFE)"),
-                (title: "15% — Core Contributors", description: "Current and future core contributor teams"),
-                (title: "15% — Safe Foundation", description: "8% strategic raise\n7% grants and reserve"),
-                (title: "5% — Ecosystem (Guardians)", description: "1.25% allocation\n1.25% vested allocation\n2.5% future programs"),
-                (title: "5% — User", description: "2.5% allocation\n2.5% vested allocation")]
-            let vc = ViewControllerFactory.modal(viewController: DetailedInfoListViewController(title: "Distribution details",
+                (title: NSLocalizedString("ui_claim_distribution_community_title", comment: "Distribution community title"),
+                 description: NSLocalizedString("ui_claim_distribution_community_desc", comment: "Distribution community description")),
+                (title: NSLocalizedString("ui_claim_distribution_core_title", comment: "Distribution core title"),
+                 description: NSLocalizedString("ui_claim_distribution_core_desc", comment: "Distribution core description")),
+                (title: NSLocalizedString("ui_claim_distribution_foundation_title", comment: "Distribution foundation title"),
+                 description: NSLocalizedString("ui_claim_distribution_foundation_desc", comment: "Distribution foundation description")),
+                (title: NSLocalizedString("ui_claim_distribution_ecosystem_title", comment: "Distribution ecosystem title"),
+                 description: NSLocalizedString("ui_claim_distribution_ecosystem_desc", comment: "Distribution ecosystem description")),
+                (title: NSLocalizedString("ui_claim_distribution_user_title", comment: "Distribution user title"),
+                 description: NSLocalizedString("ui_claim_distribution_user_desc", comment: "Distribution user description"))]
+            let vc = ViewControllerFactory.modal(viewController: DetailedInfoListViewController(title: NSLocalizedString("ui_claim_distribution_details_title", comment: "Distribution details title"),
                                                                                                 content: content,
                                                                                                 trackingEvent: .screenClaimDistrDetail))
             present(vc, animated: true)
         }
         titleLabel.setStyle(.title2)
         descriptionLabel.setStyle(.body)
-        nextButton.setText("Next", .filled)
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
     }
 
     @IBAction func didTapNext(_ sender: Any) {

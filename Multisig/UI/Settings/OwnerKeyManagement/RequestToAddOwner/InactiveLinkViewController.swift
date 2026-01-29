@@ -55,7 +55,7 @@ class InactiveLinkViewController: UIViewController {
         let vc = InactiveLinkViewController()
         vc.titleText = "Something went wrong"
         vc.bodyText = error.localizedDescription
-        vc.buttonText = "Close"
+        vc.buttonText = NSLocalizedString("button_close", comment: "Close button title")
         vc.onDone = completion
         return vc
     }

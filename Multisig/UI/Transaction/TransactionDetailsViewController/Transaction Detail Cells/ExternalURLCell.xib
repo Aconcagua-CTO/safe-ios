@@ -21,7 +21,8 @@
                     <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="SfF-2r-PVD">
                         <rect key="frame" x="16" y="0.0" width="51" height="60"/>
                         <constraints>
-                            <constraint firstAttribute="height" constant="60" id="6Pu-4S-3vn"/>
+                            <!-- Avoid breaking during fitting-size layout passes -->
+                            <constraint firstAttribute="height" constant="60" priority="999" id="6Pu-4S-3vn"/>
                         </constraints>
                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                         <state key="normal" title="Button">

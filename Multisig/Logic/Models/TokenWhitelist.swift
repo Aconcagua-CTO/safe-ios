@@ -116,6 +116,72 @@ extension TokenWhitelist {
         return try? context.fetch(fr).first
     }
 
+    /// True when the token exists in whitelist and is not disabled.
+    static func isWhitelisted(chainId: String, networkAddress: String) -> Bool {
+        guard let entry = TokenWhitelist.by(chainId: chainId, networkAddress: networkAddress) else {
+            return false
+        }
+        return entry.enabled != false
+    }
+
+    /// Resolves Aave V3 reserve identifiers for a given aToken symbol on a specific chain.
+    /// - Returns: (marketPool, underlying) if the whitelist entry is enriched.
+    static func aaveV3ReserveConfig(chainId: String,
+                                    aTokenSymbolUpper: String) -> (marketPool: String, underlying: String)? {
+        let symbol = aTokenSymbolUpper.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !symbol.isEmpty else { return nil }
+
+        let context = App.shared.coreDataStack.viewContext
+        let fr = TokenWhitelist.fetchRequest()
+        fr.predicate = NSPredicate(
+            format: "chainId == %@ AND tokenSymbol ==[c] %@ AND yieldSource ==[c] %@ AND " +
+                "aaveMarketPoolAddress != nil AND aaveMarketPoolAddress != '' AND " +
+                "aaveUnderlyingTokenAddress != nil AND aaveUnderlyingTokenAddress != ''",
+            chainId, symbol, "aave_v3"
+        )
+        fr.fetchLimit = 1
+
+        guard let entry = try? context.fetch(fr).first else { return nil }
+        let market = (entry.aaveMarketPoolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let underlying = (entry.aaveUnderlyingTokenAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !market.isEmpty, !underlying.isEmpty else { return nil }
+        return (marketPool: market, underlying: underlying)
+    }
+
+    /// Resolves an enriched Aave V3 reserve config, preferring a specific chain when available.
+    /// - Returns: (chainId, marketPool, underlying) if a matching entry exists.
+    static func aaveV3ReserveConfig(preferredChainId: String?,
+                                    aTokenSymbolUpper: String) -> (chainId: Int, marketPool: String, underlying: String)? {
+        let symbol = aTokenSymbolUpper.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !symbol.isEmpty else { return nil }
+
+        let candidates = TokenWhitelist.all.filter { entry in
+            let tokenSymbol = (entry.tokenSymbol ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard tokenSymbol == symbol else { return false }
+            let source = (entry.yieldSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard source == "aave_v3" else { return false }
+            let market = (entry.aaveMarketPoolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let underlying = (entry.aaveUnderlyingTokenAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return !market.isEmpty && !underlying.isEmpty
+        }
+
+        let pick: TokenWhitelist?
+        if let preferredChainId {
+            pick = candidates.first(where: {
+                ($0.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines) == preferredChainId
+            }) ?? candidates.first
+        } else {
+            pick = candidates.first
+        }
+
+        guard let entry = pick else { return nil }
+        let market = (entry.aaveMarketPoolAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let underlying = (entry.aaveUnderlyingTokenAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let chainIdStr = (entry.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let chainId = Int(chainIdStr), !market.isEmpty, !underlying.isEmpty else { return nil }
+        return (chainId: chainId, marketPool: market, underlying: underlying)
+    }
+
     static func upsert(entries: [TokenWhitelistEntryResponse]) {
         dispatchPrecondition(condition: .onQueue(.main))
         let context = App.shared.coreDataStack.viewContext

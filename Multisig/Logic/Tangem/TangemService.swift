@@ -504,8 +504,8 @@ final class TangemService {
         do {
             let runnable = TangemActivationTask(curve: .secp256k1, accessCode: accessCode)
             let initialMessage = Message(
-                header: nil,
-                body: "Safe Wallet\n\nHold your Tangem card near the top of your iPhone to activate it."
+                header: NSLocalizedString("ui_tangem_scan_message_header", comment: "Tangem scan message header"),
+                body: NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")
             )
 
             let result: TangemActivationTask.Result = try await perform("activate card") { sdk, completion in

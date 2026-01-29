@@ -129,7 +129,7 @@ final class TransactionRequestsService {
         return nil
     }
 
-    private static func networkName(forChainId chainId: String?) -> String? {
+    static func networkName(forChainId chainId: String?) -> String? {
         guard let chainId else { return nil }
         switch chainId {
         case "137": return "POLYGON"

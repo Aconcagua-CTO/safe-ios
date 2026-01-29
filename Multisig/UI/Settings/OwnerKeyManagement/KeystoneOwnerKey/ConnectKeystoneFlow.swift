@@ -139,7 +139,7 @@ final class ConnectKeystoneFactory: AddKeyFlowFactory {
                       title: "How secure is that?",
                       body: "Your key will remain on your Keystone wallet. We do not store it in the app.")]
         introVC.viewTrackingEvent = .keystoneOwnerOnboarding
-        introVC.navigationItem.title = "Connect Keystone"
+        introVC.navigationItem.title = NSLocalizedString("ui_keystone_connect_title", comment: "Title for connecting a Keystone device")
         introVC.navigationItem.largeTitleDisplayMode = .never
         return introVC
     }

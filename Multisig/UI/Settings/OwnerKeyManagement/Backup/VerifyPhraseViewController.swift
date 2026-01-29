@@ -86,10 +86,10 @@ class VerifyPhraseViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Verify seed phrase"
-        titleLabel.text = "Tap on the correct word from your seed phrase."
-        wordLabel.text = "Word"
-        errorLabel.text = "Incorrect word"
+        navigationItem.title = NSLocalizedString("ui_seed_verify_title", comment: "Title for verifying seed phrase")
+        titleLabel.text = NSLocalizedString("ui_seed_verify_instruction", comment: "Seed phrase verify instruction")
+        wordLabel.text = NSLocalizedString("ui_seed_verify_word_title", comment: "Seed phrase word title")
+        errorLabel.text = NSLocalizedString("ui_seed_verify_incorrect_word", comment: "Seed phrase incorrect word")
 
         // we have to set frame explicitly, otherwise the text is automatically ellipsized by the system.
         pageLabel.frame = CGRect(x: 0, y: 0, width: 50, height: 21)
@@ -102,7 +102,7 @@ class VerifyPhraseViewController: UIViewController {
         wordNumberLabel.setStyle(.headlineSecondary)
         errorLabel.setStyle(.calloutError)
 
-        restartButton.setText("Restart", .filled)
+        restartButton.setText(NSLocalizedString("ui_restart_action", comment: "Restart action"), .filled)
         // we're taking the system icon here
         let restartIcon = UIImage(
             systemName: "arrow.triangle.2.circlepath",
@@ -222,9 +222,12 @@ class VerifyPhraseViewController: UIViewController {
         }
 
         // update the word number
-        wordNumberLabel.text = "#\(question.wordNumber + 1)"
+        wordNumberLabel.text = String(format: NSLocalizedString("ui_seed_verify_word_number_format", comment: "Seed phrase word number format"),
+                                      question.wordNumber + 1)
         // update the page (question) number
-        pageLabel.text = "\(currentQuestion + 1) of \(questions.count)"
+        pageLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                currentQuestion + 1,
+                                questions.count)
     }
 
     func createWordView() -> WordView {

@@ -12,6 +12,16 @@ protocol TokenDetailBalancesProvider: AnyObject {
     /// Returns the list of per-chain holdings for a MoneyMarket token (Aave aToken).
     /// The returned `aTokenAddress` MUST be lower/upper-case agnostic (caller should normalize).
     func moneyMarketHoldings(for token: TokenBalance) -> [(chainId: Int, aTokenAddress: String)]
+
+    /// Returns backend-provided token metadata for a specific chain+address.
+    func tokenMetadata(chainId: Int, tokenAddress: String) -> TokenBalanceMetadata?
+}
+
+struct TokenBalanceMetadata {
+    let yieldSource: String?
+    let priceSource: String?
+    let aaveMarketPoolAddress: String?
+    let aaveUnderlyingTokenAddress: String?
 }
 
 

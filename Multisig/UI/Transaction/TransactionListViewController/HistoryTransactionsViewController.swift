@@ -39,22 +39,23 @@ class HistoryTransactionsViewController: TransactionListViewController {
     }
 
     override func asyncTransactionList(
-        completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void) -> URLSessionTask? {
+        completion: @escaping (Result<TransactionSummaryPage, Error>) -> Void) -> URLSessionTask? {
         guard let safe = safe else { return nil }
         return asyncTransactionList(for: safe, completion: completion)
     }
 
     override func asyncTransactionList(
         for safe: Safe,
-        completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void
+        completion: @escaping (Result<TransactionSummaryPage, Error>) -> Void
     ) -> URLSessionTask? {
         guard let chainId = safe.chain?.id else { return nil }
-        return clientGatewayService.asyncHistoryTransactionsSummaryList(safeAddress: safe.addressValue,
-                                                                        chainId: chainId,
-                                                                        completion: completion)
+        let service = safe.chain?.gatewayService() ?? clientGatewayService
+        return service.asyncHistoryTransactionsSummaryList(safeAddress: safe.addressValue,
+                                                           chainId: chainId,
+                                                           completion: completion)
     }
 
-    override func asyncTransactionList(pageUri: String, completion: @escaping (Result<Page<SCGModels.TransactionSummaryItem>, Error>) -> Void) throws -> URLSessionTask? {
-        clientGatewayService.asyncExecute(request: try PagedRequest<SCGModels.TransactionSummaryItem>(pageUri), completion: completion)
+    override func asyncTransactionList(pageUri: String, completion: @escaping (Result<TransactionSummaryPage, Error>) -> Void) throws -> URLSessionTask? {
+        clientGatewayService.asyncExecute(request: try TransactionSummaryPagedRequest(pageUri), completion: completion)
     }
 }

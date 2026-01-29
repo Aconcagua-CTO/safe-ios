@@ -28,7 +28,7 @@ class ValidateRequestToAddOwnerViewController: UIViewController {
 
         descriptionLabel.setStyle(.headline)
 
-        cancelButton.setText("Cancel", .plain)
+        cancelButton.setText(NSLocalizedString("cancel", comment: "Cancel button title"), .plain)
 
         validate()
     }

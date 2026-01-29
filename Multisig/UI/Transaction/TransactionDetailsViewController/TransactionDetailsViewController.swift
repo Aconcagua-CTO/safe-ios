@@ -48,6 +48,39 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     private var ledgerKeyInfo: KeyInfo?
     private var keystoneSignFlow: KeystoneSignFlow!
     
+    // MARK: - Signing helpers (robust to missing `signers` in tx-details)
+    //
+    // We’ve observed tx-details responses where `detailedExecutionInfo.signers` is returned as an empty list (`[]`)
+    // even when the Safe has owners. Relying exclusively on `multisigInfo.signers` then blocks confirmations.
+    // These helpers fall back to the Safe owners list when tx-details has no signers.
+    private var safeOwnerAddresses: [Address] {
+        safe.ownersInfo?.map(\.address) ?? []
+    }
+    
+    private var safeOwnerKeys: [KeyInfo] {
+        (try? KeyInfo.keys(addresses: safeOwnerAddresses)) ?? []
+    }
+    
+    private func remainingSignerKeysForConfirmation() -> [KeyInfo] {
+        guard let multisigInfo = tx?.multisigInfo else { return [] }
+        
+        let alreadyConfirmed = Set(multisigInfo.confirmations.map { $0.signer.value.address })
+        
+        let signersFromTxDetails: [Address] = multisigInfo.signers.map(\.value.address)
+        let signersSource: [Address] = signersFromTxDetails.isEmpty ? safeOwnerAddresses : signersFromTxDetails
+        let remaining = signersSource.filter { !alreadyConfirmed.contains($0) }
+        
+        return (try? KeyInfo.keys(addresses: remaining)) ?? []
+    }
+    
+    private var needsYourConfirmationForCurrentSafe: Bool {
+        guard let tx else { return false }
+        guard tx.txStatus.isAwatingConfiramtions else { return false }
+        guard let multisigInfo = tx.multisigInfo else { return false }
+        guard multisigInfo.needsMoreSignatures else { return false }
+        return !remainingSignerKeysForConfirmation().isEmpty
+    }
+    
     convenience init(transactionID: String) {
         self.init(namedClass: Self.superclass())
         txSource = .id(transactionID)
@@ -78,7 +111,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Transaction Details"
+        title = NSLocalizedString("ui_tx_details_title", comment: "Title for transaction details screen")
 
         safe = providedSafe ?? (try! Safe.getSelected()!)
 
@@ -99,7 +132,6 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                              .ownerKeyUpdated,
                              .chainInfoChanged,
                              .addressbookChanged,
-                             .selectedSafeUpdated,
                              .selectedSafeChanged,
                              .transactionDataInvalidated] {
             notificationCenter.addObserver(
@@ -126,7 +158,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         let vc = UIActivityViewController(activityItems: [text], applicationActivities: nil)
         vc.completionWithItemsHandler = { _, success, _, _ in
             if success {
-                App.shared.snackbar.show(message: "Transaction link shared")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_transaction_link_shared_message", comment: "Transaction link shared message"))
             }
         }
 
@@ -140,7 +172,6 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                 switch result {
                 case .success(let safeInfo):
                     self?.safe.update(from: safeInfo)
-                    self?.onSuccess()
                 case .failure(_):
                     break
                 }
@@ -191,17 +222,17 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         actionsContainerView.translatesAutoresizingMaskIntoConstraints = false
 
         rejectButton = UIButton(type: .custom)
-        rejectButton.setText("Reject", .filledError)
+        rejectButton.setText(NSLocalizedString("ui_tx_reject_action", comment: "Reject transaction action"), .filledError)
         rejectButton.addTarget(self, action: #selector(didTapReject), for: .touchUpInside)
         actionsContainerView.addArrangedSubview(rejectButton)
 
         confirmButton = UIButton(type: .custom)
-        confirmButton.setText("Confirm", .filled)
+        confirmButton.setText(NSLocalizedString("ui_tx_confirm_action", comment: "Confirm transaction action"), .filled)
         confirmButton.addTarget(self, action: #selector(didTapConfirm), for: .touchUpInside)
         actionsContainerView.addArrangedSubview(confirmButton)
 
         executeButton = UIButton(type: .custom)
-        executeButton.setText("Execute", .filled)
+        executeButton.setText(NSLocalizedString("ui_tx_execute_action", comment: "Execute transaction action"), .filled)
         executeButton.addTarget(self, action: #selector(didTapExecute), for: .touchUpInside)
         actionsContainerView.addArrangedSubview(executeButton)
 
@@ -228,7 +259,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
 
     private var showsActionsViewContrainer: Bool  {
         // allow executing to anyone with a key
-        tx?.multisigInfo?.canSign == true && (showsRejectButton || showsConfirmButton || showsExecuteButton) || showsExecuteButton
+        (!safeOwnerKeys.isEmpty && (showsRejectButton || showsConfirmButton || showsExecuteButton)) || showsExecuteButton
     }
 
     private var showsRejectButton: Bool {
@@ -238,7 +269,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         default:
             guard let multisigInfo = tx?.multisigInfo,
                   let status = tx?.txStatus,
-                  multisigInfo.canSign
+                  !safeOwnerKeys.isEmpty
                     else { return false }
 
             if status == .awaitingExecution && !multisigInfo.isRejected() && !pendingExecution {
@@ -256,7 +287,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         case .rejection(_):
             if tx!.txStatus.isAwatingConfiramtions,
                let multisigInfo = tx!.multisigInfo,
-               multisigInfo.canSign {
+               !safeOwnerKeys.isEmpty {
                 return true
             }
             return false
@@ -293,7 +324,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
     }
 
     private var enableConfirmButton: Bool {
-        tx?.needsYourConfirmation ?? false
+        needsYourConfirmationForCurrentSafe
     }
 
     // MARK: - Signing, Rejection, Execution
@@ -309,11 +340,9 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         }
         #endif
         
-        guard let signers = tx?.multisigInfo?.signerKeys() else {
-            #if DEBUG
-            LogService.shared.debug("[DualSignatureFlow] ❌ signerKeys() returned nil in TransactionDetailsViewController")
-            #endif
-            assertionFailure()
+        let signers = remainingSignerKeysForConfirmation()
+        guard !signers.isEmpty else {
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_owner_key_available", comment: "No owner key available to sign transaction"))
             return
         }
         
@@ -400,7 +429,8 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     confirmAndRefresh(safeTxHash: safeTxHash, signature: signature.hexadecimal, keyInfo: keyInfo)
 
                 } catch {
-                    onError(GSError.error(description: "Failed to confirm transaction", error: error))
+                    onError(GSError.error(description: NSLocalizedString("ui_tx_failed_confirm_error", comment: "Failed to confirm transaction error"),
+                                          error: error))
                 }
             }
 
@@ -553,7 +583,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                 if case Result.success(_) = result {
                     DispatchQueue.main.async {
                         NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
-                        App.shared.snackbar.show(message: "Confirmation successfully submitted")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_tx_confirmation_submitted_message", comment: "Confirmation submitted message"))
                         Tracker.trackEvent(
                             .userTransactionConfirmed,
                             parameters: TrackingEvent.keyTypeParameters(keyInfo, parameters: ["source": "tx_details"])
@@ -605,7 +635,8 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     (error as NSError).domain == NSURLErrorDomain {
                     return
                 }
-                self.onError(GSError.error(description: "Failed to load transaction details", error: error))
+                self.onError(GSError.error(description: NSLocalizedString("ui_tx_failed_load_details_error", comment: "Failed to load transaction details error"),
+                                           error: error))
 
                 self.trackScreenWithLoadingFailure()
             }
@@ -629,7 +660,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         self.tx = tx
 
         // artificial tx status
-        if self.tx!.needsYourConfirmation {
+        if needsYourConfirmationForCurrentSafe {
             self.tx!.txStatus = .awaitingYourConfirmation
         }
 

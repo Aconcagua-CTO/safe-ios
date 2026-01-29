@@ -208,7 +208,7 @@ class WCIncomingTransactionRequestViewController: ReviewSafeTransactionViewContr
             self?.dismiss(animated: true, completion: nil)
         }
 
-        App.shared.snackbar.show(message: "The transaction is submitted and can be confirmed by other owners.")
+        App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_tx_submitted_message", comment: "WalletConnect transaction submitted message"))
 
         guard let multisigInfo = transaction.multisigInfo else { return }
         onSubmit?(multisigInfo.nonce, multisigInfo.safeTxHash)

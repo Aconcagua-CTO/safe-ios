@@ -128,7 +128,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             safe = selectedSafe
             updateSections()
         } catch {
-            onError(GSError.error(description: "Failed to load Safe Account settings", error: error))
+            onError(GSError.error(description: NSLocalizedString("ui_safe_settings_load_failed_error", comment: "Failed to load Safe settings error"),
+                                  error: error))
         }
         tableView.reloadData()
     }
@@ -163,7 +164,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                             return
                         }
 
-                        self.onError(GSError.error(description: "Failed to load Safe Account settings", error: detailedError))
+                        self.onError(GSError.error(description: NSLocalizedString("ui_safe_settings_load_failed_error", comment: "Failed to load Safe settings error"),
+                                                   error: detailedError))
                     }
                 case .success(let safeInfo):
                     DispatchQueue.main.async { [weak self] in
@@ -177,7 +179,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                 }
             }
         } catch {
-            onError(GSError.error(description: "Failed to load Safe Account settings", error: GSError.detailedError(from: error)))
+            onError(GSError.error(description: NSLocalizedString("ui_safe_settings_load_failed_error", comment: "Failed to load Safe settings error"),
+                                  error: GSError.detailedError(from: error)))
         }
     }
 
@@ -197,7 +200,8 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                     (error as NSError).domain == NSURLErrorDomain {
                     return
                 }
-                self.onError(GSError.error(description: "Failed to load Safe Account owners", error: GSError.detailedError(from: error)))
+                self.onError(GSError.error(description: NSLocalizedString("ui_safe_owners_load_failed_error", comment: "Failed to load Safe owners error"),
+                                           error: GSError.detailedError(from: error)))
             case .success(let owners):
                 self.safeOwners = owners.compactMap { owner in
                     AddressInfo.init(address: owner)
@@ -220,7 +224,9 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         {
             newSections += [
                 (section: .name("Safe Account Name"), items: [Section.Name.name(safe.name ?? "Safe \(safe.addressValue.ellipsized())")]),
-                (section: .security("SECURITY"), items: [Section.Security.security("Account security", safe.security)]),
+                (section: .security(NSLocalizedString("ui_security_section_title", comment: "Security section title")),
+                 items: [Section.Security.security(NSLocalizedString("ui_safe_account_security_title", comment: "Account security title"),
+                                                   safe.security)]),
                 (section: .safeVersion("Safe Account base contract version"),
                  items: [Section.ContractVersion.versionInfo(implementationInfo, implementationVersionState, version)]),
 
@@ -324,7 +330,9 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                     }
                 }
 
-                let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+                let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                           style: .cancel,
+                                           handler: nil)
                 alertController.addAction(remove)
                 alertController.addAction(cancel)
                 

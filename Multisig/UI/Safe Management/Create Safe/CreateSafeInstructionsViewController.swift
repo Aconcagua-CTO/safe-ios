@@ -17,17 +17,23 @@ class CreateSafeInstructionsViewController: InstructionsViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.largeTitleDisplayMode = .never
-        title = "How does it work?"
+        title = NSLocalizedString("ui_safe_how_it_works_title", comment: "Safe creation how it works title")
 
         steps = [
             .header,
-            .step(number: "1", title: "Choose a name", description: "How do you want to identify your Safe Account?"),
-            .step(number: "2", title: "Add owners", description: "Owners are owner keys that control Safe Account. Add owners and specify the number of required signatures."),
-            .step(number: "3", title: "Pay network fee", description: "A network fee is required for creation, as Safe Account is a smart contract. We don’t profit from the fees."),
-            .finalStep(title: "Start using your Safe Account!")
+            .step(number: "1",
+                  title: NSLocalizedString("ui_safe_step_choose_name_title", comment: "Choose name step title"),
+                  description: NSLocalizedString("ui_safe_step_choose_name_description", comment: "Choose name step description")),
+            .step(number: "2",
+                  title: NSLocalizedString("ui_safe_step_add_owners_title", comment: "Add owners step title"),
+                  description: NSLocalizedString("ui_safe_step_add_owners_description", comment: "Add owners step description")),
+            .step(number: "3",
+                  title: NSLocalizedString("ui_safe_step_pay_network_fee_title", comment: "Pay network fee step title"),
+                  description: NSLocalizedString("ui_safe_step_pay_network_fee_description", comment: "Pay network fee step description")),
+            .finalStep(title: NSLocalizedString("ui_safe_final_step_title", comment: "Final step title"))
         ]
 
-        button.setText("OK, Let’s start", .filled)
+        button.setText(NSLocalizedString("ui_safe_ok_lets_start_button", comment: "OK let's start button"), .filled)
     }
     
     override func viewDidAppear(_ animated: Bool) {

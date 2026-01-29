@@ -52,12 +52,15 @@ class SignatureRequestToWalletViewController: PendingWalletActionViewController 
 
         if transaction != nil {
             if isRejection {
-                titleLabel.text = "Confirm Rejection with your owner key from \(walletName)"
+                titleLabel.text = String(format: NSLocalizedString("ui_wallet_confirm_rejection_format", comment: "Confirm rejection with owner key"),
+                                         walletName)
             } else {
-                titleLabel.text = "Confirm Transaction with your owner key from \(walletName)"
+                titleLabel.text = String(format: NSLocalizedString("ui_wallet_confirm_transaction_format", comment: "Confirm transaction with owner key"),
+                                         walletName)
             }
         } else {
-            titleLabel.text = "Approve request with your owner key from \(walletName)"
+            titleLabel.text = String(format: NSLocalizedString("ui_wallet_approve_request_format", comment: "Approve request with owner key"),
+                                     walletName)
         }
     }
 

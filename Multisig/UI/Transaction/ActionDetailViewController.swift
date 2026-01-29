@@ -123,9 +123,12 @@ class ActionDetailViewController: UITableViewController {
                     )
 
                     if let currencySymbol = chain.nativeCurrency?.symbol {
-                        title = "Interact with (Send \(amount) \(currencySymbol) to): "
+                        title = String(format: NSLocalizedString("ui_tx_interact_send_amount_currency_title_format", comment: "Interact with send amount and currency title"),
+                                       amount,
+                                       currencySymbol)
                     } else {
-                        title = "Interact with (Send \(amount) to): "
+                        title = String(format: NSLocalizedString("ui_tx_interact_send_amount_title_format", comment: "Interact with send amount title"),
+                                       amount)
                     }
                 }
             }
@@ -256,7 +259,7 @@ class ActionDetailViewController: UITableViewController {
 
     private func emptyCell(indentation: CGFloat = 0) -> UITableViewCell {
         let cell = tableView.dequeueCell(ActionDetailTextCell.self)
-        cell.setText("empty", style: .bodyTertiary)
+        cell.setText(NSLocalizedString("ui_empty_title", comment: "Empty placeholder"), style: .bodyTertiary)
         cell.selectionStyle = .none
         cell.margins.leading += indentation
         return cell

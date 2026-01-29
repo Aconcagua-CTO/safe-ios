@@ -47,7 +47,9 @@ class EditConfirmationsViewController: UIViewController, UITableViewDataSource, 
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: stepLabel)
 
         stepLabel.setStyle(.calloutTertiary)
-        stepLabel.text = "\(stepNumber) of \(maxSteps)"
+        stepLabel.text = String(format: NSLocalizedString("ui_step_progress_format", comment: "Step progress format"),
+                                stepNumber,
+                                maxSteps)
 
         if promptText.isEmpty {
             labelContainer.isHidden = true
@@ -56,7 +58,7 @@ class EditConfirmationsViewController: UIViewController, UITableViewDataSource, 
             promptLabel.setStyle(.body)
             promptLabel.text = promptText
         }
-        button.setText("Continue", .filled)
+        button.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
     }
 
     @IBAction func didTapButton(_ sender: Any) {
@@ -83,14 +85,18 @@ class EditConfirmationsViewController: UIViewController, UITableViewDataSource, 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         if indexPath.row == 0 {
             return cellBuilder.thresholdCell(
-                    "\(min(confirmations, maxConfirmations)) out of \(maxConfirmations)",
+                    String(format: NSLocalizedString("ui_step_out_of_format", comment: "Out of format"),
+                           min(confirmations, maxConfirmations),
+                           maxConfirmations),
                     range: (minConfirmations...maxConfirmations),
                     value: confirmations,
                     indexPath: indexPath,
                     onChange: { [unowned self] threshold in
                         confirmations = threshold
                         if let cell = tableView.cellForRow(at: indexPath) as? StepperTableViewCell {
-                            cell.setText("\(confirmations) out of \(maxConfirmations)")
+                            cell.setText(String(format: NSLocalizedString("ui_step_out_of_format", comment: "Out of format"),
+                                                confirmations,
+                                                maxConfirmations))
                         }
 
                         tableView.reloadData()
@@ -101,13 +107,13 @@ class EditConfirmationsViewController: UIViewController, UITableViewDataSource, 
         } else {
             return cellBuilder.warningCell(image: nil,
                                            title: nil,
-                                           description: "We recommend to set a threshold which is lower than the total number of owners of your Safe Account.",
+                                           description: NSLocalizedString("ui_confirmations_threshold_warning", comment: "Confirmations threshold warning"),
                                            for: indexPath)
         }
     }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        cellBuilder.headerView(text: "Required Confirmations")
+        cellBuilder.headerView(text: NSLocalizedString("ui_confirmations_required_header", comment: "Required confirmations header"))
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {

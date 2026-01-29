@@ -54,7 +54,7 @@ class CreateAddressBookEntryViewController: UIViewController {
 
         navigationItem.rightBarButtonItem = nextButton
 
-        textField.setPlaceholder("Enter entry name")
+        textField.setPlaceholder(NSLocalizedString("ui_address_book_entry_placeholder", comment: "Address book entry placeholder"))
         textField.textField.delegate = self
         textField.textField.becomeFirstResponder()
     }
@@ -97,7 +97,9 @@ class CreateAddressBookEntryViewController: UIViewController {
             self.present(vc, animated: true, completion: nil)
         }))
 
-        alertVC.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        alertVC.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                        style: .cancel,
+                                        handler: nil))
         
         if let popoverPresentationController = alertVC.popoverPresentationController {
             popoverPresentationController.sourceView = addressField

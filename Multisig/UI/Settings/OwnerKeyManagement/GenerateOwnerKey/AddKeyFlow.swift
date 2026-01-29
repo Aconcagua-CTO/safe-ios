@@ -128,7 +128,7 @@ class AddKeyFlow: UIFlow {
 
     override func stop(success: Bool) {
         if success {
-            App.shared.snackbar.show(message: "Owner key successfully added")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_owner_key_added_message", comment: "Owner key added message"))
         }
         super.stop(success: success)
     }

@@ -56,20 +56,22 @@ class SafeDeploymentFinishedViewController: UIViewController {
             animationView.backgroundBehavior = .pauseAndRestore
             animationView.play()
 
-            titleLabel.text = "Your Safe Account is ready!"
-            descriptionLabel.text = "That’s it! Start using your most secure wallet on \(chain.name ?? "the blockchain")."
-            actionButton.setText("Start using Safe{Wallet}", .filled)
+            titleLabel.text = NSLocalizedString("ui_safe_account_ready_title", comment: "Safe account ready title")
+            let chainName = chain.name ?? NSLocalizedString("ui_blockchain_generic_name", comment: "Generic blockchain name")
+            descriptionLabel.text = String(format: NSLocalizedString("ui_safe_account_ready_description_format", comment: "Safe account ready description"),
+                                           chainName)
+            actionButton.setText(NSLocalizedString("ui_safe_start_using_title", comment: "Start using Safe action"), .filled)
             linkButton.isHidden = true
 
         case .failure:
             statusImage.isHidden = false
             animationView.isHidden = true
             statusImage.image = UIImage(named: "ico-safe-deployment-failure")
-            titleLabel.text = "Oops, Safe Account wasn’t created"
-            descriptionLabel.text = "Safe Account couldn’t have been created. This might happen due to the mining error or spiked gas fees."
+            titleLabel.text = NSLocalizedString("ui_safe_account_not_created_title", comment: "Safe account not created title")
+            descriptionLabel.text = NSLocalizedString("ui_safe_account_not_created_description", comment: "Safe account not created description")
             
-            actionButton.setText("Retry", .filled)
-            linkButton.setText("View on block explorer", .plain)
+            actionButton.setText(NSLocalizedString("button_retry", comment: "Retry button title"), .filled)
+            linkButton.setText(NSLocalizedString("ui_safe_view_on_block_explorer_title", comment: "View on block explorer title"), .plain)
         }
     }
 

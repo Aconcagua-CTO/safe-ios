@@ -40,10 +40,10 @@ class ClaimedAmountInputCell: UITableViewCell {
 
     override func awakeFromNib() {
         super.awakeFromNib()
-        titleLabel.text = "How much do you want to claim?"
+        titleLabel.text = NSLocalizedString("ui_claim_amount_title", comment: "Claim amount title")
         titleLabel.setStyle(.title3)
 
-        descriptionLabel.text = "Select all tokens or custom amount."
+        descriptionLabel.text = NSLocalizedString("ui_claim_amount_description", comment: "Claim amount description")
         descriptionLabel.setStyle(.body)
 
         redeemWarningLabel.setStyle(.footnote)
@@ -51,7 +51,7 @@ class ClaimedAmountInputCell: UITableViewCell {
         amountTextField.setToken(image: UIImage(named: "ico-safe-token-logo-circle"))
 
         maxButton = UIButton(type: .custom)
-        maxButton.setText("Max", .primary)
+        maxButton.setText(NSLocalizedString("ui_claim_amount_max_action", comment: "Claim max action"), .primary)
         maxButton.addTarget(self, action: #selector(maxButtonTouched(_:)), for: .touchUpInside)
 
         amountTextField.amountTextField.rightView = maxButton
@@ -147,19 +147,19 @@ class TokenAmountTextDelegate: NSObject, UITextFieldDelegate {
 
         // cannot be empty
         if string.isEmpty {
-            validationError = "Please enter amount"
+            validationError = NSLocalizedString("ui_claim_amount_required_error", comment: "Claim amount required error")
             return
         }
 
         // must be a number
         guard let decimal = formatter.number(from: string, precision: 18) else {
-            validationError = "Please enter a positive number (max 18 digits after decimal point)"
+            validationError = NSLocalizedString("ui_claim_amount_invalid_number_error", comment: "Claim amount invalid number error")
             return
         }
 
         // must be within range of UInt128
         guard decimal.value >= 0 && decimal.value <= Sol.UInt128.max else {
-            validationError = "Value is too big. Please enter a smaller number."
+            validationError = NSLocalizedString("ui_claim_amount_too_big_error", comment: "Claim amount too big error")
             return
         }
         let number = Sol.UInt128(big: UInt256(decimal.value))
@@ -168,7 +168,9 @@ class TokenAmountTextDelegate: NSObject, UITextFieldDelegate {
         guard valueRange.contains(number) else {
             let lowBound = formatted(valueRange.lowerBound, literal: false)
             let highBound = formatted(valueRange.upperBound, literal: false)
-            validationError = "Please enter value in range from \(lowBound) to \(highBound)"
+            validationError = String(format: NSLocalizedString("ui_claim_amount_range_format", comment: "Claim amount range format"),
+                                     lowBound,
+                                     highBound)
             return
         }
     }

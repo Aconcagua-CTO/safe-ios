@@ -13,8 +13,8 @@ class ChangePasscodeEnterNewViewController: PasscodeViewController {
     var onPasscodeEnter: ((String) -> Void)?
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "Change Passcode"
-        promptLabel.text = "Create a new 6-digit passcode"
+        navigationItem.title = NSLocalizedString("ui_passcode_change_title", comment: "Change passcode title")
+        promptLabel.text = NSLocalizedString("ui_passcode_new_prompt", comment: "New passcode prompt")
         button.isHidden = true
     }
 

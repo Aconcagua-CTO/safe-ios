@@ -48,7 +48,7 @@ class Ramper: MoonpayCallbackInterface {
         self.chain = chain
 
         guard !chainCurrencies.isEmpty else {
-            App.shared.snackbar.show(message: "No currencies supported on the selected chain")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_ramper_no_currencies_error", comment: "No currencies supported error"))
             return
         }
 

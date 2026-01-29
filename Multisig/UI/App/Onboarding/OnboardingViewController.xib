@@ -70,7 +70,7 @@
                                 <action selector="didTapCreateSafe:" destination="-1" eventType="touchUpInside" id="fh4-o5-3hP"/>
                             </connections>
                         </button>
-                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="LsA-0C-304">
+                        <button hidden="YES" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="LsA-0C-304">
                             <rect key="frame" x="0.0" y="64" width="335" height="56"/>
                             <constraints>
                                 <constraint firstAttribute="height" constant="56" id="EfG-1e-InH"/>
@@ -82,7 +82,7 @@
                                 <action selector="didTapLoadSafe:" destination="-1" eventType="touchUpInside" id="eD6-oS-QTK"/>
                             </connections>
                         </button>
-                        <stackView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="yTp-l2-HW8">
+                        <stackView hidden="YES" opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="yTp-l2-HW8">
                             <rect key="frame" x="39" y="128" width="257.33333333333331" height="44"/>
                             <subviews>
                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="New to Safe{Wallet}?" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="C1t-72-vR5">
@@ -120,7 +120,7 @@
                         <action selector="didTapClosed:" destination="-1" eventType="touchUpInside" id="znj-kX-j5Z"/>
                     </connections>
                 </button>
-                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="right" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="J5g-y8-c6N">
+                <button hidden="YES" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="right" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="J5g-y8-c6N">
                     <rect key="frame" x="325" y="67" width="30" height="30"/>
                     <state key="normal" title="Skip"/>
                     <connections>

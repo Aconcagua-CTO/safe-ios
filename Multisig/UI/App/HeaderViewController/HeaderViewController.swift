@@ -9,6 +9,11 @@
 import UIKit
 import SwiftCryptoTokenFormatter
 
+protocol HeaderSearchHandling: AnyObject {
+    var headerSearchPlaceholder: String { get }
+    func headerSearchDidChange(_ text: String)
+}
+
 /// Header bar will adapt to the devices size
 final class HeaderViewController: ContainerViewController {
     @IBOutlet private weak var stackView: UIStackView!
@@ -21,6 +26,10 @@ final class HeaderViewController: ContainerViewController {
 
     private var rootViewController: UIViewController?
     private var currentDataTask: URLSessionTask?
+    private let searchController = UISearchController(searchResultsController: nil)
+
+    var showsNavigationBar: Bool = false
+    weak var searchHandler: HeaderSearchHandling?
 
     private var clientGatewayService: SafeClientGatewayService {
         guard let chain = try? Safe.getSelected()?.chain else {
@@ -51,6 +60,7 @@ final class HeaderViewController: ContainerViewController {
         headerBarHeightConstraint.constant = ScreenMetrics.safeHeaderHeight
         LogService.shared.debug("[HeaderViewController] viewDidLoad - screen bounds: \(UIScreen.main.bounds.size), isBigScreen: \(ScreenMetrics.isBigScreen), headerHeight: \(ScreenMetrics.safeHeaderHeight)")
         reloadSafeData()
+        configureSearchIfNeeded()
     }
     
     override func viewDidLayoutSubviews() {
@@ -82,12 +92,30 @@ final class HeaderViewController: ContainerViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        navigationController?.navigationBar.isHidden = true
+        navigationController?.navigationBar.isHidden = !showsNavigationBar
+        configureSearchIfNeeded()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         navigationController?.navigationBar.isHidden = false
+    }
+
+    private func configureSearchIfNeeded() {
+        guard let handler = searchHandler, showsNavigationBar else {
+            navigationItem.searchController = nil
+            return
+        }
+
+        searchController.searchResultsUpdater = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = handler.headerSearchPlaceholder
+        searchController.hidesNavigationBarDuringPresentation = false
+        searchController.searchBar.autocapitalizationType = .none
+
+        navigationItem.searchController = searchController
+        navigationItem.hidesSearchBarWhenScrolling = false
+        definesPresentationContext = true
     }
 
     private func addSafe() {
@@ -98,9 +126,9 @@ final class HeaderViewController: ContainerViewController {
     }
 
     @objc private func didTapSafeBarView(_ sender: Any) {
-        // Navigate to Transactions tab > History subtab
+        // Navigate to Transactions > History
         if let tabBarController = tabBarController as? MainTabBarViewController {
-            tabBarController.switchTo(indexPath: MainTabBarViewController.Path.history)
+            tabBarController.openTransactions(segment: MainTabBarViewController.Path.historySegment)
         }
     }
 
@@ -136,7 +164,8 @@ final class HeaderViewController: ContainerViewController {
             }
         } catch {
             App.shared.snackbar.show(
-                error: GSError.error(description: "Failed to update selected safe", error: error))
+                error: GSError.error(description: NSLocalizedString("ui_safe_update_failed_error", comment: "Failed to update selected safe error"),
+                                      error: error))
         }
     }
 
@@ -177,5 +206,14 @@ final class HeaderViewController: ContainerViewController {
         guard !trimmed.isEmpty else { return nil }
 
         return trimmed.split(whereSeparator: { $0.isWhitespace }).first.map(String.init)
+    }
+}
+
+// MARK: - UISearchResultsUpdating
+
+extension HeaderViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        let raw = searchController.searchBar.text ?? ""
+        searchHandler?.headerSearchDidChange(raw)
     }
 }

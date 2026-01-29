@@ -20,13 +20,21 @@ class DetailTransferInfoCell: UITableViewCell {
         addressInfoView = AddressInfoView(frame: stackView.bounds)
         arrowView = DetailArrowPiece(frame: stackView.bounds)
 
+        // These views are laid out via Auto Layout (inside a UIStackView).
+        tokenInfoView.translatesAutoresizingMaskIntoConstraints = false
+        addressInfoView.translatesAutoresizingMaskIntoConstraints = false
+        arrowView.translatesAutoresizingMaskIntoConstraints = false
+
         // Because we created the views programmatically, we set the
         // heights in code:
-        NSLayoutConstraint.activate([
-            tokenInfoView.heightAnchor.constraint(equalToConstant: 44),
-            addressInfoView.heightAnchor.constraint(equalToConstant: 44),
-            arrowView.heightAnchor.constraint(equalToConstant: 24)
-        ])
+        let tokenHeight = tokenInfoView.heightAnchor.constraint(equalToConstant: 44)
+        let addressHeight = addressInfoView.heightAnchor.constraint(equalToConstant: 44)
+        let arrowHeight = arrowView.heightAnchor.constraint(equalToConstant: 24)
+        // Allow UITableView's calculated row height to win (prevents constraint-breaking / flicker).
+        tokenHeight.priority = UILayoutPriority(999)
+        addressHeight.priority = UILayoutPriority(999)
+        arrowHeight.priority = UILayoutPriority(999)
+        NSLayoutConstraint.activate([tokenHeight, addressHeight, arrowHeight])
     }
 
     func setAddress(_ address: Address, label: String?, imageUri: URL?, browseURL: URL?, prefix: String?) {

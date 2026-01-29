@@ -20,6 +20,7 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
     var showWeb2SupportHint: Bool = false
     var trackingEvent: TrackingEvent?
     var preselectedChainId: String?
+    var useLocalChains: Bool = false
 
     var completion: (SCGModels.Chain) -> Void = { _ in }
     
@@ -50,7 +51,7 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
         tableView.delegate = self
         tableView.dataSource = self
         navigationItem.title = screenTitle
-        emptyView.setTitle("Networks will appear here")
+        emptyView.setTitle(NSLocalizedString("ui_networks_empty_title", comment: "Networks empty title"))
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -68,6 +69,14 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
         loadNextPageDataTask?.cancel()
         pageLoadingState = .idle
 
+        if useLocalChains {
+            let localChains = Chain.all.map { $0.toSCGChain() }
+            model = NetworksListViewModel(localChains)
+            onSuccess()
+            findPreselectedChainId()
+            return
+        }
+
         loadFirstPageDataTask = clientGatewayService.asyncChains { [weak self] result in
             guard let `self` = self else { return }
             switch result {
@@ -81,7 +90,8 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
                         (error as NSError).domain == NSURLErrorDomain {
                         return
                     }
-                    self.onError(GSError.error(description: "Failed to load networks", error: error))
+                    self.onError(GSError.error(description: NSLocalizedString("ui_networks_load_failed_error", comment: "Failed to load networks error"),
+                                               error: error))
                 }
             case .success(let page):
                 var model = NetworksListViewModel(page.results)
@@ -150,7 +160,8 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
                             self.pageLoadingState = .idle
                             return
                         }
-                        self.onError(GSError.error(description: "Failed to load chains", error: error))
+                        self.onError(GSError.error(description: NSLocalizedString("ui_chains_load_failed_error", comment: "Failed to load chains error"),
+                                                   error: error))
                         self.pageLoadingState = .retry
                     }
                 case .success(let page):
@@ -168,7 +179,8 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
                 self.loadNextPageDataTask = nil
             }
         } catch {
-            onError(GSError.error(description: "Failed to load more chains", error: error))
+            onError(GSError.error(description: NSLocalizedString("ui_chains_load_more_failed_error", comment: "Failed to load more chains error"),
+                                  error: error))
             pageLoadingState = .retry
         }
     }

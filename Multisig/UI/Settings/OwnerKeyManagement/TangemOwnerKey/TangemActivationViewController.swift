@@ -25,6 +25,11 @@ final class TangemActivationViewController: UIViewController {
     private var activatedCardInfo: ActivatedCardInfo?
     
     var onActivationComplete: ((ActivatedCardInfo) -> Void)?
+    var onActivationResult: ((Result<ActivatedCardInfo, Error>) -> Void)?
+    var onDidClose: (() -> Void)?
+    var autoStartActivation: Bool = false
+    var shouldSuppressError: ((Error) -> Bool)?
+    var activateButtonTitle: String?
     
     private enum State {
         case idle
@@ -59,12 +64,20 @@ final class TangemActivationViewController: UIViewController {
         
         TangemLogger.info("🔧 ACTIVATION VC: View controller loaded")
         
-        view.backgroundColor = .backgroundSecondary
-        navigationItem.title = "Activate Tangem Card"
+        view.backgroundColor = .black
+        navigationItem.title = NSLocalizedString("ui_tangem_activate_card_title", comment: "Title for Tangem card activation screen")
         navigationItem.largeTitleDisplayMode = .never
         
         setupUI()
         updateUI(for: .idle)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if autoStartActivation, case .idle = state {
+            TangemLogger.info("🔧 ACTIVATION VC: Auto-starting activation")
+            performActivation()
+        }
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -93,10 +106,18 @@ final class TangemActivationViewController: UIViewController {
         
         activityIndicator.hidesWhenStopped = true
         
-        configureButton(activateButton, title: "Activate Card", action: #selector(activateTapped))
-        configureButton(doneButton, title: "Done", action: #selector(doneTapped))
-        configureButton(tryAgainButton, title: "Try Again", action: #selector(tryAgainTapped))
-        configureButton(addAsOwnerButton, title: "Add as Owner", action: #selector(addAsOwnerTapped))
+        configureButton(activateButton,
+                        title: activateButtonTitle ?? NSLocalizedString("ui_tangem_activate_card_button", comment: "Activate Tangem card button title"),
+                        action: #selector(activateTapped))
+        configureButton(doneButton,
+                        title: NSLocalizedString("button_done", comment: "Done button title"),
+                        action: #selector(doneTapped))
+        configureButton(tryAgainButton,
+                        title: NSLocalizedString("button_retry", comment: "Retry button title"),
+                        action: #selector(tryAgainTapped))
+        configureButton(addAsOwnerButton,
+                        title: NSLocalizedString("ui_tangem_add_as_owner_button", comment: "Add as owner button title"),
+                        action: #selector(addAsOwnerTapped))
         
         contentStack.addArrangedSubview(statusLabel)
         contentStack.addArrangedSubview(detailLabel)
@@ -133,13 +154,22 @@ final class TangemActivationViewController: UIViewController {
         button.heightAnchor.constraint(equalToConstant: 44).isActive = true
     }
     
+    private func performAddAsOwner(_ info: ActivatedCardInfo) {
+        // Prevent double-taps causing duplicate imports / confusing UI.
+        addAsOwnerButton.isEnabled = false
+        doneButton.isEnabled = false
+
+        onActivationComplete?(info)
+        close()
+    }
+
     private func updateUI(for state: State) {
         TangemLogger.debug("🔧 ACTIVATION VC: Updating UI for state: \(String(describing: state))")
         
         switch state {
         case .idle:
-            statusLabel.text = "Activate Tangem Card"
-            detailLabel.text = "Create a new wallet on your Tangem card. The card must be empty (no existing wallets).\n\nThe wallet will be created using hardware-generated randomness for maximum security."
+            statusLabel.text = NSLocalizedString("ui_tangem_activate_card_title", comment: "Title for Tangem card activation screen")
+            detailLabel.text = NSLocalizedString("ui_tangem_activation_intro_detail", comment: "Tangem activation intro detail")
             activityIndicator.stopAnimating()
             activateButton.isHidden = false
             doneButton.isHidden = true
@@ -147,8 +177,8 @@ final class TangemActivationViewController: UIViewController {
             addAsOwnerButton.isHidden = true
             
         case .scanning:
-            statusLabel.text = "Scanning Card"
-            detailLabel.text = "Hold your Tangem card near the top of your iPhone..."
+            statusLabel.text = NSLocalizedString("ui_tangem_activation_scanning_title", comment: "Tangem activation scanning title")
+            detailLabel.text = NSLocalizedString("ui_tangem_card_reader_hold_near_top", comment: "Tangem activation hold near top message")
             activityIndicator.startAnimating()
             activateButton.isHidden = true
             doneButton.isHidden = true
@@ -156,13 +186,8 @@ final class TangemActivationViewController: UIViewController {
             addAsOwnerButton.isHidden = true
             
         case .creatingWallet:
-            statusLabel.text = "Creating Wallet"
-            detailLabel.text = """
-            Creating a new wallet on your Tangem card…
-
-            Keep the card pressed flat against the top edge of your iPhone until you feel a vibration.
-            If iOS shows a tangem.com banner, ignore it and keep the card in place.
-            """
+            statusLabel.text = NSLocalizedString("ui_tangem_activation_creating_wallet_title", comment: "Tangem activation creating wallet title")
+            detailLabel.text = NSLocalizedString("ui_tangem_activation_creating_wallet_detail", comment: "Tangem activation creating wallet detail")
             activityIndicator.startAnimating()
             activateButton.isHidden = true
             doneButton.isHidden = true
@@ -170,8 +195,8 @@ final class TangemActivationViewController: UIViewController {
             addAsOwnerButton.isHidden = true
             
         case .settingAccessCode:
-            statusLabel.text = "Setting Access Code"
-            detailLabel.text = "Setting access code on your Tangem card..."
+            statusLabel.text = NSLocalizedString("ui_tangem_activation_setting_access_code_title", comment: "Tangem activation setting access code title")
+            detailLabel.text = NSLocalizedString("ui_tangem_activation_setting_access_code_detail", comment: "Tangem activation setting access code detail")
             activityIndicator.startAnimating()
             activateButton.isHidden = true
             doneButton.isHidden = true
@@ -180,17 +205,19 @@ final class TangemActivationViewController: UIViewController {
             
         case .success:
             if let info = activatedCardInfo {
-                statusLabel.text = "✅ Card Activated Successfully"
-                detailLabel.text = """
-                Card ID: \(info.cardId.suffix(8))
-                Ethereum Address: \(info.ethereumAddress.checksummed)
-                Access Code: \(info.accessCodeSet ? "Set" : "Not Set")
-                
-                The wallet has been created successfully. You can now add it as an owner.
-                """
+                statusLabel.text = NSLocalizedString("ui_tangem_activation_success_title", comment: "Tangem activation success title")
+                let accessCodeStatus = info.accessCodeSet
+                    ? NSLocalizedString("ui_tangem_access_code_set", comment: "Tangem access code set")
+                    : NSLocalizedString("ui_tangem_access_code_not_set", comment: "Tangem access code not set")
+                detailLabel.text = String(
+                    format: NSLocalizedString("ui_tangem_activation_success_detail_format", comment: "Tangem activation success detail"),
+                    String(info.cardId.suffix(8)),
+                    info.ethereumAddress.checksummed,
+                    accessCodeStatus
+                )
             } else {
-                statusLabel.text = "✅ Card Activated Successfully"
-                detailLabel.text = "The wallet has been created successfully."
+                statusLabel.text = NSLocalizedString("ui_tangem_activation_success_title", comment: "Tangem activation success title")
+                detailLabel.text = NSLocalizedString("ui_tangem_activation_success_detail_short", comment: "Tangem activation success short detail")
             }
             activityIndicator.stopAnimating()
             activateButton.isHidden = true
@@ -199,7 +226,7 @@ final class TangemActivationViewController: UIViewController {
             addAsOwnerButton.isHidden = false
             
         case .error(let message):
-            statusLabel.text = "❌ Activation Failed"
+            statusLabel.text = NSLocalizedString("ui_tangem_activation_failed_title", comment: "Tangem activation failed title")
             detailLabel.text = message
             activityIndicator.stopAnimating()
             activateButton.isHidden = true
@@ -231,22 +258,20 @@ final class TangemActivationViewController: UIViewController {
             return
         }
 
-        // Prevent double-taps causing duplicate imports / confusing UI.
-        addAsOwnerButton.isEnabled = false
-        doneButton.isEnabled = false
-
-        onActivationComplete?(info)
-        close()
+        performAddAsOwner(info)
     }
 
     /// Closes this screen whether it's pushed or presented modally.
     private func close(animated: Bool = true) {
         if let nav = navigationController, nav.viewControllers.first != self {
             nav.popViewController(animated: animated)
+            onDidClose?()
             return
         }
         // Presented as root of a nav controller (e.g. from Advanced settings) → dismiss.
-        dismiss(animated: animated)
+        dismiss(animated: animated) { [weak self] in
+            self?.onDidClose?()
+        }
     }
     
     private func performActivation() {
@@ -275,10 +300,20 @@ final class TangemActivationViewController: UIViewController {
                 TangemLogger.debug("🔧 ACTIVATION VC: - Card ID: \(info.cardId)")
                 TangemLogger.debug("🔧 ACTIVATION VC: - Ethereum Address: \(info.ethereumAddress.checksummed)")
                 TangemLogger.debug("🔧 ACTIVATION VC: - Access Code Set: \(info.accessCodeSet)")
+
+                // Register the primary card record after activation.
+                self.registerPrimaryCardInBackend(cardId: info.cardId)
                 
                 await MainActor.run {
                     self.activatedCardInfo = info
-                    self.state = .success
+                    if let onActivationResult = self.onActivationResult {
+                        onActivationResult(.success(info))
+                        self.close()
+                    } else if self.onActivationComplete != nil {
+                        self.performAddAsOwner(info)
+                    } else {
+                        self.state = .success
+                    }
                 }
             } catch {
                 guard !Task.isCancelled else { return }
@@ -287,8 +322,41 @@ final class TangemActivationViewController: UIViewController {
                 TangemLogger.error("🔧 ACTIVATION VC: Card activation failed", error: error)
                 
                 await MainActor.run {
-                    self.state = .error(message)
+                    if let shouldSuppressError = self.shouldSuppressError, shouldSuppressError(error) {
+                        self.onActivationResult?(.failure(error))
+                        self.close()
+                    } else {
+                        self.onActivationResult?(.failure(error))
+                        self.state = .error(message)
+                    }
                 }
+            }
+        }
+    }
+
+    private func registerPrimaryCardInBackend(cardId: String) {
+        guard App.shared.authRepository.isAuthenticated() else {
+            TangemLogger.debug("🔧 ACTIVATION VC: Skipping primary card registration (user not authenticated)")
+            return
+        }
+
+        let payload = RegisterPrimaryCardPayload(
+            manufacturer: "tangem",
+            cardId: cardId,
+            firmwareLevel: nil,
+            state: 1
+        )
+        let service = PrimaryCardRegistrationService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+
+        service.registerPrimaryCard(payload: payload) { result in
+            switch result {
+            case .success:
+                TangemLogger.info("🔧 ACTIVATION VC: Registered primary Tangem card (cardId=\(cardId))")
+            case .failure(let error):
+                TangemLogger.error("🔧 ACTIVATION VC: Failed to register primary Tangem card", error: error)
             }
         }
     }
@@ -299,7 +367,7 @@ final class TangemActivationViewController: UIViewController {
             case .nfcUnavailable:
                 return "NFC is not available on this device."
             case .userCancelled:
-                return "The NFC session ended before activation finished. Keep the Tangem card in place, ignore any tangem.com banner, and wait for the success message."
+                return NSLocalizedString("ui_tangem_activation_error_nfc_session_expired", comment: "Tangem activation NFC session expired")
             case .sdkError(let sdkError):
                 return sdkError.localizedDescription
             case .underlying(let underlying):

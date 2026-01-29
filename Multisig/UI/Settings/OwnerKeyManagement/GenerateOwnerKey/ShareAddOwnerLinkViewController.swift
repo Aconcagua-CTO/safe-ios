@@ -35,7 +35,7 @@ class ShareAddOwnerLinkViewController: UIViewController {
         assert(owner != nil)
 
         titleLabel.setStyle(.title2)
-        doneButton.setText("Done", .filled)
+        doneButton.setText(NSLocalizedString("button_done", comment: "Done button title"), .filled)
 
         tableView.registerCell(StepInstructionTableViewCell.self)
 
@@ -54,7 +54,7 @@ class ShareAddOwnerLinkViewController: UIViewController {
             let vc = UIActivityViewController(activityItems: [text], applicationActivities: nil)
             vc.completionWithItemsHandler = { _, success, _, _ in
                 if success {
-                    App.shared.snackbar.show(message: "Add owner link shared")
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_add_owner_link_shared_message", comment: "Add owner link shared message"))
                 }
             }
 

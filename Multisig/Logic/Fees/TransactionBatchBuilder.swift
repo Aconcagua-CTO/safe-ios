@@ -107,24 +107,28 @@ final class TransactionBatchBuilder {
     private let safe: Safe
     private let config: FeeConfiguration
     private let catalog: FunctionSelectorCatalog
+    private let availableBalance: UInt256?
 
     private init(transaction: Transaction,
                  safe: Safe,
                  config: FeeConfiguration,
-                 catalog: FunctionSelectorCatalog) {
+                 catalog: FunctionSelectorCatalog,
+                 availableBalance: UInt256?) {
         self.transaction = transaction
         self.safe = safe
         self.config = config
         self.catalog = catalog
+        self.availableBalance = availableBalance
     }
 
-    static func build(transaction: Transaction, safe: Safe) -> Result? {
+    static func build(transaction: Transaction, safe: Safe, availableBalance: UInt256? = nil) -> Result? {
         guard let config = FeeConfiguration.load() else { return nil }
         let catalog = FunctionSelectorCatalog.shared
         let builder = TransactionBatchBuilder(transaction: transaction,
                                               safe: safe,
                                               config: config,
-                                              catalog: catalog)
+                                              catalog: catalog,
+                                              availableBalance: availableBalance)
         return builder.build()
     }
 
@@ -453,10 +457,22 @@ final class TransactionBatchBuilder {
             TransactionFeeLogger.info("ERC20 transfer amount too small for fee – skipping.")
             return nil
         }
-        let netAmount = amount - feeAmount
-        guard netAmount > 0 else {
-            TransactionFeeLogger.warning("ERC20 transfer net amount would be zero – skipping.")
-            return nil
+        let shouldDeductFromAmount: Bool
+        if let availableBalance = availableBalance {
+            shouldDeductFromAmount = (amount + feeAmount) > availableBalance
+        } else {
+            shouldDeductFromAmount = true
+        }
+
+        let netAmount: UInt256
+        if shouldDeductFromAmount {
+            netAmount = amount - feeAmount
+            guard netAmount > 0 else {
+                TransactionFeeLogger.warning("ERC20 transfer net amount would be zero – skipping.")
+                return nil
+            }
+        } else {
+            netAmount = amount
         }
 
         let mainCall = ERC20.transfer(to: Sol.Address(stringLiteral: recipient.checksummedWithoutPrefix),

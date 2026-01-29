@@ -20,19 +20,9 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
     private var errorViewController: UIViewController?
 
     private var pendingVaultActivationViewController: PendingVaultActivationViewController?
-    private var localKeyRecoverViewController: LocalKeyRecoverViewController?
-    private var generateKeyFlow: GenerateKeyFlow?
-    private var tangemKeyFlow: TangemKeyFlow?
 
     private var isSyncing = false
     private var hasAttemptedSync = false
-    private var isStartingGenerateKeyFlow = false
-    private var isRegisteringOwnerKeys = false
-    private var pendingGenerateKeyFlow = false
-
-    private lazy var keysRegistrationService: KeysRegistrationService = {
-        KeysRegistrationService(authRepository: App.shared.authRepository, logger: LogService.shared)
-    }()
 
     var notificationCenter = NotificationCenter.default
 
@@ -47,17 +37,9 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-
-        if pendingGenerateKeyFlow && !isStartingGenerateKeyFlow {
-            pendingGenerateKeyFlow = false
-            startGenerateKeyFlow()
-        }
     }
 
     @objc private func reloadContent() {
-        // Non-blocking retry: if a previous registration attempt failed, try again opportunistically.
-        attemptRegisterOwnerKeysIfNeeded(force: false)
-
         do {
             var selectedSafe = try Safe.getSelected()
 
@@ -71,13 +53,7 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
             }
 
             if let safe = selectedSafe {
-                // Has vault(s). Gate on local keys.
-                if !hasLocalOwnerKeysImportedOrGenerated() {
-                    showLocalKeyRecoverState()
-                    return
-                }
-
-                // Has vault(s) + local key(s) -> normal behavior
+                // Has vault(s) -> normal behavior
                 if safe.safeStatus == .deployed {
                     viewControllers = [hasSafeViewController]
                 } else {
@@ -96,24 +72,16 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
                 viewControllers = [errorViewController!]
                 displayChild(at: 0, in: view)
             } else if hasAttemptedSync && !isSyncing && errorViewController == nil {
-                // Sync completed but still no vaults: show pending activation screen.
-                // This avoids showing the Load/Create Safe screen during onboarding.
                 showPendingVaultActivationState()
-                if !hasLocalOwnerKeysImportedOrGenerated() {
-                    startGenerateKeyFlow()
-                }
             } else {
                 // Fallback (e.g. not authenticated)
                 viewControllers = [noSafeViewController]
                 displayChild(at: 0, in: view)
             }
         } catch {
-            App.shared.snackbar.show(error: GSError.error(description: "Failed to check loaded safes", error: error))
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_safe_failed_check_loaded_error", comment: "Failed to check loaded safes error"),
+                                                          error: error))
         }
-    }
-
-    private func hasLocalOwnerKeysImportedOrGenerated() -> Bool {
-        KeyInfo.count(.deviceImported) + KeyInfo.count(.deviceGenerated) > 0
     }
 
     private func startVaultSync() {
@@ -143,58 +111,6 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
         }
     }
 
-    private func startGenerateKeyFlow() {
-        guard !isStartingGenerateKeyFlow else { return }
-        guard view.window != nil else {
-            pendingGenerateKeyFlow = true
-            return
-        }
-        isStartingGenerateKeyFlow = true
-
-        let flow = GenerateKeyFlow { [weak self] success in
-            guard let self else { return }
-            // Release strong reference once the modal flow finishes/cancels.
-            self.generateKeyFlow = nil
-            self.isStartingGenerateKeyFlow = false
-            // If the local owner key was added successfully, continue with Tangem card activation.
-            // If user cancels/fails, just re-evaluate the gate.
-            if success {
-                self.startTangemKeyFlow()
-            } else {
-                self.reloadContent()
-            }
-        }
-        // IMPORTANT: retain the flow, otherwise closures inside AddKeyFlow use `unowned self`
-        // and can crash if the flow is deallocated while the UI is still visible.
-        generateKeyFlow = flow
-
-        // Present modally from current gate VC.
-        present(flow: flow, dismissableOnSwipe: true)
-
-        // If user completes successfully, `stop(success:)` will dismiss and call completion.
-        // In that case, we reset the guard in completion via reloadContent after keys exist.
-        // If flow is successful, the keys will exist and we won't re-enter this branch.
-    }
-
-    private func startTangemKeyFlow() {
-        // Avoid double-presenting Tangem flow.
-        guard tangemKeyFlow == nil else { return }
-
-        let flow = TangemKeyFlow(service: TangemService.shared) { [weak self] success in
-            guard let self else { return }
-            self.tangemKeyFlow = nil
-            if success {
-                // Mark as pending and try to register immediately (non-blocking).
-                AppSettings.pendingOwnerKeysRegistration = true
-                self.attemptRegisterOwnerKeysIfNeeded(force: true)
-            }
-            // After Tangem card activation/import, proceed to the pending vault activation screen via normal gate evaluation.
-            self.reloadContent()
-        }
-        tangemKeyFlow = flow
-        present(flow: flow, dismissableOnSwipe: true)
-    }
-
     private func showPendingVaultActivationState() {
         if pendingVaultActivationViewController == nil {
             let vc = PendingVaultActivationViewController()
@@ -204,14 +120,6 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
             pendingVaultActivationViewController = vc
         }
         viewControllers = [pendingVaultActivationViewController!]
-        displayChild(at: 0, in: view)
-    }
-
-    private func showLocalKeyRecoverState() {
-        if localKeyRecoverViewController == nil {
-            localKeyRecoverViewController = LocalKeyRecoverViewController()
-        }
-        viewControllers = [localKeyRecoverViewController!]
         displayChild(at: 0, in: view)
     }
 
@@ -226,65 +134,15 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
     private func showErrorState(error: Error) {
         if errorViewController == nil {
             errorViewController = VaultSyncErrorViewController(
-                message: "No hemos podido cargar tus bóvedas, por favor escribinos a hola@boveda.ai"
+                message: "No hemos podido cargar tus bóvedas, por favor escribinos a hola@boveda.ai",
+                showsSignOut: true
             )
         }
         viewControllers = [errorViewController!]
         displayChild(at: 0, in: view)
     }
 
-    // MARK: - Owner key registration (deviceGenerated + tangem)
-
-    private func attemptRegisterOwnerKeysIfNeeded(force: Bool) {
-        guard App.shared.authRepository.isAuthenticated() else { return }
-        guard force || AppSettings.pendingOwnerKeysRegistration else { return }
-        guard !isRegisteringOwnerKeys else { return }
-
-        let keys = collectOwnerKeysForRegistration()
-        // Only register once we have both onboarding keys.
-        guard keys.count >= 2 else { return }
-
-        isRegisteringOwnerKeys = true
-        keysRegistrationService.register(keys: keys) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.isRegisteringOwnerKeys = false
-                switch result {
-                case .success:
-                    AppSettings.pendingOwnerKeysRegistration = false
-                    LogService.shared.info("[KeysRegistration] owner keys registered successfully")
-                case .failure(let error):
-                    AppSettings.pendingOwnerKeysRegistration = true
-                    LogService.shared.error("[KeysRegistration] failed to register owner keys", error: error)
-                }
-            }
-        }
-    }
-
-    private func collectOwnerKeysForRegistration() -> [RegisterKey] {
-        // Device-generated key (address only)
-        let deviceKey: RegisterKey? = (try? KeyInfo.keys(types: [.deviceGenerated]))
-            .flatMap { $0.first }
-            .map { keyInfo in
-                RegisterKey(keyType: "deviceGenerated",
-                            address: keyInfo.address.checksummed,
-                            cardId: nil,
-                            walletIndex: nil)
-            }
-
-        // Tangem key (address + metadata)
-        let tangemKey: RegisterKey? = (try? KeyInfo.keys(types: [.tangem]))
-            .flatMap { $0.first }
-            .flatMap { keyInfo in
-                let metadata = keyInfo.metadata.flatMap { try? JSONDecoder().decode(KeyInfo.TangemKeyMetadata.self, from: $0) }
-                return RegisterKey(keyType: "tangem",
-                                   address: keyInfo.address.checksummed,
-                                   cardId: metadata?.cardId,
-                                   walletIndex: metadata?.walletIndex)
-            }
-
-        return [deviceKey, tangemKey].compactMap { $0 }
-    }
+    // Owner key onboarding is now handled by the post-login gate coordinator.
 }
 
 

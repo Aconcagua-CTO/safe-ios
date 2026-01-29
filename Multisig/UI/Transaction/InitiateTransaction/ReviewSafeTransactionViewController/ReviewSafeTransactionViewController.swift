@@ -66,11 +66,11 @@ class ReviewSafeTransactionViewController: UIViewController {
 
         assert(safe != nil)
 
-        navigationItem.title = "Review"
-        navigationItem.backButtonTitle = "Back"
+        navigationItem.title = NSLocalizedString("ui_review_title", comment: "Title for reviewing a transaction before submitting")
+        navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
 
 
-        retryButton.setText("Retry", .filled)
+        retryButton.setText(NSLocalizedString("button_retry", comment: "Retry button title"), .filled)
         descriptionLabel.setStyle(.footnote)
 
         tableView.registerCell(BorderedInnerTableCell.self)
@@ -85,7 +85,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         ribbonView.update(chain: safe.chain)
         loadData()
 
-        confirmButtonView.actionTitle = "Submit"
+        confirmButtonView.actionTitle = NSLocalizedString("button_submit", comment: "Submit button title")
         confirmButtonView.state = .normal
         confirmButtonView.set(rejectionEnabled: false)
         
@@ -109,7 +109,15 @@ class ReviewSafeTransactionViewController: UIViewController {
         #endif
 
         // Check if transaction already exists with confirmations
-        currentDataTask = gatewayService.asyncTransactionDetails(safeTxHash: safeTxHashData, chainId: chainId) { [weak self] result in
+        let txId = transaction.safe.map { "multisig_\($0.description)_\(safeTxHash)" }
+        let detailsRequest: (@escaping (Result<SCGModels.TransactionDetails, Error>) -> Void) -> URLSessionTask? = { completion in
+            if let txId {
+                return self.gatewayService.asyncTransactionDetails(id: txId, chainId: chainId, completion: completion)
+            }
+            return self.gatewayService.asyncTransactionDetails(safeTxHash: safeTxHashData, chainId: chainId, completion: completion)
+        }
+
+        currentDataTask = detailsRequest { [weak self] result in
             guard let self = self else { return }
             
             #if DEBUG
@@ -262,7 +270,29 @@ class ReviewSafeTransactionViewController: UIViewController {
             guard let `self` = self else { return }
             switch result {
             case .failure(let error):
-                self.handleError(error)
+                // Some deployments/proxies block the `/nonces` endpoint (e.g. return 403/404).
+                // In that case we can fall back to using the Safe's `nonce` from the safe-info
+                // endpoint so the user can still create the transaction.
+                let nsError = error as NSError
+                if nsError.domain == "NetworkError", nsError.code == 403 || nsError.code == 404 {
+                    self.currentDataTask = self.gatewayService.asyncSafeInfo(
+                        safeAddress: safeAddress,
+                        chainId: chainId
+                    ) { [weak self] safeInfoResult in
+                        guard let self = self else { return }
+                        switch safeInfoResult {
+                        case .failure(let safeInfoError):
+                            self.handleError(safeInfoError)
+                        case .success(let info):
+                            self.minimalNonce = info.nonce
+                            self.nonce = info.nonce
+                            self.safeTxGas = nil
+                            self.handleEstimationSuccess()
+                        }
+                    }
+                } else {
+                    self.handleError(error)
+                }
             case .success(let nonces):
                 self.minimalNonce = nonces.currentNonce
                 self.nonce = nonces.recommendedNonce
@@ -279,7 +309,8 @@ class ReviewSafeTransactionViewController: UIViewController {
                 (error as NSError).domain == NSURLErrorDomain {
                 return
             }
-            self.showError(GSError.error(description: "Failed to create transaction", error: error))
+            self.showError(GSError.error(description: NSLocalizedString("ui_tx_failed_create_error", comment: "Failed to create transaction error"),
+                                         error: error))
         }
     }
     
@@ -401,7 +432,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             LogService.shared.debug("[DualSignatureFlow] ❌ No local key found - showing error message")
             #endif
             endConfirm()
-            App.shared.snackbar.show(message: "No se encuentra la llave local")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_local_key_error", comment: "Local key not found error"))
             return
         }
 
@@ -416,10 +447,11 @@ class ReviewSafeTransactionViewController: UIViewController {
                     transaction: transaction,
                     keyInfo: localKey,
                     signature: signature.hexadecimal,
-                    safeTxHash: safeTxHash
+                    safeTxHash: safeTxHash,
+                    localKey: localKey
                 )
             } catch {
-                App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction",
+                App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_confirm_error", comment: "Failed to confirm transaction error"),
                                                               error: error))
                 endConfirm()
             }
@@ -429,7 +461,8 @@ class ReviewSafeTransactionViewController: UIViewController {
     private func proposeTransaction(transaction: Transaction,
                                     keyInfo: KeyInfo,
                                     signature: String,
-                                    safeTxHash: String) {
+                                    safeTxHash: String,
+                                    localKey: KeyInfo) {
         currentDataTask = gatewayService.asyncProposeTransaction(transaction: transaction,
                                                                  sender: AddressString(keyInfo.address),
                                                                  signature: signature,
@@ -444,23 +477,56 @@ class ReviewSafeTransactionViewController: UIViewController {
                             return
                         }
                         self.endConfirm()
-                        App.shared.snackbar.show(error: GSError.error(description: "Failed to create transaction", error: error))
+                        App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_create_error", comment: "Failed to create transaction error"),
+                                                                     error: error))
                     case .success(let transactionDetails):
                         NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
-                        self.handleCardSignatureIfNeeded(proposedTransaction: transactionDetails, safeTxHash: safeTxHash)
+                        self.handleCardSignatureIfNeeded(proposedTransaction: transactionDetails,
+                                                         safeTxHash: safeTxHash,
+                                                         localKey: localKey)
                     }
                 }
             }
         }
     }
 
-    private func handleCardSignatureIfNeeded(proposedTransaction: SCGModels.TransactionDetails, safeTxHash: String) {
+    private func handleCardSignatureIfNeeded(proposedTransaction: SCGModels.TransactionDetails,
+                                             safeTxHash: String,
+                                             localKey: KeyInfo) {
         let cardKeys = DualSignatureKeySelector.cardOwnerKeys(for: safe)
         guard let cardKey = cardKeys.first else {
-            // No card key available; leave as-is.
-            endConfirm()
-            App.shared.snackbar.show(message: "No card key available; transaction proposed with local signature.")
-            onSuccess(transaction: proposedTransaction)
+            let usermail = App.shared.authRepository.getCurrentUser()?.email ?? "unknown"
+            LogService.shared.info("User (\(usermail)) no card available, falling back to standard transaction confirmation")
+
+            let owners = KeyInfo.owners(safe: safe)
+            let candidates = owners.filter { $0.address != localKey.address }
+            if candidates.isEmpty {
+                // No card key available; leave as-is.
+                endConfirm()
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_card_key_available", comment: "No card key available message"))
+                onSuccess(transaction: proposedTransaction)
+                return
+            }
+
+            let descriptionText = NSLocalizedString("ui_tx_confirm_transaction_description", comment: "Confirm transaction description")
+            let vc = ChooseOwnerKeyViewController(
+                owners: { candidates },
+                chainID: safe.chain!.id,
+                header: .text(description: descriptionText)
+            ) { [weak self] keyInfo in
+                self?.dismiss(animated: true) {
+                    guard let keyInfo = keyInfo else {
+                        self?.endConfirm()
+                        return
+                    }
+                    self?.signExistingTransaction(keyInfo: keyInfo,
+                                                  existingTx: proposedTransaction,
+                                                  safeTxHash: safeTxHash)
+                }
+            }
+
+            let navigationController = UINavigationController(rootViewController: vc)
+            presentModal(navigationController)
             return
         }
 
@@ -477,7 +543,7 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     private func presentTangemSigner(cardKey: KeyInfo, safeTxHash: String, proposedTransaction: SCGModels.TransactionDetails) {
-        let request = SignRequest(title: "Confirm Transaction",
+        let request = SignRequest(title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
                                   tracking: ["action": "confirm"],
                                   signer: cardKey,
                                   hexToSign: safeTxHash)
@@ -495,7 +561,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             guard let self = self else { return }
             if !didSign {
                 self.endConfirm()
-                App.shared.snackbar.show(message: "Card signature pending; complete from Queue.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_card_signature_pending", comment: "Card signature pending message"))
                 self.onSuccess(transaction: proposedTransaction)
             }
         }
@@ -504,7 +570,7 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     private func presentBurnerSigner(cardKey: KeyInfo, safeTxHash: String, proposedTransaction: SCGModels.TransactionDetails) {
-        let request = SignRequest(title: "Confirm Transaction",
+        let request = SignRequest(title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
                                   tracking: ["action": "confirm"],
                                   signer: cardKey,
                                   hexToSign: safeTxHash)
@@ -521,7 +587,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             guard let self = self else { return }
             if !didSign {
                 self.endConfirm()
-                App.shared.snackbar.show(message: "Card signature pending; complete from Queue.")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_card_signature_pending", comment: "Card signature pending message"))
                 self.onSuccess(transaction: proposedTransaction)
             }
         }
@@ -542,7 +608,8 @@ class ReviewSafeTransactionViewController: UIViewController {
                     switch result {
                     case .failure(let error):
                         self.endConfirm()
-                        App.shared.snackbar.show(error: GSError.error(description: "Failed to add card signature", error: error))
+                        App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_add_card_signature_error", comment: "Failed to add card signature error"),
+                                                                     error: error))
                         // Leave proposed tx as is.
                         self.onSuccess(transaction: proposedTransaction)
                     case .success(let confirmedTx):
@@ -567,7 +634,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             LogService.shared.debug("[DualSignatureFlow] ❌ signerKeys() returned nil")
             #endif
             endConfirm()
-            App.shared.snackbar.show(message: "No remaining signers available")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_remaining_signers", comment: "No remaining signers message"))
             return
         }
 
@@ -576,7 +643,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             LogService.shared.debug("[DualSignatureFlow] ❌ signerKeys() returned empty array")
             #endif
             endConfirm()
-            App.shared.snackbar.show(message: "No remaining signers available")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_remaining_signers", comment: "No remaining signers message"))
             return
         }
 
@@ -584,7 +651,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         LogService.shared.debug("[DualSignatureFlow] ✅ Found \(signers.count) available signers - showing ChooseOwnerKeyViewController")
         #endif
 
-        let descriptionText = "You are about to confirm this transaction. This happens off-chain. Please select which owner key to use."
+        let descriptionText = NSLocalizedString("ui_tx_confirm_transaction_description", comment: "Confirm transaction description")
         let vc = ChooseOwnerKeyViewController(
             owners: { signers },
             chainID: safe.chain!.id,
@@ -615,7 +682,7 @@ class ReviewSafeTransactionViewController: UIViewController {
               let safeAddress = try? Address(from: safe.address!),
               let chainId = safe.chain?.id else {
             endConfirm()
-            App.shared.snackbar.show(error: GSError.error(description: "Failed to prepare transaction for signing"))
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_prepare_signing_error", comment: "Failed to prepare transaction for signing error")))
             return
         }
 
@@ -631,7 +698,8 @@ class ReviewSafeTransactionViewController: UIViewController {
                     confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature.hexadecimal, keyInfo: keyInfo)
                 } catch {
                     endConfirm()
-                    App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction", error: error))
+                    App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_confirm_error", comment: "Failed to confirm transaction error"),
+                                                                 error: error))
                 }
             }
 
@@ -644,7 +712,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             presentModal(vc)
 
         case .ledgerNanoX:
-            let request = SignRequest(title: "Confirm Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
                                       tracking: ["action": "confirm"],
                                       signer: keyInfo,
                                       hexToSign: safeTxHash)
@@ -667,7 +735,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             }
 
         case .tangem, .tangem0:
-            let request = SignRequest(title: "Confirm Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
                                       tracking: ["action": "confirm"],
                                       signer: keyInfo,
                                       hexToSign: safeTxHash)
@@ -691,7 +759,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             }
 
         case .burner:
-            let request = SignRequest(title: "Confirm Transaction",
+            let request = SignRequest(title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
                                       tracking: ["action": "confirm"],
                                       signer: keyInfo,
                                       hexToSign: safeTxHash)
@@ -755,11 +823,12 @@ class ReviewSafeTransactionViewController: UIViewController {
                             (error as NSError).domain == NSURLErrorDomain {
                             return
                         }
-                        App.shared.snackbar.show(error: GSError.error(description: "Failed to confirm transaction", error: error))
+                        App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_confirm_error", comment: "Failed to confirm transaction error"),
+                                                                     error: error))
                     case .success(let confirmedTx):
                         NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
                         self.endConfirm()
-                        App.shared.snackbar.show(message: "Confirmation successfully submitted")
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_tx_confirmation_submitted_message", comment: "Confirmation submitted message"))
                         Tracker.trackEvent(
                             .userTransactionConfirmed,
                             parameters: TrackingEvent.keyTypeParameters(keyInfo, parameters: ["source": "review_screen"])
@@ -839,7 +908,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         let cell = tableView.dequeueCell(DetailAccountCell.self)
         cell.setAccount(address: safe.addressValue,
                         label: safe.name,
-                        title: "Safe Account details",
+                        title: NSLocalizedString("ui_tx_safe_account_details_title", comment: "Safe account details title"),
                         copyEnabled: false,
                         browseURL: nil,
                         prefix: safe.chain!.shortName,
@@ -857,7 +926,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         tableCell.tableView.registerCell(DisclosureWithContentCell.self)
 
         let cell = tableCell.tableView.dequeueCell(DisclosureWithContentCell.self)
-        cell.setText("Advanced parameters")
+        cell.setText(NSLocalizedString("ui_tx_advanced_parameters_title", comment: "Advanced parameters title"))
         cell.selectionStyle = .none
         cell.setContent(nil)
 
@@ -876,7 +945,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         let cell = tableView.dequeueCell(DetailExpandableTextCell.self)
         let data = transaction.data?.description ?? ""
         cell.tableView = tableView
-        cell.setTitle("Data")
+        cell.setTitle(NSLocalizedString("ui_tx_data_title", comment: "Transaction data title"))
         cell.setText(data)
         cell.setCopyText(data)
         cell.setExpandableTitle("\(transaction.data?.data.count ?? 0) Bytes")
@@ -978,10 +1047,10 @@ class ReviewSafeTransactionViewController: UIViewController {
     
     private func showConfirmationSuccess(transaction: SCGModels.TransactionDetails) {
         let successVC = SuccessViewController(
-            titleText: "Your confirmation is submitted!",
-            bodyText: "The transaction needs more confirmations before it can be executed.",
-            primaryAction: "View details",
-            secondaryAction: "Done"
+            titleText: NSLocalizedString("ui_tx_confirmation_submitted_title", comment: "Confirmation submitted title"),
+            bodyText: NSLocalizedString("ui_tx_confirmation_submitted_body", comment: "Confirmation submitted body"),
+            primaryAction: NSLocalizedString("ui_tx_view_details_action", comment: "View details action"),
+            secondaryAction: NSLocalizedString("button_done", comment: "Done button title")
         )
         successVC.onDone = { [weak self] isPrimaryAction in
             guard let self = self else { return }

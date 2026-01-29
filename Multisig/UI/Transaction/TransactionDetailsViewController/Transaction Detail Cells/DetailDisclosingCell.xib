@@ -21,7 +21,8 @@
                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="BRP-UI-mza">
                         <rect key="frame" x="16" y="0.0" width="263.5" height="60"/>
                         <constraints>
-                            <constraint firstAttribute="height" constant="60" id="ZiC-t3-6yX"/>
+                            <!-- Avoid breaking during fitting-size layout passes -->
+                            <constraint firstAttribute="height" constant="60" priority="999" id="ZiC-t3-6yX"/>
                         </constraints>
                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                         <nil key="textColor"/>

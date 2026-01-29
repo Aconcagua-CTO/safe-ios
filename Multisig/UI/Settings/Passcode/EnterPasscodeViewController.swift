@@ -43,8 +43,8 @@ class EnterPasscodeViewController: PasscodeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationItem.title = navigationItemTitle
-        promptLabel.text = "Enter your current passcode"
-        button.setText("Forgot your passcode?", .plain)
+        promptLabel.text = NSLocalizedString("ui_passcode_enter_current_prompt", comment: "Enter current passcode prompt")
+        button.setText(NSLocalizedString("ui_passcode_forgot_action", comment: "Forgot passcode action"), .plain)
         detailLabel.isHidden = true
 
         if showsCloseButton {
@@ -175,7 +175,9 @@ class EnterPasscodeViewController: PasscodeViewController {
                 return
             }
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         
@@ -227,6 +229,7 @@ class EnterPasscodeViewController: PasscodeViewController {
         biometryButton.isEnabled = true
 
         if success {
+            maybeEnableBiometrics(passcode: passcode)
             passcodeCompletion(.success(passcode))
         } else {
             wrongAttemptsCount += 1
@@ -234,6 +237,19 @@ class EnterPasscodeViewController: PasscodeViewController {
                 showError("\(wrongAttemptsCount) failed password attempts. You can reset password via \"Forgot passcode?\" button below.")
             } else {
                 showError("Wrong passcode")
+            }
+        }
+    }
+
+    private func maybeEnableBiometrics(passcode: String?) {
+        guard let passcode else { return }
+        guard App.shared.auth.isBiometryActivationPossible else { return }
+
+        if AppConfiguration.FeatureToggles.securityCenter {
+            App.shared.securityCenter.enableBiometricUnlockIfPossible(plaintextPasscode: passcode)
+        } else {
+            if !AppSettings.passcodeOptions.contains(.useBiometry) {
+                AppSettings.passcodeOptions.insert(.useBiometry)
             }
         }
     }

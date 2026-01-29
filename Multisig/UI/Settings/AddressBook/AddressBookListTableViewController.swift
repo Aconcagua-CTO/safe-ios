@@ -27,7 +27,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Address Book"
+        title = NSLocalizedString("ui_settings_address_book_title", comment: "Settings title for address book")
 
         tableView.delegate = self
         tableView.dataSource = self
@@ -38,7 +38,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 48
 
-        emptyView.setTitle("There are no address book entries")
+        emptyView.setTitle(NSLocalizedString("ui_address_book_empty_title", comment: "Address book empty title"))
         emptyView.setImage(UIImage(named: "ico-no-address-book")!)
 
         if !isPickerModeEnabled {
@@ -98,7 +98,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
                     activityViewController.completionWithItemsHandler = {(_ , completed, _, _) in
                         if completed {
                             Tracker.trackEvent(.addressBookExported)
-                            App.shared.snackbar.show(message: "Address book entries exported")
+                            App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_exported_message", comment: "Address book exported message"))
                         }
                     }
                     self.present(activityViewController, animated: true, completion: nil)
@@ -108,7 +108,9 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
             alertController.addAction(exportEntryButton)
         }
 
-        let cancelButton = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancelButton = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                          style: .cancel,
+                                          handler: nil)
         alertController.addAction(cancelButton)
 
         self.present(alertController, animated: true)
@@ -118,6 +120,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         let selectNetworkVC = SelectNetworkViewController()
         selectNetworkVC.screenTitle = "New Entry"
         selectNetworkVC.descriptionText = "Select network on which you want to add entry:"
+        selectNetworkVC.useLocalChains = true
         selectNetworkVC.completion = { [unowned self] chain  in
             let vc = CreateAddressBookEntryViewController()
             vc.chain = chain
@@ -126,7 +129,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
             vc.completion = { (address, name)  in
                 AddressBookEntry.create(address: address.checksummed, name: name, chainInfo: chain)
                 navigationController?.popToViewController(self, animated: true)
-                App.shared.snackbar.show(message: "Address book entry added")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_added_message", comment: "Address book added message"))
             }
             self.show(ribbon, sender: self)
         }
@@ -181,13 +184,15 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         let entry = chainEntries[indexPath.section].entries[indexPath.row]
 
         var actions = [UIContextualAction]()
-        let editAction = UIContextualAction(style: .normal, title: "Edit") { [weak self] _, _, completion in
+        let editAction = UIContextualAction(style: .normal,
+                                            title: NSLocalizedString("button_edit", comment: "Edit action title")) { [weak self] _, _, completion in
             self?.showEdit(entry: entry)
             completion(true)
         }
         actions.append(editAction)
 
-        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(style: .destructive,
+                                              title: NSLocalizedString("button_delete", comment: "Delete action title")) { [weak self] _, _, completion in
             self?.remove(entry, sourceIndexPath: indexPath)
             completion(true)
         }
@@ -224,7 +229,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
             AddressBookEntry.update(entry.displayAddress, chainId: entry.chain!.id!, name: name)
             notificationCenter.post(name: .addressbookChanged, object: self, userInfo: nil)
             navigationController?.popViewController(animated: true)
-            App.shared.snackbar.show(message: "Address book entry updated")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_updated_message", comment: "Address book updated message"))
         }
         
         let ribbonVC = RibbonViewController(rootViewController: enterNameVC)
@@ -240,9 +245,11 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
 
         let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
             AddressBookEntry.remove(entry: entry)
-            App.shared.snackbar.show(message: "Address book entry removed")
+            App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_removed_message", comment: "Address book removed message"))
         }
-        let cancel = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                   style: .cancel,
+                                   handler: nil)
         alertController.addAction(remove)
         alertController.addAction(cancel)
         
@@ -260,7 +267,10 @@ extension AddressBookListTableViewController: UIDocumentPickerDelegate {
         if let csv = FileManagerWrapper.importFile(url: url) {
             let result = AddressBookEntry.importFrom(csv: csv)
             Tracker.trackEvent(.addressBookImported)
-            App.shared.snackbar.show(message: "\(result.0) entries imported. \(result.1) entries updated")
+            App.shared.snackbar.show(message: String(format: NSLocalizedString("ui_address_book_imported_updated_format",
+                                                                              comment: "Address book imported/updated format"),
+                                                     result.0,
+                                                     result.1))
         }
     }
 }

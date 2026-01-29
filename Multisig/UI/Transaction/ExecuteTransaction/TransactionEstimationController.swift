@@ -118,7 +118,8 @@ class TransactionEstimationController {
                     let jsonError = (try? error.data?.convert(to: Json.NSError.self))?.nsError() ?? (error as NSError)
                     dispatchOnMainThread(completion(.failure(jsonError)))
                 } else {
-                    dispatchOnMainThread(completion(.failure(TransactionEstimationError(code: -2, message: "Failed to estimate transaction."))))
+                    dispatchOnMainThread(completion(.failure(TransactionEstimationError(code: -2,
+                                                                                        message: NSLocalizedString("ui_tx_estimate_failed_error", comment: "Transaction estimation failed error")))))
                 }
 
             case .array(let responses):

@@ -51,7 +51,7 @@ class KeySecurityOverviewViewController: LoadableViewController, UITableViewDele
         tableView.dataSource = self
         tableView.tableFooterView = UIView()
 
-        title = "Recovery Kit"
+        title = NSLocalizedString("ui_recovery_kit_title", comment: "Title for recovery kit overview screen")
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0

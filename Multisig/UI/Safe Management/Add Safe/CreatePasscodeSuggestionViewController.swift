@@ -32,7 +32,7 @@ class CreatePasscodeSuggestionViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        title = "Create Passcode"
+        title = NSLocalizedString("ui_passcode_suggestion_title", comment: "Passcode suggestion title")
 
         navigationItem.hidesBackButton = true
         navigationItem.title = nil
@@ -41,8 +41,8 @@ class CreatePasscodeSuggestionViewController: UIViewController {
         titleLabel.setStyle(.title3)
         subtitleLabel.setStyle(.callout)
 
-        createButton.setText("Create passcode", .filled)
-        notNowButton.setText("Not now", .primary)
+        createButton.setText(NSLocalizedString("ui_passcode_create_action", comment: "Create passcode action"), .filled)
+        notNowButton.setText(NSLocalizedString("ui_passcode_not_now_action", comment: "Not now action"), .primary)
     }
 
     override func viewDidAppear(_ animated: Bool) {

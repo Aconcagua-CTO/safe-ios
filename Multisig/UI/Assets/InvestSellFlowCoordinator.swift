@@ -90,7 +90,7 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
             vaultEvmAddress: vaultId,
             chainId: selected.chain?.id,
             payload: payload
-        ) { result in
+        ) { [service] result in
             switch result {
             case .success:
                 LogService.shared.info("[TransactionRequests][sell] created")

@@ -37,13 +37,16 @@ class EnterENSNameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = "Enter ENS Name"
+        navigationItem.title = NSLocalizedString("ui_safe_enter_ens_title", comment: "Enter ENS name title")
 
-        confirmButton = UIBarButtonItem(title: "Confirm", style: .done, target: self, action: #selector(didTapConfirmButton))
+        confirmButton = UIBarButtonItem(title: NSLocalizedString("ui_tx_confirm_action", comment: "Confirm action"),
+                                        style: .done,
+                                        target: self,
+                                        action: #selector(didTapConfirmButton))
         confirmButton.isEnabled = false
         navigationItem.rightBarButtonItem = confirmButton
 
-        textField.setPlaceholder("Enter ENS name")
+        textField.setPlaceholder(NSLocalizedString("ui_safe_enter_ens_placeholder", comment: "Enter ENS placeholder"))
         textField.textField.autocorrectionType = .no
         textField.textField.autocapitalizationType = .none
         textField.textField.keyboardType = .URL

@@ -40,12 +40,22 @@ class AddressInfoView: UINibView {
         titleLabel.setStyle(.headline)
         textLabel.setStyle(.headline)
         addressLabel.setStyle(.bodyTertiary)
+        // Always keep labels left-aligned (some screens hide identicons and still expect leading alignment).
+        titleLabel.textAlignment = .left
+        textLabel.textAlignment = .left
+        addressLabel.textAlignment = .left
         setTitle(nil)
 
         setIconSize(Self.defaultIconSize)
         // Make icon constraints flexible to avoid layout conflicts
         iconWidthConstraint.priority = .defaultHigh
         iconHeightConstraint.priority = .defaultHigh
+
+        // Allow horizontal compression during fitting-size passes.
+        identiconView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        identiconView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        addressLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Make the view more flexible for layout
         setContentHuggingPriority(.defaultHigh, for: .vertical)
@@ -58,6 +68,10 @@ class AddressInfoView: UINibView {
                                                selector: #selector(displayAddress),
                                                name: .chainSettingsChanged,
                                                object: nil)
+
+        // Product decision: do not allow opening external links from this component.
+        detailButton.isHidden = true
+        detailButton.isUserInteractionEnabled = false
     }
     
     func setIconSize(_ value: CGFloat) {
@@ -107,12 +121,17 @@ class AddressInfoView: UINibView {
         }
         
         displayAddress()
-        addressLabel.textAlignment = showIdenticon ? .left : .center
+        // Keep address alignment consistent with the rest of the text.
+        // Some screens hide identicons (showIdenticon=false) but still expect left-aligned addresses.
+        addressLabel.textAlignment = .left
         if showIdenticon {
             identiconView.set(address: address, imageURL: imageUri, badgeName: badgeName)
         }
-        identiconView.isHidden = !showIdenticon
-        detailButton.isHidden = browseURL == nil
+        // `IdenticonView.set(...)` may hide itself if it has nothing meaningful to show.
+        // Respect that and avoid forcing it visible.
+        identiconView.isHidden = !showIdenticon || identiconView.isHidden
+        // Always hide the external-link button (even if browseURL exists).
+        detailButton.isHidden = true
     }
     
     // show address with identicon, and show label or address ellipsized.
@@ -142,19 +161,21 @@ class AddressInfoView: UINibView {
         
         if !hideAddress {
             displayAddress()
+            addressLabel.textAlignment = .left
         } else {
             addressLabel.isHidden = true
         }
         
-        identiconView.isHidden = !showIdenticon
         if showIdenticon {
             identiconView.set(address: address,
                               imageURL: imageUri,
                               placeholderImage: placeholderImage,
                               badgeName: badgeName)
         }
+        identiconView.isHidden = !showIdenticon || identiconView.isHidden
         
-        detailButton.isHidden = browseURL == nil
+        // Always hide the external-link button (even if browseURL exists).
+        detailButton.isHidden = true
     }
     
     @IBAction private func didTapDetailButton() {
@@ -175,7 +196,8 @@ class AddressInfoView: UINibView {
     @IBAction private func copyAddress() {
         guard copyAddressEnabled else { return }
         Pasteboard.string = copyPrefixString() + address.checksummed
-        App.shared.snackbar.show(message: "Copied to clipboard", duration: 2)
+        App.shared.snackbar.show(message: NSLocalizedString("ui_copied_to_clipboard_message", comment: "Copied to clipboard message"),
+                                 duration: 2)
     }
     
     @IBAction private func didTouchDown(sender: UIButton, forEvent event: UIEvent) {
@@ -188,6 +210,7 @@ class AddressInfoView: UINibView {
     
     @objc func displayAddress() {
         addressLabel.isHidden = false
+        addressLabel.textAlignment = .left
         if let ensName = ensName {
             addressLabel.text = ensName
         } else if let _ = label {

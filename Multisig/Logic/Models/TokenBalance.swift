@@ -32,24 +32,73 @@ struct TokenBalance: Identifiable, Hashable {
     let fiatBalance: String
     let balanceValue: BigDecimal
     let decimals: Int
+    let tokenCategoryRaw: String?
+    let wrapLabel: String?
+    let priceSource: String?
+    let priceSourceParam: String?
+    let yieldSource: String?
+    let yieldChainId: String?
+    let aaveMarketPoolAddress: String?
+    let aaveUnderlyingTokenAddress: String?
+    let aaveMarketName: String?
+    let tokenSymbol: String?
+    let tokenName: String?
 }
 
 extension TokenBalance {
+    private static func preferredTokenPlaceholderImage() -> UIImage? {
+        UIImage(named: "ico-coin") ?? UIImage(named: "ico-token-placeholder")
+    }
+
+    private static func resolveWhitelistLogoUri(chainId: String, tokenAddress: Address) -> String? {
+        let trimmedChainId = chainId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedChainId.isEmpty else { return nil }
+
+        // CoreData viewContext is main-queue bound; resolve on main.
+        let resolve: () -> String? = {
+            let entry = TokenWhitelist.by(chainId: trimmedChainId, networkAddress: tokenAddress.checksummed)
+            let raw = entry?.image?.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let raw, !raw.isEmpty else { return nil }
+            return raw
+        }
+
+        if Thread.isMainThread {
+            return resolve()
+        }
+        var value: String?
+        DispatchQueue.main.sync {
+            value = resolve()
+        }
+        return value
+    }
+
     init(_ item: SCGBalance, code: String, chainId: String) {
-        let whitelistEntry = TokenWhitelist.by(chainId: chainId, networkAddress: item.tokenInfo.address.address.checksummed)
-        let category = whitelistEntry?.tokenCategory ?? "blackToken"
-        let resolvedSymbol = whitelistEntry?.tokenSymbol ?? item.tokenInfo.symbol
-        let resolvedName = whitelistEntry?.tokenName ?? item.tokenInfo.name
+        let resolvedCategory = item.tokenCategory ?? "blackToken"
+        let resolvedSymbol = item.tokenInfo.symbol
+        let resolvedName = item.tokenInfo.name
+        let whitelistLogoUri = Self.resolveWhitelistLogoUri(chainId: chainId, tokenAddress: item.tokenInfo.address.address)
+        let resolvedLogoUri = whitelistLogoUri ?? item.tokenInfo.logoUri
         self.init(address: item.tokenInfo.address.address,
                   name: resolvedName,
                   symbol: resolvedSymbol,
-                  logoUri: item.tokenInfo.logoUri,
+                  logoUri: resolvedLogoUri,
                   tokenBalance: item.balance,
                   decimals: item.tokenInfo.decimals,
                   fiatBalance: item.fiatBalance,
                   fiatConversion: item.fiatConversion,
                   code: code,
-                  category: category)
+                  category: resolvedCategory,
+                  tokenCategoryRaw: item.tokenCategory,
+                  wrapLabel: item.wrapLabel,
+                  priceSource: item.priceSource,
+                  priceSourceParam: item.priceSourceParam,
+                  yieldSource: item.yieldSource,
+                  yieldChainId: item.yieldChainId,
+                  aaveMarketPoolAddress: item.aaveMarketPoolAddress,
+                  aaveUnderlyingTokenAddress: item.aaveUnderlyingTokenAddress,
+                  aaveMarketName: item.aaveMarketName,
+                  tokenSymbol: item.tokenSymbol,
+                  tokenName: item.tokenName)
     }
 
     init(address: Address,
@@ -61,14 +110,32 @@ extension TokenBalance {
          fiatBalance: String,
          fiatConversion: String = "0",
          code: String,
-         category: String) {
+         category: String,
+         tokenCategoryRaw: String? = nil,
+         wrapLabel: String? = nil,
+         priceSource: String? = nil,
+         priceSourceParam: String? = nil,
+         yieldSource: String? = nil,
+         yieldChainId: String? = nil,
+         aaveMarketPoolAddress: String? = nil,
+         aaveUnderlyingTokenAddress: String? = nil,
+         aaveMarketName: String? = nil,
+         tokenSymbol: String? = nil,
+         tokenName: String? = nil) {
         self.address = address.checksummed
         let coin = Chain.nativeCoin
 
         self.name = name ?? coin?.name ?? "Ether"
         self.symbol = symbol ?? coin?.symbol ?? "ETH"
         self.category = category
-        self.imageURL = logoUri.flatMap { URL(string: $0) } ?? coin?.logoUrl
+        self.imageURL = logoUri
+            .flatMap { URL(string: $0) }
+            ?? coin?.logoUrl
+        if self.imageURL == nil {
+            self.image = Self.preferredTokenPlaceholderImage()
+        } else {
+            self.image = nil
+        }
 
         let tokenFormatter = TokenFormatter()
         let amount = Int256(tokenBalance.value)
@@ -87,6 +154,17 @@ extension TokenBalance {
 
         let conversionNumber = Self.serverCurrencyFormatter.number(from: fiatConversion) ?? 0
         self.fiatConversion = conversionNumber.doubleValue
+        self.tokenCategoryRaw = tokenCategoryRaw
+        self.wrapLabel = wrapLabel
+        self.priceSource = priceSource
+        self.priceSourceParam = priceSourceParam
+        self.yieldSource = yieldSource
+        self.yieldChainId = yieldChainId
+        self.aaveMarketPoolAddress = aaveMarketPoolAddress
+        self.aaveUnderlyingTokenAddress = aaveUnderlyingTokenAddress
+        self.aaveMarketName = aaveMarketName
+        self.tokenSymbol = tokenSymbol
+        self.tokenName = tokenName
     }
 
     /// Creates a zero-balance token row from a whitelist entry (used for Markets screens).
@@ -121,7 +199,11 @@ extension TokenBalance {
         } else {
             self.imageURL = nil
         }
-        self.image = nil
+        if self.imageURL == nil {
+            self.image = Self.preferredTokenPlaceholderImage()
+        } else {
+            self.image = nil
+        }
 
         let d = Int(entry.decimals)
         self.decimals = d > 0 ? d : 18
@@ -131,6 +213,17 @@ extension TokenBalance {
         self.fiatValue = 0
         self.fiatConversion = 0
         self.fiatBalance = Self.displayCurrency(from: "0", code: fiatCode)
+        self.tokenCategoryRaw = entry.tokenCategory
+        self.wrapLabel = entry.wrapLabel
+        self.priceSource = entry.priceSource
+        self.priceSourceParam = entry.priceSourceParam
+        self.yieldSource = entry.yieldSource
+        self.yieldChainId = entry.chainId
+        self.aaveMarketPoolAddress = entry.aaveMarketPoolAddress
+        self.aaveUnderlyingTokenAddress = entry.aaveUnderlyingTokenAddress
+        self.aaveMarketName = entry.aaveMarketName
+        self.tokenSymbol = entry.tokenSymbol
+        self.tokenName = entry.tokenName
     }
 
     static var serverCurrencyFormatter: NumberFormatter = {

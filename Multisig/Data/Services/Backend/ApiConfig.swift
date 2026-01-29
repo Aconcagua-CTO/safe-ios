@@ -87,9 +87,33 @@ struct ApiConfig {
         return url
     }()
 
+    /// Safe Client Gateway reverse-proxy base URL (Option A).
+    /// This is served by the vaults backend (`vaultsPolygon`) and keeps Safe API keys server-side.
+    /// Final URLs look like:
+    ///   {scgProxyApiURL}/v1/chains/{chainId}/safes/{safeAddress}/balances/{fiat}
+    static let scgProxyApiURL: URL = {
+        // Ensure trailing slash so path-joining is predictable.
+        return vaultsApiURL.appendingPathComponent("scg").appendingPathComponent("")
+    }()
+
     static let marketApiURL: URL = {
         guard let url = URL(string: "\(firebaseBaseURL)market/") else {
             fatalError("Invalid market API URL")
+        }
+        return url
+    }()
+
+    static let marketCapApiURL: URL = {
+        guard let url = URL(string: "\(firebaseBaseURL)marketCap/") else {
+            fatalError("Invalid marketCap API URL")
+        }
+        return url
+    }()
+
+    /// Safe Config service base URL (unauthenticated)
+    static let safeConfigApiURL: URL = {
+        guard let url = URL(string: "https://safe-config.safe.global") else {
+            fatalError("Invalid Safe Config API URL")
         }
         return url
     }()

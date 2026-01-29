@@ -58,13 +58,14 @@ class FeeLegacyFormModel: FormModel {
 
     var totalFeeInNativeCoinText: String? {
         guard let totalFee = totalFeeInWei else {
-            return "Total estimated fee: n/a"
+            return NSLocalizedString("ui_tx_total_estimated_fee_na", comment: "Total estimated fee not available")
         }
         let amount = Eth.TokenAmount(
             value: totalFee,
             decimals: Int(nativeCurrency.decimals),
             symbol: nativeCurrency.symbol ?? "")
-        let result = "Total estimated fee: \(amount)"
+        let result = String(format: NSLocalizedString("ui_tx_total_estimated_fee_format", comment: "Total estimated fee format"),
+                            amount.description)
         return result
     }
 
@@ -79,11 +80,11 @@ class FeeLegacyFormModel: FormModel {
     func fields() -> [UIView] {
         nonceField = LabeledTextField()
         nonceField.infoLabel.setText(
-            "Nonce",
-            description: "Transaction count of the execution account",
+            NSLocalizedString("ui_tx_nonce_field_title", comment: "Nonce field title"),
+            description: NSLocalizedString("ui_tx_execution_account_nonce_description", comment: "Nonce field description"),
             style: .headline
         )
-        nonceField.gnoTextField.setPlaceholder("Nonce")
+        nonceField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_nonce_field_title", comment: "Nonce field title"))
         nonceField.gnoTextField.text = nonceText
         nonceField.gnoTextField.textField.keyboardType = .numberPad
         nonceField.validator = IntegerTextValidator()
@@ -91,11 +92,11 @@ class FeeLegacyFormModel: FormModel {
 
         gasField = LabeledTextField()
         gasField.infoLabel.setText(
-            "Gas limit",
-            description: "Maximum gas that this transaction can spend. Unused gas will be refunded",
+            NSLocalizedString("ui_tx_gas_limit_title", comment: "Gas limit title"),
+            description: NSLocalizedString("ui_tx_gas_limit_description", comment: "Gas limit description"),
             style: .headline
         )
-        gasField.gnoTextField.setPlaceholder("Gas limit")
+        gasField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_gas_limit_title", comment: "Gas limit title"))
         gasField.gnoTextField.text = gasText
         gasField.gnoTextField.textField.keyboardType = .numberPad
         gasField.validator = IntegerTextValidator()
@@ -104,11 +105,11 @@ class FeeLegacyFormModel: FormModel {
 
         gasPriceField = LabeledTextField()
         gasPriceField.infoLabel.setText(
-            "Gas price (GWEI)",
-            description: "Price per 1 gas in Gwei price units",
+            NSLocalizedString("ui_tx_gas_price_title", comment: "Gas price title"),
+            description: NSLocalizedString("ui_tx_gas_price_description", comment: "Gas price description"),
             style: .headline
         )
-        gasPriceField.gnoTextField.setPlaceholder("Gas price (GWEI)")
+        gasPriceField.gnoTextField.setPlaceholder(NSLocalizedString("ui_tx_gas_price_title", comment: "Gas price title"))
         gasPriceField.gnoTextField.text = gasPriceInGigaweiText
         gasPriceField.gnoTextField.textField.keyboardType = .decimalPad
         gasPriceField.validator = DecimalTextValidator()
@@ -117,7 +118,7 @@ class FeeLegacyFormModel: FormModel {
         gasPriceField.setCaption(totalFeeInNativeCoinText)
 
         helpField = HyperlinkButtonView()
-        helpField.setText("How do I configure these details manually?")
+        helpField.setText(NSLocalizedString("ui_tx_advanced_help_link", comment: "Advanced parameters help link text"))
         helpField.url = App.configuration.help.advancedTxParamsURL
 
         return [nonceField, gasField, gasPriceField, helpField]
@@ -139,12 +140,12 @@ class FeeLegacyFormModel: FormModel {
         gasField.gnoTextField.setErrorText(nil)
 
         guard let gasText = gasField.text, !gasText.isEmpty else {
-            gasField.gnoTextField.setErrorText("This value is required")
+            gasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let value = Sol.UInt64(gasText, radix: 10) else {
-            gasField.gnoTextField.setErrorText("Value is not a valid number")
+            gasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
 
@@ -156,17 +157,17 @@ class FeeLegacyFormModel: FormModel {
         nonceField.gnoTextField.setErrorText(nil)
 
         guard let text = nonceField.text, !text.isEmpty else {
-            nonceField.gnoTextField.setErrorText("This value is required")
+            nonceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let value = Sol.UInt64(text, radix: 10) else {
-            nonceField.gnoTextField.setErrorText("Value is not a valid number")
+            nonceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
 
         if value < minimalNonce {
-            nonceField.gnoTextField.setErrorText("Transaction with this nonce is already executed")
+            nonceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_nonce_already_executed_error", comment: "Nonce already executed error"))
             return false
         }
         
@@ -178,12 +179,12 @@ class FeeLegacyFormModel: FormModel {
         gasPriceField.gnoTextField.setErrorText(nil)
 
         guard let text = gasPriceField.text, !text.isEmpty else {
-            gasPriceField.gnoTextField.setErrorText("This value is required")
+            gasPriceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_required_error", comment: "Value required error"))
             return false
         }
 
         guard let amount = Eth.TokenAmount<Sol.UInt256>(text, radix: 10, decimals: gigaweiDecimals) else {
-            gasPriceField.gnoTextField.setErrorText("Value is not a valid number")
+            gasPriceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_value_invalid_number_error", comment: "Invalid number error"))
             return false
         }
 
@@ -193,8 +194,8 @@ class FeeLegacyFormModel: FormModel {
 
     func validateTotalFee() -> Bool {
         guard totalFeeInWei != nil else {
-            gasField.gnoTextField.setErrorText("Total fee is too high")
-            gasPriceField.gnoTextField.setErrorText("Total fee is too high ")
+            gasField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_total_fee_too_high_error", comment: "Total fee too high error"))
+            gasPriceField.gnoTextField.setErrorText(NSLocalizedString("ui_tx_total_fee_too_high_error", comment: "Total fee too high error"))
             return false
         }
         return true

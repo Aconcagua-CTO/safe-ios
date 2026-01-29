@@ -30,10 +30,10 @@ class SafeCreationSuccessViewController: UIViewController {
         animationView.contentMode = .scaleAspectFit
         animationView.backgroundBehavior = .pauseAndRestore
         animationView.play()
-        continueButton.setText("Continue", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
 
         addressInfoView.setAddress(Address("0xEa3290590Dd491739f5F731266631A2649eBa661"),
-                                   label: "My Safe Account",
+                                   label: NSLocalizedString("ui_safe_creation_success_label", comment: "Safe creation success label"),
                                    browseURL: chain.browserURL(address: "0xEa3290590Dd491739f5F731266631A2649eBa661"))
 
         addressInfoView.backgroundColor = .backgroundLightGreen

@@ -23,7 +23,7 @@ class EditOwnerKeyViewController: UIViewController {
         super.viewDidLoad()
         assert(keyInfo != nil, "Developer error: expect to have a key")
 
-        navigationItem.title = "Edit Key Name"
+        navigationItem.title = NSLocalizedString("ui_key_edit_name_title", comment: "Title for editing an owner key name")
 
         saveButton = UIBarButtonItem(title: "Save", style: .done, target: self, action: #selector(didTapSaveButton))
         navigationItem.rightBarButtonItem = saveButton

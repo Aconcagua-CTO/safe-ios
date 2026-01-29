@@ -32,7 +32,7 @@ class ReplaceOwnerFromInviteFlow: ReplaceOwnerFlow {
                                name: newOwnerName,
                                stepNumber: 1,
                                maxSteps: 3,
-                               title: "Replace owner",
+                               title: NSLocalizedString("ui_owner_replace_title", comment: "Replace owner title"),
                                trackingEvent: .screenOwnerFromLinkChooseName) { [unowned self] name in
             newOwnerName = name
             pickOwnerToReplace()

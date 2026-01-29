@@ -20,7 +20,7 @@ class BackupKeyTableViewCell: UITableViewCell {
         // Initialization code
         titleLabel.setStyle(.headline)
         descriptionLabel.setStyle(.body)
-        backupButton.setText("Back up now", .filled)
+        backupButton.setText(NSLocalizedString("ui_backup_now_action", comment: "Back up now action"), .filled)
     }
 
     @IBAction func backupButtonTouched(_ sender: Any) {

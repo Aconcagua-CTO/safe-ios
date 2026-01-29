@@ -4,6 +4,7 @@ import TangemSdk
 final class TangemScanViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     var onWalletSelected: ((TangemWalletSelection) -> Void)?
     var onCancelled: (() -> Void)?
+    var autoSelectFirstWallet: Bool = false
 
     private enum State {
         case idle
@@ -36,6 +37,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
     private var cardId: String?
     private var scanTask: Task<Void, Never>?
     private var hasStarted = false
+    private var hasAutoSelected = false
 
     init(service: TangemCardService) {
         self.service = service
@@ -55,7 +57,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         super.viewDidLoad()
 
         view.backgroundColor = .backgroundSecondary
-        navigationItem.title = "Scan Tangem Card"
+        navigationItem.title = NSLocalizedString("ui_tangem_scan_card_title", comment: "Title for scanning a Tangem card")
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel,
                                                             target: self,
@@ -128,7 +130,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
     }
 
     private func configureActionButton() {
-        actionButton.setTitle("Try Again", for: .normal)
+        actionButton.setTitle(NSLocalizedString("button_retry", comment: "Retry button title"), for: .normal)
         actionButton.addTarget(self, action: #selector(retryTapped), for: .touchUpInside)
         actionButton.isHidden = true
     }
@@ -143,8 +145,8 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
             guard let self else { return }
             do {
                 let message = Message(
-                    header: "Safe Wallet",
-                    body: "Hold your Tangem card near the top of your iPhone to connect."
+                    header: NSLocalizedString("ui_tangem_scan_message_header", comment: "Tangem scan message header"),
+                    body: NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")
                 )
 
                 let summary = try await self.service.scanCard(forceRefresh: forceRefresh, initialMessage: message)
@@ -169,8 +171,12 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
                 await MainActor.run {
                     self.cardId = summary.cardId
                     self.walletItems = items
-                    self.state = .ready
-                    self.tableView.reloadData()
+                    if self.autoSelectFirstWallet {
+                        self.autoSelectFirstWalletIfNeeded()
+                    } else {
+                        self.state = .ready
+                        self.tableView.reloadData()
+                    }
                 }
             } catch {
                 guard !Task.isCancelled else { return }
@@ -193,21 +199,21 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
             tableView.isHidden = true
 
         case .scanning:
-            statusLabel.text = "Scanning Tangem Card"
-            detailLabel.text = "Hold your Tangem card near the top edge of your iPhone."
+            statusLabel.text = NSLocalizedString("ui_tangem_scanning_title", comment: "Status shown while scanning Tangem card")
+            detailLabel.text = NSLocalizedString("ui_tangem_hold_near_top_edge", comment: "Instruction for holding Tangem card near phone")
             activityIndicator.startAnimating()
             actionButton.isHidden = true
             tableView.isHidden = true
 
         case .ready:
-            statusLabel.text = "Select Wallet"
-            detailLabel.text = "Choose which wallet on your Tangem card you want to add."
+            statusLabel.text = NSLocalizedString("ui_tangem_select_wallet_title", comment: "Title shown when selecting a Tangem wallet")
+            detailLabel.text = NSLocalizedString("ui_tangem_choose_wallet_detail", comment: "Detail shown when choosing a Tangem wallet")
             activityIndicator.stopAnimating()
             actionButton.isHidden = true
             tableView.isHidden = false
 
         case .error(let message):
-            statusLabel.text = "Unable to Scan"
+            statusLabel.text = NSLocalizedString("ui_tangem_unable_to_scan_title", comment: "Title shown when Tangem scan fails")
             detailLabel.text = message
             activityIndicator.stopAnimating()
             actionButton.isHidden = false
@@ -219,17 +225,17 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         if let tangemError = error as? TangemServiceError {
             switch tangemError {
             case .nfcUnavailable:
-                return "NFC is not available on this device. Tangem cards require NFC to communicate."
+                return NSLocalizedString("ui_tangem_error_nfc_unavailable", comment: "Error when NFC is unavailable for Tangem")
             case .userCancelled:
-                return "The operation was cancelled. Tap Try Again to rescan your Tangem card."
+                return NSLocalizedString("ui_tangem_error_user_cancelled", comment: "Error when Tangem scan is cancelled")
             case .missingWallet:
-                return "This Tangem card does not contain an Ethereum-compatible wallet. Create a wallet in the Tangem app and try again."
+                return NSLocalizedString("ui_tangem_error_missing_wallet", comment: "Error when Tangem card has no Ethereum-compatible wallet")
             case .cardMismatch(let expected, let actual):
-                return "Please use Tangem card \(expected). Detected card \(actual)."
+                return String(format: NSLocalizedString("ui_tangem_error_card_mismatch_format", comment: "Error when Tangem card does not match expected"), expected, actual)
             case .invalidDerivationPath(let path):
-                return "The derivation path \(path) is not supported for this card."
+                return String(format: NSLocalizedString("ui_tangem_error_invalid_derivation_path_format", comment: "Error when Tangem derivation path is unsupported"), path)
             case .unsupportedCurve:
-                return "This Tangem wallet is not compatible with Ethereum accounts."
+                return NSLocalizedString("ui_tangem_error_unsupported_curve", comment: "Error when Tangem wallet is incompatible")
             case .sdkError(let sdkError):
                 return sdkError.localizedDescription
             case .underlying(let underlying):
@@ -261,7 +267,10 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier) ?? UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
         let item = walletItems[indexPath.row]
         cell.textLabel?.text = item.address.checksummed
-        cell.detailTextLabel?.text = "Wallet #\(item.wallet.index)"
+        cell.detailTextLabel?.text = String(
+            format: NSLocalizedString("ui_tangem_wallet_format", comment: "Tangem wallet label format"),
+            item.wallet.index
+        )
         cell.imageView?.image = UIImage(named: KeyType.tangem.imageName)
         cell.accessoryType = .disclosureIndicator
         cell.selectionStyle = .default
@@ -274,6 +283,21 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         tableView.deselectRow(at: indexPath, animated: true)
         guard let cardId = cardId else { return }
         let item = walletItems[indexPath.row]
+        selectWallet(item, cardId: cardId, allowDebugAlert: true)
+    }
+
+    private func autoSelectFirstWalletIfNeeded() {
+        guard autoSelectFirstWallet, !hasAutoSelected else { return }
+        guard let cardId = cardId, let first = walletItems.first else {
+            state = .ready
+            tableView.reloadData()
+            return
+        }
+        hasAutoSelected = true
+        selectWallet(first, cardId: cardId, allowDebugAlert: false)
+    }
+
+    private func selectWallet(_ item: WalletItem, cardId: String, allowDebugAlert: Bool) {
         let derivationPath = TangemDerivationPathPolicy.defaultDerivationPath(for: item.wallet)
         let selection = TangemWalletSelection(cardId: cardId,
                                               walletPublicKey: item.rawPublicKey,
@@ -284,22 +308,28 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
         TangemLogger.debug("Derived default path for wallet index \(item.wallet.index): \(pathLog)")
         TangemLogger.info("User selected Tangem wallet index=\(item.wallet.index) cardId=\(cardId)")
         #if DEBUG
-        let rawKeyHex = item.rawPublicKey.tangemHexDescription(prefix: true)
-        let message = """
-        Address: \(item.address.checksummed)
-        Wallet index: \(item.wallet.index)
-        Public key: \(rawKeyHex)
-        """
-        let alert = UIAlertController(title: "Tangem Wallet Key", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "Copy & Continue", style: .default) { [weak self] _ in
-            UIPasteboard.general.string = rawKeyHex
-            self?.onWalletSelected?(selection)
-        })
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        present(alert, animated: true)
-        #else
-        onWalletSelected?(selection)
+        if allowDebugAlert {
+            let rawKeyHex = item.rawPublicKey.tangemHexDescription(prefix: true)
+            let message = """
+            Address: \(item.address.checksummed)
+            Wallet index: \(item.wallet.index)
+            Public key: \(rawKeyHex)
+            """
+            let alert = UIAlertController(title: NSLocalizedString("ui_tangem_wallet_key_title", comment: "Tangem wallet key alert title"),
+                                          message: message,
+                                          preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: NSLocalizedString("ui_walletconnect_copy_continue_title", comment: "Copy and continue button title"),
+                                          style: .default) { [weak self] _ in
+                UIPasteboard.general.string = rawKeyHex
+                self?.onWalletSelected?(selection)
+            })
+            alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
+                                          style: .cancel))
+            present(alert, animated: true)
+            return
+        }
         #endif
+        onWalletSelected?(selection)
     }
 }
 

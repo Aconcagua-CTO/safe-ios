@@ -58,7 +58,7 @@ enum ViewControllerFactory {
         vc.safe = safe
         vc.onSelect = { [weak vc] address in
             vc?.dismiss(animated: true, completion: {
-                App.shared.snackbar.show(message: "Top Up Not Supported")
+                App.shared.snackbar.show(message: NSLocalizedString("ui_top_up_not_supported", comment: "Top up not supported message"))
             })
         }
 
@@ -66,17 +66,17 @@ enum ViewControllerFactory {
     }
 
     static func transactionDetailsViewController(transactionId: String) -> UIViewController {
-        let vc = TransactionDetailsViewController(transactionID: transactionId)
+        let vc = UnifiedTransactionDetailsViewController(transactionID: transactionId)
         return modalWithRibbon(viewController: vc)
     }
 
     static func transactionDetailsViewController(safeTxHash: Data) -> UIViewController {
-        let vc = TransactionDetailsViewController(safeTxHash: safeTxHash)
+        let vc = UnifiedTransactionDetailsViewController(safeTxHash: safeTxHash)
         return modalWithRibbon(viewController: vc)
     }
     
     static func transactionDetailsViewController(transaction: SCGModels.TransactionDetails) -> UIViewController {
-        let vc = TransactionDetailsViewController(transactionID: transaction.txId)
+        let vc = UnifiedTransactionDetailsViewController(transactionID: transaction.txId)
         return modalWithRibbon(viewController: vc)
     }
 

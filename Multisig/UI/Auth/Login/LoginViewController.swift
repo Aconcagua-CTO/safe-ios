@@ -124,7 +124,7 @@ class LoginViewController: UIViewController {
         
         // Create logo
         let logoImageView = UIImageView()
-        logoImageView.image = UIImage(named: "ico-safe") ?? UIImage(systemName: "lock.shield")
+        logoImageView.image = UIImage(named: "ico-safe-bar-logo") ?? UIImage(systemName: "lock.shield")
         logoImageView.contentMode = .scaleAspectFit
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(logoImageView)
@@ -343,7 +343,7 @@ class LoginViewController: UIViewController {
         progressIndicator.style = .medium
         
         // Setup logo
-        logoImageView.image = UIImage(named: "ico-safe") ?? UIImage(systemName: "lock.shield")
+        logoImageView.image = UIImage(named: "ico-safe-bar-logo") ?? UIImage(systemName: "lock.shield")
         logoImageView.contentMode = .scaleAspectFit
     }
 
@@ -438,7 +438,9 @@ class LoginViewController: UIViewController {
     private func presentContactRequired(message: String) {
         guard !contactRequiredPresented else { return }
         contactRequiredPresented = true
-        let contactVC = ContactRequiredViewController(message: message)
+        let contactVC = ContactRequiredViewController(message: message) { [weak self] in
+            self?.contactRequiredPresented = false
+        }
         contactVC.modalPresentationStyle = .fullScreen
         present(contactVC, animated: true, completion: nil)
     }
@@ -530,9 +532,11 @@ class LoginViewController: UIViewController {
     
     @objc private func registerLinkTapped() {
         AuthLogger.info("Register link clicked")
-        // TODO: Navigate to registration screen when implemented
-        // For now, just show a message
-        SnackbarViewController.show("Registration screen coming soon", duration: 3.0)
+        guard let url = URL(string: "https://boveda.ai/register") else {
+            AuthLogger.warning("Register link URL is invalid")
+            return
+        }
+        openInSafari(url)
     }
 }
 

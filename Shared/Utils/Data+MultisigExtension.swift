@@ -3,10 +3,19 @@
 //
 
 import Foundation
+#if canImport(CryptoSwift)
 import CryptoSwift
+#endif
 
 // MARK: - Hex String to Data conversion
 public extension Data {
+
+    #if !canImport(CryptoSwift)
+    /// Minimal hex encoder used when CryptoSwift isn't linked (e.g. extensions).
+    func toHexString() -> String {
+        self.map { String(format: "%02x", $0) }.joined()
+    }
+    #endif
 
     static func value(of nibble: UInt8) -> UInt8? {
         guard let letter = String(bytes: [nibble], encoding: .ascii) else { return nil }

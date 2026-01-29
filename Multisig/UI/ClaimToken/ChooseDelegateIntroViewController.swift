@@ -33,8 +33,10 @@ class ChooseDelegateIntroViewController: UIViewController {
         descriptionLabel.setStyle(.body)
         descriptionLabel.textAlignment = .left
 
-        chooseGuardianButton.setText("Delegate to a Safe Guardian", .filled)
-        customAddressButton.setText("Delegate to custom address or ENS", .primary)
+        chooseGuardianButton.setText(NSLocalizedString("ui_claim_delegate_guardian_action", comment: "Delegate to guardian action"),
+                                     .filled)
+        customAddressButton.setText(NSLocalizedString("ui_claim_delegate_custom_action", comment: "Delegate to custom address action"),
+                                    .primary)
     }
 
     @IBAction func didChooseGuardianButton(_ sender: Any) {

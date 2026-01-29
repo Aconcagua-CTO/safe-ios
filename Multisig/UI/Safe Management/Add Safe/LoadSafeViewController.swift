@@ -45,9 +45,9 @@ class LoadSafeViewController: UIViewController {
     
     private func updateUI() {
         if showNoVaultsMessage {
-            headerLabel?.text = "Aún no tenés bóvedas"
+            headerLabel?.text = NSLocalizedString("ui_safe_no_vaults_title", comment: "No vaults title")
             headerLabel?.setStyle(.title3)
-            descriptionLabel?.text = "Contactos a hola@boveda.ai"
+            descriptionLabel?.text = NSLocalizedString("ui_safe_no_vaults_contact", comment: "No vaults contact")
             descriptionLabel?.setStyle(.callout)
             loadSafeButton?.isHidden = true
             createSafeButton?.isHidden = true
@@ -55,11 +55,11 @@ class LoadSafeViewController: UIViewController {
         } else {
             headerLabel?.setStyle(.title3)
             descriptionLabel?.setStyle(.callout)
-            loadSafeButton?.setText("Load existing Safe Account", .filled)
+            loadSafeButton?.setText(NSLocalizedString("ui_safe_load_existing_title", comment: "Load existing Safe title"), .filled)
             loadSafeButton?.isHidden = false
-            createSafeButton?.setText("Create new Safe Account", .bordered)
+            createSafeButton?.setText(NSLocalizedString("ui_safe_create_new_title", comment: "Create new Safe title"), .bordered)
             createSafeButton?.isHidden = false
-            demoButton?.setText("Try Demo", .plain)
+            demoButton?.setText(NSLocalizedString("ui_safe_try_demo_title", comment: "Try demo title"), .plain)
             demoButton?.isHidden = false
         }
     }
@@ -95,7 +95,7 @@ class LoadSafeViewController: UIViewController {
         let chain = Chain.mainnetChain()
         
         let demoAddress: Address = Address(exactly: Safe.demoAddress)
-        let demoName = "Demo Safe"
+        let demoName = NSLocalizedString("ui_safe_demo_name", comment: "Demo safe name")
         let safeVersion = "1.1.1"
         Safe.create(address: demoAddress.checksummed, version: safeVersion, name: demoName, chain: chain)
         

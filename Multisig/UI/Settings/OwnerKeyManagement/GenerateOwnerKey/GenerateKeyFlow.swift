@@ -44,8 +44,18 @@ class GenerateKeyFlow: AddKeyFlow {
 
     override func didIntro() {
         let privateKey = OwnerKeyController.generate()
-        keyParameters = GenerateKeyParameters(address: privateKey.address, keyName: nil, privateKey: privateKey)
+        // Streamlined flow: don't prompt for a name; always use "Mobile Key".
+        keyParameters = GenerateKeyParameters(address: privateKey.address, keyName: "Mobile Key", privateKey: privateKey)
         didGetKey()
+    }
+
+    override func didGetKey() {
+        // Streamlined flow: skip the name entry screen.
+        // `didIntro()` already sets the name, but we ensure it's present here as well.
+        if keyParameters?.name == nil {
+            keyParameters?.name = "Mobile Key"
+        }
+        importKey()
     }
 
     override func doImport() -> Bool {
@@ -73,7 +83,7 @@ class GenerateKeyFlow: AddKeyFlow {
 
     func addKeyAsOwner() {
         safe = try? Safe.getSelected()
-        didAddKeyAsOwner()
+        didAddKeyAsOwner(openKeyDetails: false)
     }
 
     func addOwner() {
@@ -136,20 +146,17 @@ class GenerateKeyFactory: AddKeyFlowFactory {
     override func intro(completion: @escaping () -> Void) -> AddKeyOnboardingViewController {
         let introVC = super.intro(completion: completion)
         introVC.cards = [
-            .init(image: UIImage(named: "ico-onboarding-import-key-1"),
-                  title: "How does it work?",
-                  body: "To use this app as an owner in the Safe Account, you can create a key and add it as an owner of your Safe Account. When you tap Next, the app will create a new private key from a new unique seed phrase."),
+            .init(image: UIImage(named: "ico-lock"),
+                  title: NSLocalizedString("ui_mobile_key_create_intro_title", comment: "Intro title for mobile key creation"),
+                  body: NSLocalizedString("ui_mobile_key_create_intro_body", comment: "Intro body for mobile key creation")),
 
                 .init(image: UIImage(named: "ico-onboarding-import-key-2"),
-                      title: "How secure is that?",
-                      body: "The owner key and the seed phrase are stored in the device's secure store - iOS Keychain.",
-                      link: .init(title: "How is a private key stored on mobile?", url: App.configuration.help.keySecurityURL)),
+                      title: NSLocalizedString("ui_mobile_key_create_secure_title", comment: "Security title for mobile key creation"),
+                      body: NSLocalizedString("ui_mobile_key_create_secure_body", comment: "Security body for mobile key creation")),
 
-                .init(image: UIImage(named: "ico-onboarding-import-key-3"),
-                      title: "How to export?",
-                      body: "To export your owner key or seed phrase, navigate to the key details.")]
+        ]
         introVC.viewTrackingEvent = .generateOwnerOnboarding
-        introVC.navigationItem.title = "Create Owner Key"
+        introVC.navigationItem.title = NSLocalizedString("ui_owner_key_create_title", comment: "Title for the generate owner key flow")
         introVC.navigationItem.largeTitleDisplayMode = .never
         return introVC
     }

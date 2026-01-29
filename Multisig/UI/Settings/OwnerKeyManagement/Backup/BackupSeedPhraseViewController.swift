@@ -23,7 +23,7 @@ class BackupSeedPhraseViewController: ContainerViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        navigationItem.title = "Back up manually"
+        navigationItem.title = NSLocalizedString("ui_backup_manual_title", comment: "Title for backing up seed phrase manually")
         
         seedPhraseViewController = SeedPhraseViewController()
         seedPhraseViewController.seedPhrase = seedPhrase
@@ -34,7 +34,7 @@ class BackupSeedPhraseViewController: ContainerViewController {
         
         displayChild(at: 0, in: seedPhraseContentView)
        
-        continueButton.setText("Continue", .filled)
+        continueButton.setText(NSLocalizedString("button_continue", comment: "Continue button title"), .filled)
     }
 
     func set(mnemonic: String) {

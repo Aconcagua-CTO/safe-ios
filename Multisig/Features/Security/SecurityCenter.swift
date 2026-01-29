@@ -55,6 +55,33 @@ class SecurityCenter {
         try dataStore.unlock(derivedPassword: derivedPassword)
     }
 
+    func enableBiometricUnlockIfPossible(plaintextPasscode: String) {
+        guard AppSettings.securityLockEnabled else { return }
+        guard App.shared.auth.isBiometryActivationPossible else { return }
+
+        if !AppSettings.securityLockMethod.isUserPresenceRequired() {
+            AppSettings.securityLockMethod = .passcodeAndUserPresence
+        }
+
+        let options = AppSettings.passcodeOptions
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let derived = self.derivedKey(from: plaintextPasscode)
+            let passwordData = derived.data(using: .utf8)
+
+            do {
+                if options.contains(.useForLogin) {
+                    try self.dataStore.storeBiometricUnlockCredential(passwordData: passwordData)
+                }
+                if options.contains(.useForConfirmation) {
+                    try self.sensitiveStore.storeBiometricUnlockCredential(passwordData: passwordData)
+                }
+            } catch {
+                LogService.shared.error("Failed to store biometric unlock credential", error: error)
+            }
+        }
+    }
+
     /// Verifies the data-store passcode using a pre-derived password (PBKDF2 output).
     /// Does not change the lock state.
     func isDataStorePasscodeCorrect(derivedPassword: String?) -> Bool {
@@ -295,11 +322,10 @@ class SecurityCenter {
         let isStoreLockEnabled: Bool = AppSettings.passcodeOptions.contains(optionForStore)
 
         if isStoreLockEnabled {
-            // sensitive store can ask passcode and biometrics to access the items, depending on the lock method.
-            // data store only asks for passcode if that's the lock method. Otherwise, it uses biometric authentication.
-            let lockMethodsWithPassword: [LockMethod] = store === sensitiveStore ? [.passcode, .passcodeAndUserPresence] : [.passcode]
-            
-            newStorePassword = lockMethodsWithPassword.contains(AppSettings.securityLockMethod) ? newDerivedPassword! : nil
+            guard let newDerivedPassword else {
+                throw GSError.GenericPasscodeError(reason: "Missing passcode for security lock")
+            }
+            newStorePassword = newDerivedPassword
             biometryUsed = AppSettings.securityLockMethod.isUserPresenceRequired()
         } else {
             newStorePassword = nil
@@ -360,8 +386,8 @@ class SecurityCenter {
         
         let result = AppSettings.securityLockEnabled &&
         (
-            accessScope.contains(.sensitive) && AppSettings.passcodeOptions.contains(.useForConfirmation) && [LockMethod.passcode, .passcodeAndUserPresence].contains(AppSettings.securityLockMethod) ||
-            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin) && [LockMethod.passcode, .passcodeAndUserPresence].contains(AppSettings.securityLockMethod)
+            accessScope.contains(.sensitive) && AppSettings.passcodeOptions.contains(.useForConfirmation) ||
+            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin)
         )
         
         #if DEBUG
@@ -403,10 +429,13 @@ class SecurityCenter {
             return false
         }
         
-        let result = (
-            accessScope.contains(.sensitive) && AppSettings.passcodeOptions.contains(.useForConfirmation) ||
-            accessScope.contains(.data) && AppSettings.passcodeOptions.contains(.useForLogin)
-        )
+        let canUnlockSensitive = accessScope.contains(.sensitive) &&
+            AppSettings.passcodeOptions.contains(.useForConfirmation) &&
+            sensitiveStore.hasBiometricUnlockCredential()
+        let canUnlockData = accessScope.contains(.data) &&
+            AppSettings.passcodeOptions.contains(.useForLogin) &&
+            dataStore.hasBiometricUnlockCredential()
+        let result = canUnlockSensitive || canUnlockData
         
         #if DEBUG
         LogService.shared.debug("[SecurityCenter] passcodeOptions: \(AppSettings.passcodeOptions.rawValue)")
