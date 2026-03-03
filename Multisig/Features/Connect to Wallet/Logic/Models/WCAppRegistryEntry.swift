@@ -4,6 +4,9 @@
 //
 
 import Foundation
+#if canImport(WalletConnectSwift)
+import WalletConnectSwift
+#endif
 
 class WCAppRegistryEntry {
 
@@ -90,7 +93,7 @@ class WCAppRegistryEntry {
            link.host == nil || !(link.host == "apps.apple.com" || link.host == "itunes.apple.com" || link.host == "play.google.com"),
            var components = URLComponents(url: link, resolvingAgainstBaseURL: false)
         {
-            let encodedUri = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+            let encodedUri = url.absoluteString.addingPercentEncoding(withAllowedCharacters: CharacterSet.alphanumerics)!
             components.percentEncodedQuery = "uri=\(encodedUri)"
 
             if let url = components.url, url.lastPathComponent != "wc" {
@@ -102,7 +105,7 @@ class WCAppRegistryEntry {
             let link = linkMobileNative,
             var components = URLComponents(url: link, resolvingAgainstBaseURL: false)
         {
-            let encodedUri = url.absoluteString.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+            let encodedUri = url.absoluteString.addingPercentEncoding(withAllowedCharacters: CharacterSet.alphanumerics)!
             components.percentEncodedQuery = "uri=\(encodedUri)"
 
             if components.scheme == nil && components.host == nil, let componentsUrl = components.url {
@@ -149,5 +152,30 @@ class WCAppRegistryEntry {
         }
         return nil
     }
+}
+
+/// Minimal WalletConnect URI wrapper used by app-link builders.
+/// Kept lightweight so WalletConnect v1 transport code stays removed.
+struct WebConnectionURL {
+    let absoluteString: String
+    let handshakeChannelId: String
+    let protocolVersion: String
+
+    init(absoluteString: String) {
+        self.absoluteString = absoluteString
+
+        let uriWithoutScheme = absoluteString.hasPrefix("wc:") ? String(absoluteString.dropFirst(3)) : absoluteString
+        let mainPart = uriWithoutScheme.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
+        let components = mainPart.split(separator: "@", maxSplits: 1, omittingEmptySubsequences: false)
+
+        self.handshakeChannelId = components.first.map(String.init) ?? ""
+        self.protocolVersion = components.count > 1 ? String(components[1]) : ""
+    }
+
+    #if canImport(WalletConnectSwift)
+    init(wcURL: WCURL) {
+        self.init(absoluteString: wcURL.absoluteString)
+    }
+    #endif
 }
 

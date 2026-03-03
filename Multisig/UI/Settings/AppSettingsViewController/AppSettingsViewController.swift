@@ -27,14 +27,14 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     private var importFlow: ImportDataFlow!
 
     enum Section {
-        case app
+        case app(String)
         case support(String)
         case advanced(String)
         case about(String)
 
         enum App: SectionItem {
             case vaultList(String)
-            case desktopPairing(String)
+            case walletConnect(String)
             case ownerKeys(String, Bool, String)
             case addressBook(String)
             case passcode(String)
@@ -97,23 +97,24 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
 
     private func buildSections() {
         sections = []
-        var appSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .app, items: [])
+        let appSectionTitle = NSLocalizedString("ui_settings_app_section_title", comment: "Settings section title for main app settings")
+        var appSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .app(appSectionTitle), items: [])
         
         appSection.items.append(contentsOf: [
             Section.App.vaultList(Self.vaultListTitle),
             Section.App.ownerKeys(NSLocalizedString("ui_settings_keys_title", comment: "Settings list title for keys"),
                                   !KeyInfo.keysWithoutBackup().isEmpty,
                                   "\(KeyInfo.count())"),
-            Section.App.addressBook(NSLocalizedString("ui_settings_address_book_title", comment: "Settings list title for address book")),
-            Section.App.herencia(NSLocalizedString("ui_settings_inheritance_title", comment: "Settings list title for inheritance")),
             Section.App.passcode(NSLocalizedString("ui_settings_security_title", comment: "Settings list title for security")),
-            Section.App.planes(NSLocalizedString("ui_settings_plans_title", comment: "Settings list title for plans"))
+            Section.App.addressBook(NSLocalizedString("ui_settings_address_book_title", comment: "Settings list title for address book")),
+            Section.App.herencia(NSLocalizedString("ui_settings_inheritance_title", comment: "Settings list title for inheritance"))
         ])
 
-        appSection.items.append(Section.Support.chatWithUs(NSLocalizedString("ui_settings_help_title", comment: "Settings list title for help")))
-        if FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true {
-            appSection.items.append(Section.App.desktopPairing(NSLocalizedString("ui_settings_wallet_connect_title", comment: "Settings list title for WalletConnect")))
+        if App.configuration.services.environment.isDevelopment {
+            appSection.items.append(Section.App.planes(NSLocalizedString("ui_settings_plans_title", comment: "Settings list title for plans")))
         }
+
+        appSection.items.append(Section.Support.chatWithUs(NSLocalizedString("ui_settings_help_title", comment: "Settings list title for help")))
         
         // Show these settings in Development environment only (Debug + Release)
         if App.configuration.services.environment.isDevelopment {
@@ -182,8 +183,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
                              .ownerKeyBackedUp,
                              .selectedFiatCurrencyChanged,
                              .updatedExperemental,
-                             .IntercomUnreadConversationCountDidChange,
-                             .didReadConnectToWebBanner] {
+                             .IntercomUnreadConversationCountDidChange] {
             notificationCenter.addObserver(
                 self,
                 selector: #selector(reload),
@@ -192,31 +192,9 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         }
     }
 
-    @discardableResult
-    private func showDesktopPairing() -> WebConnectionsViewController? {
-        if let vc = navigationTop(as: WebConnectionsViewController.self) {
-            return vc
-        } else {
-            popNavigationStack()
-        }
-        
-        let keys = WebConnectionController.shared.accountKeys()
-        if keys.isEmpty {
-            let addOwnersVC = AddOwnerFirstViewController()
-            addOwnersVC.descriptionText = "To connect to Safe{Wallet} import at least one owner key. Keys are used to confirm transactions."
-            addOwnersVC.onSuccess = { [weak self] in
-                self?.dismiss(animated: true) {
-                    _ = self?.showDesktopPairing()
-                }
-            }
-            let nav = UINavigationController(rootViewController: addOwnersVC)
-            present(nav, animated: true)
-            return nil
-        } else {
-            let connectionsVC = WebConnectionsViewController()
-            show(connectionsVC, sender: self)
-            return connectionsVC
-        }
+    private func showDappsViewController() {
+        let dappsVC = DappsViewController(namedClass: nil)
+        show(dappsVC, sender: self)
     }
 
     private func showOwnerKeys() {
@@ -225,13 +203,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     }
 
     private func presentVaultList() {
-        let switchSafesVC: UIViewController
-        if App.configuration.services.environment.isDevelopment {
-            switchSafesVC = SwitchSafesViewController()
-        } else {
-            switchSafesVC = GroupedSwitchSafesViewController()
-        }
-        let nav = UINavigationController(rootViewController: switchSafesVC)
+        let nav = UINavigationController(rootViewController: GroupedSwitchSafesViewController())
         present(nav, animated: true)
     }
 
@@ -254,12 +226,6 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         sections[section].items.count
     }
 
-    static func shouldBringAttentionToDesktopPairing() -> Bool {
-        !WebConnectionController.shared.accountKeys().isEmpty &&
-            AppSettings.didShowDeprecateConnectToWeb != true &&
-            FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
-    }
-    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let item = sections[indexPath.section].items[indexPath.row]
         switch item {
@@ -267,13 +233,12 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.vaultList(let name):
             return tableView.basicCell(name: name, icon: "tab-icon-balances", iconTintColor: .icon, indexPath: indexPath)
             
-        case Section.App.desktopPairing(let name):
+        case Section.App.walletConnect(let name):
             return tableView.basicCell(
                 name: name,
                 icon: "tab-icon-dapps",
                 iconTintColor: .icon,
-                indexPath: indexPath,
-                supplementaryImage: Self.shouldBringAttentionToDesktopPairing() ? UIImage(named: "ico-warning") : nil)
+                indexPath: indexPath)
             
         case Section.App.ownerKeys(let name, let warning, let count):
             return tableView.basicCell(name: name,
@@ -307,7 +272,16 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             return tableView.basicCell(name: name, icon: "ico-app-settings-desktop-pairing", indexPath: indexPath)
             
         case Section.App.logout(let name):
-            return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
+            let cell = tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
+            if let userIdentity = currentUserIdentityString() {
+                let titleAttributes = GNOTextStyle.headline.attributes
+                let subtitleAttributes = GNOTextStyle.footnoteSecondary.attributes
+                let attributed = NSMutableAttributedString(string: name, attributes: titleAttributes)
+                attributed.append(NSAttributedString(string: "\n" + userIdentity, attributes: subtitleAttributes))
+                cell.titleLabel.attributedText = attributed
+                cell.titleLabel.numberOfLines = 0
+            }
+            return cell
 
         case Section.App.logoutAndReset(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
@@ -360,8 +334,8 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         case Section.App.vaultList:
             presentVaultList()
 
-        case Section.App.desktopPairing:
-            showDesktopPairing()
+        case Section.App.walletConnect:
+            showDappsViewController()
 
         case Section.App.ownerKeys:
             showOwnerKeys()
@@ -470,6 +444,9 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
         let section = sections[section].section
         let view = tableView.dequeueHeaderFooterView(BasicHeaderView.self)
         switch section {
+        case Section.app(let name):
+            view.setName(name)
+
         case Section.support(let name):
             view.setName(name)
             
@@ -478,23 +455,22 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             
         case Section.about(let name):
             view.setName(name)
-            
-        default:
-            break
         }
         
         return view
     }
 
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let item = sections[indexPath.section].items[indexPath.row]
+        if case Section.App.logout = item, currentUserIdentityString() != nil {
+            return 76
+        }
         return BasicCell.rowHeight
     }
   
     override func tableView(_ tableView: UITableView, heightForHeaderInSection _section: Int) -> CGFloat {
         let section = sections[_section].section
         switch section {
-        case .app:
-            return 0
         default:
             return BasicHeaderView.headerHeight
         }
@@ -507,25 +483,12 @@ extension AppSettingsViewController: NavigationRouter {
     }
     
     func canNavigate(to route: NavigationRoute) -> Bool {
-        if App.configuration.services.environment.isDevelopment,
-           route.path == NavigationRoute.connectToWeb().path,
-           FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
-        {
-            return true
-        }
         return false
     }
 
     func navigate(to route: NavigationRoute) {
         if route.path == NavigationRoute.appearanceSettings().path {
             navigateToAppearance()
-        } else if
-            route.path == NavigationRoute.connectToWeb().path &&
-            FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
-        {
-            if App.configuration.services.environment.isDevelopment {
-                navigateToConnectToWeb(route)
-            }
         } else if route.path == NavigationRoute.advancedAppSettings().path {
             navigateToAdvancedAppSettings()
         } else if route.path == NavigationRoute.addressBook().path {
@@ -560,13 +523,6 @@ extension AppSettingsViewController: NavigationRouter {
         show(appearanceViewController, sender: self)
     }
     
-    private func navigateToConnectToWeb(_ route: NavigationRoute) {
-        guard FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true else { return }
-        if let pairingVC = showDesktopPairing() {
-            pairingVC.navigateAfterDelay(to: route)
-        }
-    }
-    
     private func navigateToAdvancedAppSettings() {
         if navigationTopIs(UIHostingController<AdvancedAppSettings>.self) {
             return
@@ -589,6 +545,25 @@ extension AppSettingsViewController: NavigationRouter {
         showAddressBook()
     }
     
+    private func currentUserFirstName() -> String? {
+        guard let displayName = App.shared.authRepository.getCurrentUser()?.displayName else {
+            return nil
+        }
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return trimmed.split(whereSeparator: { $0.isWhitespace }).first.map(String.init)
+    }
+
+    private func currentUserIdentityString() -> String? {
+        let firstName = currentUserFirstName()
+        let email = App.shared.authRepository.getCurrentUser()?.email
+        guard firstName != nil || email != nil else { return nil }
+        if let firstName = firstName, let email = email {
+            return "\(firstName) - \(email)"
+        }
+        return firstName ?? email
+    }
+
     private func handleLogout() {
         AuthLogger.info("User initiated logout from settings")
         

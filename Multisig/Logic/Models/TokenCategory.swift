@@ -54,12 +54,12 @@ struct TokenCategory {
         case "blacktoken":
             return sectionBlackToken
         case "nft", "debt":
-            return sectionOtros
+            return sectionBlackToken
         case "invest":
             // Legacy bucket; keep for backward compatibility.
             return sectionAcciones
         default:
-            return sectionOtros
+            return sectionBlackToken
         }
     }
 

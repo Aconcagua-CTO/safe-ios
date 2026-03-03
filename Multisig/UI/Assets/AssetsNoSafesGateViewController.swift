@@ -16,13 +16,13 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
     var noSafeViewController: UIViewController!
     var safeDepolyingViewContoller: UIViewController!
 
-    private var loadingViewController: UIViewController?
     private var errorViewController: UIViewController?
 
     private var pendingVaultActivationViewController: PendingVaultActivationViewController?
 
     private var isSyncing = false
     private var hasAttemptedSync = false
+    private var hasPostedVaultSyncStarted = false
 
     var notificationCenter = NotificationCenter.default
 
@@ -89,21 +89,28 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
         isSyncing = true
         hasAttemptedSync = true
 
+        #if DEBUG
         VaultLogger.info("[AssetsNoSafesGate] Starting vault sync (no safes found)")
+        #endif
         showLoadingState()
 
         App.shared.vaultsRepository.syncVaultsFromBackend(force: false) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.isSyncing = false
+                self.notifyVaultSyncCompletedIfNeeded()
 
                 switch result {
                 case .success:
+                    #if DEBUG
                     VaultLogger.success("[AssetsNoSafesGate] Vault sync completed successfully")
+                    #endif
                     self.errorViewController = nil
                     self.reloadContent()
                 case .failure(let error):
+                    #if DEBUG
                     VaultLogger.error("[AssetsNoSafesGate] Vault sync failed", error: error)
+                    #endif
                     self.showErrorState(error: error)
                     self.reloadContent()
                 }
@@ -124,11 +131,12 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
     }
 
     private func showLoadingState() {
-        if loadingViewController == nil {
-            loadingViewController = VaultSyncLoadingViewController(message: "Cargando tus bóvedas")
-        }
-        viewControllers = [loadingViewController!]
+        #if DEBUG
+        VaultLogger.info("[AssetsNoSafesGate] Showing Assets screen with vault icon fade loader")
+        #endif
+        viewControllers = [hasSafeViewController]
         displayChild(at: 0, in: view)
+        notifyVaultSyncStartedIfNeeded()
     }
 
     private func showErrorState(error: Error) {
@@ -143,6 +151,17 @@ final class AssetsNoSafesGateViewController: ContainerViewController {
     }
 
     // Owner key onboarding is now handled by the post-login gate coordinator.
+    private func notifyVaultSyncStartedIfNeeded() {
+        guard !hasPostedVaultSyncStarted else { return }
+        hasPostedVaultSyncStarted = true
+        notificationCenter.post(name: .vaultSyncStarted, object: self)
+    }
+
+    private func notifyVaultSyncCompletedIfNeeded() {
+        guard hasPostedVaultSyncStarted else { return }
+        hasPostedVaultSyncStarted = false
+        notificationCenter.post(name: .vaultSyncCompleted, object: self)
+    }
 }
 
 

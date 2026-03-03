@@ -125,7 +125,9 @@ final class SelectAssetRowCell: UITableViewCell {
         setBadge(text: nil)
     }
 
-    func setSymbol(_ value: String) { symbolLabel.text = value }
+    func setSymbol(_ value: String) {
+        symbolLabel.text = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
     func setChain(_ value: String) { chainLabel.text = value }
     func setFiat(_ value: String) { fiatLabel.text = value }
     func setAmount(_ value: String) { amountLabel.text = value }

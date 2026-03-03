@@ -59,7 +59,7 @@ final class MoneyMarketTokenDetailViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = token.symbol
+        title = token.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
 
         configureTable()
         configureHeader()

@@ -42,7 +42,6 @@ class KeyNotificationViewController: AccountActionCompletedViewController {
         // Streamlined flow: don't ask; always confirm notifications.
         primaryButton.isHidden = false
         secondaryButton.isHidden = true
-        ViewControllerFactory.addCloseButton(self)
     }
 
     override func viewDidAppear(_ animated: Bool) {

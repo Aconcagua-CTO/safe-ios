@@ -14,6 +14,8 @@ extension NSNotification.Name {
     static let selectedSafeChanged = NSNotification.Name("io.gnosis.safe.selectedSafeChanged")
     static let selectedSafeUpdated = NSNotification.Name("io.gnosis.safe.selectedSafeUpdated")
 
+    static let userProfileUpdated = NSNotification.Name("io.gnosis.safe.userProfileUpdated")
+
     static let safeCreationUpdate = NSNotification.Name("io.gnosis.safe.safeCreationUpdate")
 
     static let web3AuthSafeCreationUpdate = NSNotification.Name("io.gnosis.safe.web3AuthSafeCreationUpdate")
@@ -28,6 +30,8 @@ extension NSNotification.Name {
     
     static let balanceLoading = NSNotification.Name("io.gnosis.safe.balanceLoading")
     static let balanceUpdated = NSNotification.Name("io.gnosis.safe.balanceUpdated")
+    static let vaultSyncStarted = NSNotification.Name("io.gnosis.safe.vaultSyncStarted")
+    static let vaultSyncCompleted = NSNotification.Name("io.gnosis.safe.vaultSyncCompleted")
 
     static let transactionDataInvalidated = NSNotification.Name("io.gnosis.safe.transactionDataInvalidated")
 
@@ -85,6 +89,4 @@ extension NSNotification.Name {
     // MARK: - Chain settings changed
 
     static let chainSettingsChanged = NSNotification.Name("io.gnosis.safe.chainSettingsChanged")
-    
-    static let didReadConnectToWebBanner = NSNotification.Name("global.safe.ios.didReadConnectToWebBanner")
 }

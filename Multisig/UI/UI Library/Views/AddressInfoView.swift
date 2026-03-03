@@ -26,6 +26,7 @@ class AddressInfoView: UINibView {
     private(set) var browseURL: URL?
     private(set) var prefix: String?
     private(set) var label: String?
+    private(set) var showFullAddress: Bool = false
     private(set) var copyAddressEnabled: Bool = true
     
     private(set) var addToContactsGestureRecognizer: UILongPressGestureRecognizer!
@@ -105,12 +106,14 @@ class AddressInfoView: UINibView {
                     showIdenticon: Bool = true,
                     badgeName: String? = nil,
                     browseURL: URL? = nil,
-                    prefix: String? = nil) {
+                    prefix: String? = nil,
+                    showFullAddress: Bool = false) {
         self.address = address
         self.ensName = ensName
         self.browseURL = browseURL
         self.prefix = prefix
         self.label = label
+        self.showFullAddress = showFullAddress
         
         if let label = label {
             textLabel.isHidden = false
@@ -151,6 +154,7 @@ class AddressInfoView: UINibView {
         self.browseURL = nil
         self.prefix = prefix
         self.label = label
+        self.showFullAddress = false
         
         textLabel.isHidden = false
         if let label = label {
@@ -214,7 +218,8 @@ class AddressInfoView: UINibView {
         if let ensName = ensName {
             addressLabel.text = ensName
         } else if let _ = label {
-            addressLabel.text = prependingPrefixString() + self.address.ellipsized()
+            let formattedAddress = showFullAddress ? self.address.checksummed : self.address.ellipsized()
+            addressLabel.text = prependingPrefixString() + formattedAddress
         } else {
             let prefixString = prependingPrefixString()
             addressLabel.attributedText = (prefixString + self.address.checksummed).highlight(prefix: prefixString.count + 6)

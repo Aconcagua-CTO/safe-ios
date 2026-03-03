@@ -105,6 +105,9 @@ private final class TangemSignContentViewController: UIViewController {
     }
 
     private var signingTask: Task<Void, Never>?
+    private var countdownTask: Task<Void, Never>?
+    private let securityDelaySeconds = 15
+    private var countdownRemaining: Int?
     private var hasStarted = false
 
     init(request: SignRequest, service: TangemSigningService) {
@@ -120,6 +123,7 @@ private final class TangemSignContentViewController: UIViewController {
 
     deinit {
         signingTask?.cancel()
+        countdownTask?.cancel()
     }
 
     override func viewDidLoad() {
@@ -184,7 +188,9 @@ private final class TangemSignContentViewController: UIViewController {
 
     private func startSigning() {
         signingTask?.cancel()
+        countdownTask?.cancel()
         state = .waitingForSignature
+        startSecurityDelayCountdown()
         TangemLogger.debug("TangemSigner ▶️ Starting signing flow for request: signerAddress=\(request.signer.address.checksummed)")
 
         signingTask = Task { [weak self] in
@@ -227,6 +233,7 @@ private final class TangemSignContentViewController: UIViewController {
                 TangemLogger.debug("TangemSigner ▶️ Terminal linked status: \(result.linkedTerminalStatus?.rawValue ?? "unknown")")
 
                 await MainActor.run {
+                    self.stopSecurityDelayCountdown()
                     self.state = .signing
                 }
 
@@ -254,6 +261,7 @@ private final class TangemSignContentViewController: UIViewController {
                 TangemLogger.error("Tangem signing failed", error: error)
                 let message = self.message(for: error)
                 await MainActor.run {
+                    self.stopSecurityDelayCountdown()
                     self.state = .error(message)
                 }
             }
@@ -451,7 +459,11 @@ private final class TangemSignContentViewController: UIViewController {
 
         case .waitingForSignature:
             statusLabel.text = NSLocalizedString("ui_tangem_sign_ready_title", comment: "Tangem signing ready title")
-            detailLabel.text = NSLocalizedString("ui_tangem_sign_hold_again_detail", comment: "Tangem signing hold again detail")
+            if let countdownRemaining {
+                detailLabel.text = "Security check in progress (\(countdownRemaining)s)"
+            } else {
+                detailLabel.text = NSLocalizedString("ui_tangem_sign_hold_again_detail", comment: "Tangem signing hold again detail")
+            }
             actionButton.isHidden = true
             activityIndicator.startAnimating()
 
@@ -469,8 +481,35 @@ private final class TangemSignContentViewController: UIViewController {
         }
     }
 
+    private func startSecurityDelayCountdown() {
+        countdownRemaining = securityDelaySeconds
+        updateUI(for: .waitingForSignature)
+
+        countdownTask = Task { [weak self] in
+            guard let self else { return }
+
+            for second in stride(from: self.securityDelaySeconds - 1, through: 0, by: -1) {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self.countdownRemaining = second
+                    if case .waitingForSignature = self.state {
+                        self.updateUI(for: self.state)
+                    }
+                }
+            }
+        }
+    }
+
+    private func stopSecurityDelayCountdown() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        countdownRemaining = nil
+    }
+
     @objc private func cancelTapped() {
         signingTask?.cancel()
+        stopSecurityDelayCountdown()
         onClose?()
     }
 

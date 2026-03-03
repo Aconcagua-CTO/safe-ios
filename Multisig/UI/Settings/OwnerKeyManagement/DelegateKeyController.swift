@@ -234,20 +234,7 @@ class DelegateKeyController {
                 }
             }
         case .walletConnect:
-            let signVC = SignatureRequestToWalletViewController(hexMessage, keyInfo: keyInfo, chain: chain!)
-            signVC.requiresChainIdMatch = false
-            var isSuccess: Bool = false
-            signVC.onSuccess = { signature in
-                isSuccess = true
-                completion(.success(Data(hex: signature)))
-            }
-            signVC.onCancel = {
-                if !isSuccess {
-                    completion(.failure(GSError.AddDelegateKeyCancelled()))
-                }
-            }
-            let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
-            presenter?.present(vc, animated: true)
+            completion(.failure(GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message"))))
         case .keystone:
             let signInfo = KeystoneSignInfo(
                 signData: message.toHexString(),

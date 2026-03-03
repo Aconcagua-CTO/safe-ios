@@ -335,12 +335,19 @@ class LoginViewModel: ObservableObject {
     private func handlePostProvisioning(user: User, leadAction: LeadProvisioningAction) {
         switch leadAction {
         case .leadMissingNames:
+            AppSettings.lastLeadProvisioningAction = nil
             authState = .contactRequired(message: NSLocalizedString("auth_lead_pending_message", comment: ""))
         case .leadMissingCardManufacturer:
+            AppSettings.lastLeadProvisioningAction = nil
             authState = .contactRequired(message: NSLocalizedString("auth_lead_pending_message", comment: ""))
         case .leadCreated:
+            AppSettings.lastLeadProvisioningAction = nil
             authState = .contactRequired(message: NSLocalizedString("auth_lead_created_message", comment: ""))
         default:
+            AppSettings.lastLeadProvisioningAction = leadAction.rawValue
+            #if DEBUG
+            LogService.shared.debug("[LoginViewModel] Stored lastLeadProvisioningAction=\(leadAction.rawValue)")
+            #endif
             AuthLogger.stateTransition("State: Loading → Success")
             authState = .success(user: user)
             OwnerKeyController.migrateBackendKeyRegistryIfNeeded()

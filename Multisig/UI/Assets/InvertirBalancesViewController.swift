@@ -47,17 +47,21 @@ class InvertirBalancesViewController: BalancesViewController {
     override var useEthereumUnderlyingApyForMoneyMarket: Bool { true }
 
     override var balanceSectionOrder: [(id: String, title: String)] {
-        [
+        var order: [(id: String, title: String)] = [
             (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
-            (id: TokenCategory.sectionAcciones, title: "Acciones"),
-            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
-            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
             (id: TokenCategory.sectionCripto, title: "Cripto"),
-            (id: TokenCategory.sectionOro, title: "Oro"),
-            // Keep these last so we don't hide anything unexpected.
-            (id: TokenCategory.sectionOtros, title: "Otros"),
-            (id: TokenCategory.sectionBlackToken, title: "blackToken")
+            (id: TokenCategory.sectionOro, title: "Commodities"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            // Keep this last so we don't hide anything unexpected.
+            (id: TokenCategory.sectionOtros, title: "Otros")
         ]
+
+        if App.configuration.services.environment.isDevelopment {
+            order.append((id: TokenCategory.sectionBlackToken, title: "blackToken"))
+        }
+        return order
     }
 
     override func mapCategoryToSectionId(_ item: TokenBalance) -> String {

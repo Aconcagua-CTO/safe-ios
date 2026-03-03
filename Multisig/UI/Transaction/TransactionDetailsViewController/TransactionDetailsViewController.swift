@@ -435,12 +435,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
             }
 
         case .walletConnect:
-            let signVC = SignatureRequestToWalletViewController(transaction, keyInfo: keyInfo, chain: safe.chain!)
-            signVC.onSuccess = { [weak self] signature in
-                self?.confirmAndRefresh(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
-            }
-            let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
-            present(vc, animated: true)
+            onError(GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message")))
 
         case .ledgerNanoX:
             let request = SignRequest(title: "Confirm Transaction",
@@ -591,7 +586,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     }
                 }
 
-                self?.onLoadingCompleted(result: result)
+                self?.onLoadingCompleted(result: result, triggerAutoExecution: true)
             }
         }
     }
@@ -623,7 +618,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         }
     }
 
-    private func onLoadingCompleted(result: Result<SCGModels.TransactionDetails, Error>) {
+    private func onLoadingCompleted(result: Result<SCGModels.TransactionDetails, Error>, triggerAutoExecution: Bool = false) {
         switch result {
         case .failure(let error):
             DispatchQueue.main.async { [weak self] in
@@ -651,7 +646,30 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                     self.txSource = .id(details.txId)
                 }
                 self.buildCells(from: details)
+                if triggerAutoExecution {
+                    self.autoExecuteIfReady(details)
+                }
                 self.onSuccess()
+            }
+        }
+    }
+
+    private func autoExecuteIfReady(_ transaction: SCGModels.TransactionDetails) {
+        AutoExecutionCoordinator.shared.attemptAutoExecute(
+            safe: safe,
+            transaction: transaction,
+            source: "transaction_details_confirm"
+        ) { outcome in
+            switch outcome {
+            case .success:
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_submit_success_title", comment: "Transaction submitted title"))
+            case .failure(let error):
+                App.shared.snackbar.show(error: GSError.error(
+                    description: NSLocalizedString("ui_tx_submitting_failed_error", comment: "Submitting failed error"),
+                    error: error
+                ))
+            case .skipped:
+                break
             }
         }
     }
@@ -694,28 +712,12 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
             return []
         }
 
-        guard let safe = safe, let chain = safe.chain else {
-            return []
-        }
-
         // all keys that can sign this tx on its chain.
-            // currently, only wallet connect keys are chain-specific, so we filter those out.
         guard let allKeys = try? KeyInfo.all(), !allKeys.isEmpty else {
             return []
         }
 
-        let validKeys = allKeys.filter { keyInfo in
-            // if it's a wallet connect key which chain doesn't match then do not use it
-            if keyInfo.keyType == .walletConnect,
-               let chainId = keyInfo.walletConnections?.first?.chainId,
-               // when chainId is 0 then it is 'any' chain
-               chainId != 0 && String(chainId) != chain.id {
-                return false
-            }
-            // else use the key
-            return true
-        }
-        .filter {
+        let validKeys = allKeys.filter {
             // filter out ledger until it is supported
             $0.keyType != .ledgerNanoX
         }

@@ -27,7 +27,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.2</string>
+	<string>1.0.3</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -69,16 +69,12 @@
 	<string>$(CONFIRMATIONS_URL)</string>
 	<key>CONFLICT_URL</key>
 	<string>$(CONFLICT_URL)</string>
-	<key>CONNECT_DAPP_ON_MOBILE_URL</key>
-	<string>$(CONNECT_DAPP_ON_MOBILE_URL)</string>
 	<key>CONTACT_EMAIL</key>
 	<string>$(CONTACT_EMAIL)</string>
 	<key>CREATE_SAFE_URL</key>
 	<string>$(CREATE_SAFE_URL)</string>
 	<key>DELEGATE_KEY_URL</key>
 	<string>$(DELEGATE_KEY_URL)</string>
-	<key>DESKTOP_PAIRING_URL</key>
-	<string>$(DESKTOP_PAIRING_URL)</string>
 	<key>DISCORD_URL</key>
 	<string>$(DISCORD_URL)</string>
 	<key>FALLBACKHANDLER_URL</key>

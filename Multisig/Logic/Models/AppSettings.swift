@@ -98,6 +98,9 @@ extension AppSettings {
     @UserDefault(key: "io.gnosis.multisig.multiVaultTransactionsEnabled")
     private static var _multiVaultTransactionsEnabled: Bool?
 
+    @UserDefault(key: "io.gnosis.multisig.activeVaultGroupAddress")
+    private static var _activeVaultGroupAddress: String?
+
     @UserDefault(key: "io.gnosis.multisig.selfHostedExecuteEnabled")
     private static var _selfHostedExecuteEnabled: Bool?
     
@@ -120,6 +123,13 @@ extension AppSettings {
     static var multiVaultTransactionsEnabled: Bool {
         get { _multiVaultTransactionsEnabled ?? true }
         set { _multiVaultTransactionsEnabled = newValue }
+    }
+
+    /// Active vault group address selected in Bovedas.
+    /// When nil, consumers should fall back to currently selected safe address.
+    static var activeVaultGroupAddress: String? {
+        get { _activeVaultGroupAddress }
+        set { _activeVaultGroupAddress = newValue }
     }
 
     /// Feature flag: Execute Safe transactions via backend instead of gateway
@@ -164,19 +174,16 @@ extension AppSettings {
     @UserDefault(key: "io.gnosis.multisig.leadCardManufacturer")
     static var leadCardManufacturer: String?
 
+    /// Stores the last lead provisioning action emitted during login to route post-login gate behavior.
+    @UserDefault(key: "io.gnosis.multisig.lastLeadProvisioningAction")
+    static var lastLeadProvisioningAction: String?
+
     /// When true, the app should retry registering onboarding owner keys (deviceGenerated + tangem) with backend.
     static var pendingOwnerKeysRegistration: Bool {
         get { _pendingOwnerKeysRegistration ?? false }
         set { _pendingOwnerKeysRegistration = newValue }
     }
     
-    @UserDefault(key: "global.safe.ios.connectToWebDeprecationMessageShown")
-    static var didShowDeprecateConnectToWeb: Bool? {
-        didSet {
-            NotificationCenter.default.post(name: .didReadConnectToWebBanner, object: nil)
-        }
-    }
-
     @AppSetting(\.lastMarketingVersion)
     static var lastMarketingVersion: String?
 

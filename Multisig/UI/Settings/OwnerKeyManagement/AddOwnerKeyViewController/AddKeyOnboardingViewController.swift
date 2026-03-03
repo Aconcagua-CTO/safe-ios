@@ -10,7 +10,7 @@ import Foundation
 import UIKit
 
 // base class for onboarding screens when addding a key
-class AddKeyOnboardingViewController: UITableViewController {
+class AddKeyOnboardingViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     struct Card {
         var image: UIImage?
         var title: String
@@ -24,7 +24,8 @@ class AddKeyOnboardingViewController: UITableViewController {
     }
 
     var cards: [Card] = []
-    private var nextButton: UIBarButtonItem!
+    var tableView = UITableView()
+    private let nextButton = UIButton(type: .system)
     var viewTrackingEvent: TrackingEvent!
     var createPasscodeFlow: CreatePasscodeFlow!
 
@@ -43,15 +44,33 @@ class AddKeyOnboardingViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        nextButton = UIBarButtonItem(title: NSLocalizedString("button_next", comment: "Next button title"),
-                                     style: .done,
-                                     target: self,
-                                     action: #selector(didTapNextButton(_:)))
-        navigationItem.rightBarButtonItem = nextButton
+        view.backgroundColor = .backgroundPrimary
 
+        tableView.delegate = self
+        tableView.dataSource = self
         tableView.registerCell(CardTableViewCell.self)
-
         tableView.backgroundColor = .backgroundPrimary
+        tableView.separatorStyle = .none
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+
+        nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
+        nextButton.addTarget(self, action: #selector(didTapNextButton(_:)), for: .touchUpInside)
+        nextButton.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(tableView)
+        view.addSubview(nextButton)
+
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: nextButton.topAnchor, constant: -12),
+
+            nextButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            nextButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            nextButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            nextButton.heightAnchor.constraint(equalToConstant: 56),
+        ])
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -60,17 +79,16 @@ class AddKeyOnboardingViewController: UITableViewController {
     }
 
     @objc func didTapNextButton(_ sender: Any) {
-        // to override
         completion()
     }
 
     // MARK: - Table view data source
 
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         cards.count
     }
 
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueCell(CardTableViewCell.self, for: indexPath)
         let card = cards[indexPath.row]
         cell.set(image: card.image)

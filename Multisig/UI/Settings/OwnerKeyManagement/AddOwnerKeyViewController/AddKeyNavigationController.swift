@@ -22,17 +22,11 @@ class AddKeyNavigationController: UINavigationController, UINavigationController
         presentationController?.delegate = self
     }
 
-    func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
-        if let selectWalletVC = viewController as? SelectWalletViewController {
-            selectWalletVC.cancelExistingConnection()
-        }
-    }
+    func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {}
 
     // Called when user swipes down the modal screen
     func presentationControllerWillDismiss(_ presentationController: UIPresentationController) {
-        if let selectWalletVC = viewControllers.compactMap({ $0 as? SelectWalletViewController }).first {
-            selectWalletVC.cancelExistingConnection()
-        } else if let vc = viewControllers.compactMap({ $0 as? AddOwnerKeyViewController }).first {
+        if let vc = viewControllers.compactMap({ $0 as? AddOwnerKeyViewController }).first {
             vc.completion()
         }
     }

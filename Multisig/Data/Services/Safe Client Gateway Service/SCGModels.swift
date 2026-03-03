@@ -354,6 +354,27 @@ extension SCGModels {
         var txInfo: TxInfo
         var executionInfo: ExecutionInfo?
         var safeAppInfo: SafeAppInfo?
+        var transactionRequestMeta: TransactionRequestMeta?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case timestamp
+            case txStatus
+            case txInfo
+            case executionInfo
+            case safeAppInfo
+            case transactionRequestMeta = "_transactionRequest"
+        }
+    }
+
+    struct TransactionRequestMeta: Decodable {
+        var id: String
+        var transactionType: String
+        var currency: String
+        var amount: Double
+        var requestStatus: String
+        var notes: String?
+        var createdAt: Date?
     }
 
     enum TxStatus: String, Decodable {

@@ -37,7 +37,12 @@ class App {
     // Lazy initialization - depends on authRepository
     lazy var vaultsRepository: VaultsRepository = {
         let vaultsService = VaultsService(authRepository: authRepository, logger: LogService.shared)
-        return VaultsRepositoryImpl(vaultsService: vaultsService, authRepository: authRepository)
+        let delegatesService = DelegatesService(authRepository: authRepository, logger: LogService.shared)
+        return VaultsRepositoryImpl(
+            vaultsService: vaultsService,
+            delegatesService: delegatesService,
+            authRepository: authRepository
+        )
     }()
 
     lazy var tokenWhitelistRepository: TokenWhitelistRepository = {

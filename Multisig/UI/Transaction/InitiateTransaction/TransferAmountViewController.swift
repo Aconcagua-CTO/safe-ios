@@ -7,8 +7,6 @@
 
 import UIKit
 import SwiftCryptoTokenFormatter
-import Ethereum
-import Solidity
 
 final class TransferAmountViewController: UIViewController {
     private let scrollView = UIScrollView()
@@ -18,6 +16,7 @@ final class TransferAmountViewController: UIViewController {
     private let balanceValueLabel = UILabel()
     private let maxButton = UIButton(type: .system)
     private let amountField = TokenAmountField()
+    private let equivalenceLabel = UILabel()
     private let nextButton = UIButton(type: .system)
 
     private var tooltipSource: TooltipSource?
@@ -29,8 +28,19 @@ final class TransferAmountViewController: UIViewController {
     var tokenBalance: TokenBalance!
     private var safe: Safe!
 
-    private var amount: BigDecimal? {
-        amountField.balance.isEmpty ? nil : BigDecimal.create(string: amountField.balance, precision: tokenBalance.decimals)
+    private var usdAmount: BigDecimal? {
+        amountField.balance.isEmpty ? nil : BigDecimal.create(string: amountField.balance, precision: 2)
+    }
+
+    private var tokenAmountFromUsd: BigDecimal? {
+        guard let usdAmount else { return nil }
+        guard tokenBalance.fiatConversion > 0 else { return nil }
+        let usdValue = decimal(from: usdAmount)
+        let tokenAmountDecimal = usdValue / Decimal(tokenBalance.fiatConversion)
+        return BigDecimal.create(
+            string: decimalString(from: tokenAmountDecimal, maximumFractionDigits: tokenBalance.decimals),
+            precision: tokenBalance.decimals
+        )
     }
 
     override func viewDidLoad() {
@@ -39,7 +49,7 @@ final class TransferAmountViewController: UIViewController {
         safe = try? Safe.getSelected()
         assert(safe != nil)
 
-        navigationItem.title = String(format: NSLocalizedString("ui_send_token_title_format", comment: "Title for sending a specific token"), tokenBalance.symbol)
+        navigationItem.title = NSLocalizedString("ui_withdraw_amount_title", comment: "Withdraw amount title")
         navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         navigationItem.rightBarButtonItem = nil
 
@@ -47,6 +57,7 @@ final class TransferAmountViewController: UIViewController {
 
         setUpLayout()
         setUpBehavior()
+        updateEquivalenceLabel()
         verifyAmount()
     }
 
@@ -94,13 +105,13 @@ final class TransferAmountViewController: UIViewController {
         balanceTitleLabel.text = NSLocalizedString("ui_balance_title", comment: "Balance label title")
 
         balanceValueLabel.setStyle(.bodyPrimary)
-        balanceValueLabel.text = tokenBalance.balanceWithSymbol
+        balanceValueLabel.text = tokenBalance.fiatBalance
 
         tooltipSource = TooltipSource(target: balanceValueLabel, arrowTarget: balanceValueLabel)
         tooltipSource?.message = tokenBalance.fullBalanceWithSymbol
         tooltipSource?.aboveTarget = false
 
-        maxButton.setText(NSLocalizedString("ui_tx_send_max_action", comment: "Send max action"), .primary)
+        maxButton.setText(NSLocalizedString("ui_tx_max_action", comment: "Max action"), .primary)
         maxButton.contentHorizontalAlignment = .right
         maxButton.addTarget(self, action: #selector(maxButtonTouched), for: .touchUpInside)
 
@@ -111,18 +122,22 @@ final class TransferAmountViewController: UIViewController {
 
         // Amount field
         amountField.translatesAutoresizingMaskIntoConstraints = false
-        amountField.setToken(logoURL: tokenBalance.imageURL)
+        amountField.setToken(image: UIImage(systemName: "dollarsign.circle"))
+        amountField.amountTextField.placeholder = "USD"
         amountField.delegate = self
+
+        equivalenceLabel.setStyle(.footnoteSecondary)
+        equivalenceLabel.textAlignment = .left
 
         // Bottom button
         nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
         nextButton.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
 
         // Content stack (inside scroll view)
-        let stack = UIStackView(arrangedSubviews: [balanceRow, amountField])
+        let stack = UIStackView(arrangedSubviews: [balanceRow, amountField, equivalenceLabel])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = 10
         contentView.addSubview(stack)
 
         NSLayoutConstraint.activate([
@@ -140,38 +155,77 @@ final class TransferAmountViewController: UIViewController {
     }
 
     @objc private func maxButtonTouched() {
-        // string will format full amount without any rounding
-        let value = Sol.UInt256(big: tokenBalance.balanceValue.value.magnitude)
-        let tokenAmount = Eth.TokenAmount(value: value, decimals: tokenBalance.decimals)
-        amountField.balance = tokenAmount.description
+        amountField.balance = decimalString(from: Decimal(tokenBalance.fiatValue), maximumFractionDigits: 2, minimumFractionDigits: 2)
+        updateEquivalenceLabel()
         verifyAmount()
         TooltipSource.hideAll()
     }
 
     @objc private func didTapNext() {
-        guard let safe, let amount else { return }
-        let vc = TransferRecipientViewController(safe: safe, tokenBalance: tokenBalance, amount: amount)
+        guard let safe, let tokenAmountFromUsd else { return }
+        let vc = TransferRecipientViewController(safe: safe, tokenBalance: tokenBalance, amount: tokenAmountFromUsd)
         show(vc, sender: self)
     }
 
     private func verifyAmount() {
         amountField.showError(message: nil)
         nextButton.isEnabled = false
+        updateEquivalenceLabel()
 
-        guard let amount else { return }
+        guard let usdAmount else { return }
 
         var message: String? = nil
-        if amountField.balance.numberOfDecimals > tokenBalance.decimals {
+        if amountField.balance.numberOfDecimals > 2 {
             message = String(format: NSLocalizedString("ui_amount_decimals_format", comment: "Amount decimals format"),
-                             "\(tokenBalance.decimals)")
-        } else if amount.value <= 0 {
+                             "2")
+        } else if usdAmount.value <= 0 {
             message = NSLocalizedString("ui_amount_greater_than_zero_error", comment: "Amount must be greater than zero error")
-        } else if amount.value > tokenBalance.balanceValue.value {
+        } else if decimal(from: usdAmount) > Decimal(tokenBalance.fiatValue) {
             message = NSLocalizedString("ui_insufficient_funds_error", comment: "Insufficient funds error")
         }
 
-        nextButton.isEnabled = (message == nil)
+        nextButton.isEnabled = (message == nil && tokenAmountFromUsd != nil)
         amountField.showError(message: message)
+    }
+
+    private func updateEquivalenceLabel() {
+        let tokenEquivalent = tokenEquivalentText()
+        let symbolUpper = tokenBalance.symbol.uppercased()
+        equivalenceLabel.text = String(
+            format: NSLocalizedString("ui_withdraw_equivalence_format", comment: "Withdraw amount token equivalence"),
+            tokenEquivalent,
+            symbolUpper
+        )
+    }
+
+    private func tokenEquivalentText() -> String {
+        guard let usdAmount else { return "0" }
+        guard tokenBalance.fiatConversion > 0 else { return "0" }
+        let tokenAmountDecimal = decimal(from: usdAmount) / Decimal(tokenBalance.fiatConversion)
+        return decimalString(from: tokenAmountDecimal, maximumFractionDigits: 5)
+    }
+
+    private func decimal(from value: BigDecimal) -> Decimal {
+        let decimalString = TokenFormatter().string(
+            from: value,
+            decimalSeparator: ".",
+            thousandSeparator: ""
+        )
+        return Decimal(string: decimalString, locale: Locale(identifier: "en_US")) ?? 0
+    }
+
+    private func decimalString(
+        from value: Decimal,
+        maximumFractionDigits: Int,
+        minimumFractionDigits: Int = 0
+    ) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = minimumFractionDigits
+        formatter.maximumFractionDigits = maximumFractionDigits
+        return formatter.string(from: value as NSDecimalNumber) ?? "0"
     }
 }
 
@@ -179,6 +233,7 @@ extension TransferAmountViewController: UITextFieldDelegate {
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         debounceTimer?.invalidate()
         debounceTimer = Timer.scheduledTimer(withTimeInterval: debounceDuration, repeats: false, block: { [weak self] _ in
+            self?.updateEquivalenceLabel()
             self?.verifyAmount()
         })
         return true

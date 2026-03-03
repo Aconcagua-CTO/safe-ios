@@ -453,13 +453,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     }
 
     private func presentVaultList() {
-        let switchSafesVC: UIViewController
-        if App.configuration.services.environment.isDevelopment {
-            switchSafesVC = SwitchSafesViewController()
-        } else {
-            switchSafesVC = GroupedSwitchSafesViewController()
-        }
-        let nav = UINavigationController(rootViewController: switchSafesVC)
+        let nav = UINavigationController(rootViewController: GroupedSwitchSafesViewController())
         present(nav, animated: true)
     }
 

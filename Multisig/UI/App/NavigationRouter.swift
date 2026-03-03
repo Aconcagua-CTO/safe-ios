@@ -233,7 +233,7 @@ class ExtendedNavigationRouter: NavigationRouter {
             return route
         case "/settings/safe-apps", "/apps":
             let safeAddress = eip3770AddressQueryParameter(named: "safe", in: url)
-            let route = NavigationRoute.dapps(
+            let route = NavigationRoute.appSettings(
                 address: safeAddress?.address,
                 chainId: safeAddress?.chainId
             )
@@ -254,7 +254,7 @@ class ExtendedNavigationRouter: NavigationRouter {
             return route
         case "/share/safe-app":
             let chain = chainQueryParameter(named: "chain", in: url)
-            var route = NavigationRoute.dapps(
+            var route = NavigationRoute.appSettings(
                 chainId: chain?.id
             )
             if let encodedAppUrl = queryParameterValue(named: "appUrl", in: url),
@@ -413,14 +413,6 @@ extension NavigationRoute {
     
     // MARK: Settings
     
-    static func connectToWeb(_ code: String? = nil) -> NavigationRoute {
-        var route = NavigationRoute(path: "/settings/connectToWeb")
-        if let code = code {
-            route.info["code"] = code
-        }
-        return route
-    }
-    
     static func appSettings(address: String? = nil, chainId: String? = nil) -> NavigationRoute {
         var route = NavigationRoute(path: "/settings/app")
         if let address = address, let chainId = chainId {
@@ -503,7 +495,7 @@ extension NavigationRoute {
     }
     
     static var appSettingsDetailPaths: [String] = {
-        var routes: [NavigationRoute] = [
+        let routes: [NavigationRoute] = [
             .appearanceSettings(),
             .advancedAppSettings(),
             .addressBook(),
@@ -512,9 +504,6 @@ extension NavigationRoute {
             .licenses(),
             .privacy()
         ]
-        if App.configuration.services.environment.isDevelopment {
-            routes.insert(.connectToWeb(), at: 0)
-        }
         return routes.map { $0.path }
     }()
     

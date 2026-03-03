@@ -58,33 +58,6 @@ extension Transaction {
         safeTxHash = multiSigTxInfo.safeTxHash
     }
 
-    init?(wcRequest: WCSendTransactionRequest, safe: Safe) {
-        guard safe.addressValue == wcRequest.from.address, let chainId = safe.chain?.id else { return nil }
-
-        self.safe = wcRequest.from
-        self.chainId = chainId
-        self.safeVersion = Version(safe.contractVersion!)
-
-        self.to = wcRequest.to ?? AddressString.zero
-        self.value = wcRequest.value ?? "0"
-        self.data = wcRequest.data
-        self.operation = .call
-        self.safeTxGas = wcRequest.gas ?? "0"
-        self.nonce = UInt256String(safe.nonce ?? 0)
-
-        // For contracts starting 1.3.0 we setup safeTxGas to zero
-        if self.safeVersion! >= Version(1, 3, 0) {
-            self.safeTxGas = UInt256String(0)
-        }
-
-        baseGas = "0"
-        gasPrice = "0"
-        gasToken = AddressString.zero
-        refundReceiver = AddressString.zero
-
-        updateSafeTxHash()
-    }
-
     init?(transaction: EthereumTransaction, safe: Safe) {
         guard let chainId = safe.chain?.id else { return nil }
 

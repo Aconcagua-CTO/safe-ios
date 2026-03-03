@@ -23,7 +23,6 @@ enum TrackingUserProperty: String, UserProperty {
     case passcodeIsSet = "passcode_is_set" // string, "true" or "false" depending on if app passcode is set
     case walletConnectForDappsEnabled = "wc_for_dapps_enabled" // string, "true" or "false"
     case walletConnectForKeysEnabled = "wc_for_keys_enabled" // string, "true" or "false"
-    case desktopPairingEnabled = "desktop_pairing_enabled" // string, "true" or "false"
 }
 
 enum TrackingPushState: String {
@@ -500,13 +499,12 @@ extension TrackingEvent {
     }
 
     static private func parametersWithWalletName(_ keyInfo: KeyInfo, parameters: [String: Any]) -> [String: Any] {
-        let connection = WebConnectionController.shared.walletConnection(keyInfo: keyInfo).first
-        var walletName = connection?.remotePeer?.name ?? "Unknown"
-        if walletName.count > 100 {
-            walletName = String(walletName.prefix(100))
-        }
         var updatedParameters = parameters
-        updatedParameters["wallet"] = walletName
+        if let walletName = keyInfo.wallet?.name {
+            updatedParameters["wallet"] = String(walletName.prefix(100))
+        } else {
+            updatedParameters["wallet"] = "Unknown"
+        }
         return updatedParameters
     }
 }

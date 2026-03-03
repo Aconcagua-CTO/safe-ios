@@ -30,14 +30,16 @@ protocol VaultsRepository {
 class VaultsRepositoryImpl: VaultsRepository {
     
     private let vaultsService: VaultsService
+    private let delegatesService: DelegatesService
     private let authRepository: AuthRepository
     
     // Track if a sync is currently in progress to prevent concurrent syncs
     private var isSyncing: Bool = false
     private let syncQueue = DispatchQueue(label: "io.gnosis.multisig.vaultSync", qos: .userInitiated)
     
-    init(vaultsService: VaultsService, authRepository: AuthRepository) {
+    init(vaultsService: VaultsService, delegatesService: DelegatesService, authRepository: AuthRepository) {
         self.vaultsService = vaultsService
+        self.delegatesService = delegatesService
         self.authRepository = authRepository
     }
     
@@ -144,7 +146,14 @@ class VaultsRepositoryImpl: VaultsRepository {
                 
                 // Map backend vaults to Safe entities
                 VaultLogger.info("Starting vault mapping process...")
-                self.mapAndSyncVaults(response.items, selectedSafeAddress: selectedSafeAddress, selectedSafeChainId: selectedSafeChainId, startTime: startTime, completion: completion)
+                self.mapAndSyncVaults(
+                    response.items,
+                    currentUserId: userId,
+                    selectedSafeAddress: selectedSafeAddress,
+                    selectedSafeChainId: selectedSafeChainId,
+                    startTime: startTime,
+                    completion: completion
+                )
                 
             case .failure(let error):
                 let errorTime = Date().timeIntervalSince(startTime)
@@ -180,6 +189,7 @@ class VaultsRepositoryImpl: VaultsRepository {
     
     private func mapAndSyncVaults(
         _ vaultResponses: [VaultResponse],
+        currentUserId: String,
         selectedSafeAddress: String?,
         selectedSafeChainId: String?,
         startTime: Date,
@@ -299,7 +309,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                 var existingSafesMap: [String: Safe] = [:]
                 var duplicateLocalSafes = 0
                 
-                for safe in existingSafes where safe.address != Safe.demoAddress {
+                for safe in existingSafes where safe.address != Safe.demoAddress && !safe.isDelegate {
                     guard
                         let address = safe.address,
                         let chainId = safe.chain?.id
@@ -352,6 +362,14 @@ class VaultsRepositoryImpl: VaultsRepository {
                             existingSafe.chain = chain
                             changed = true
                         }
+                        if existingSafe.isDelegate {
+                            existingSafe.isDelegate = false
+                            changed = true
+                        }
+                        if existingSafe.ownerName != nil {
+                            existingSafe.ownerName = nil
+                            changed = true
+                        }
                         
                         if changed {
                             updatedSafesNeedingSave.append(existingSafe)
@@ -374,6 +392,8 @@ class VaultsRepositoryImpl: VaultsRepository {
                             selected: shouldSelect,
                             status: .deployed
                         )
+                        safe.isDelegate = false
+                        safe.ownerName = nil
                         insertedCount += 1
                         
                         if shouldSelect {
@@ -441,12 +461,123 @@ class VaultsRepositoryImpl: VaultsRepository {
             }
         }
     }
+
+    private func syncDelegateVaults(
+        currentUserId: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        delegatesService.getVaultsByDelegateId(delegateId: currentUserId, limit: nil, offset: nil) { result in
+            switch result {
+            case .failure(let error):
+                completion(.failure(error))
+            case .success(let response):
+                DispatchQueue.main.async {
+                    do {
+                        let keyFor: (String, String) -> String = { address, chainId in
+                            "\(address.lowercased())|\(chainId)"
+                        }
+
+                        var mappedSafes: [(address: String, name: String, chainId: String, chain: Chain, version: String?, ownerName: String?)] = []
+                        var seenServerKeys = Set<String>()
+
+                        for vault in response.items {
+                            let addressString: String
+                            if vault.id.contains(":") {
+                                let components = vault.id.components(separatedBy: ":")
+                                addressString = components.last ?? vault.id
+                            } else {
+                                addressString = vault.id
+                            }
+
+                            guard let parsedAddress = Address(addressString) else { continue }
+
+                            let resolvedChainId = self.chainId(forDelegateVault: vault)
+                            let chain: Chain? = {
+                                if let existing = Chain.by(resolvedChainId) {
+                                    return existing
+                                }
+                                if let cached = ChainManager.cachedChainInfo(for: resolvedChainId) {
+                                    return Chain.createOrUpdate(cached.toSCGChain())
+                                }
+                                return nil
+                            }()
+                            guard let chain, let chainId = chain.id else { continue }
+
+                            let normalizedAddress = parsedAddress.checksummed
+                            let key = keyFor(normalizedAddress, chainId)
+                            if seenServerKeys.contains(key) { continue }
+                            seenServerKeys.insert(key)
+
+                            mappedSafes.append((
+                                address: normalizedAddress,
+                                name: vault.name,
+                                chainId: chainId,
+                                chain: chain,
+                                version: vault.contractVersion,
+                                ownerName: vault.ownerName
+                            ))
+                        }
+
+                        let existingSafes = try Safe.getAll()
+                        var existingDelegatesMap: [String: Safe] = [:]
+                        for safe in existingSafes where safe.address != Safe.demoAddress && safe.isDelegate {
+                            guard let address = safe.address, let chainId = safe.chain?.id else { continue }
+                            existingDelegatesMap[keyFor(address, chainId)] = safe
+                        }
+
+                        for mappedSafe in mappedSafes {
+                            let key = keyFor(mappedSafe.address, mappedSafe.chainId)
+                            if let existingSafe = existingDelegatesMap.removeValue(forKey: key) {
+                                existingSafe.name = mappedSafe.name
+                                existingSafe.contractVersion = mappedSafe.version
+                                existingSafe.safeStatus = .deployed
+                                existingSafe.chain = mappedSafe.chain
+                                existingSafe.isDelegate = true
+                                existingSafe.ownerName = mappedSafe.ownerName
+                            } else {
+                                let safe = Safe.create(
+                                    address: mappedSafe.address,
+                                    version: mappedSafe.version,
+                                    name: mappedSafe.name,
+                                    chain: mappedSafe.chain,
+                                    selected: false,
+                                    status: .deployed
+                                )
+                                safe.isDelegate = true
+                                safe.ownerName = mappedSafe.ownerName
+                            }
+                        }
+
+                        for safe in existingDelegatesMap.values {
+                            Safe.remove(safe: safe)
+                        }
+
+                        App.shared.coreDataStack.saveContext()
+                        Safe.updateCachedNames()
+                        completion(.success(()))
+                    } catch {
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Helpers
 
 private extension VaultsRepository {
     func chainId(for vault: VaultResponse) -> String {
+        guard let networkName = vault.contractNetwork?.uppercased() else {
+            return vault.chainId
+        }
+        if let mapped = vaultNetworkNameToChainId[networkName] {
+            return mapped
+        }
+        return vault.chainId
+    }
+
+    func chainId(forDelegateVault vault: DelegateVaultResponse) -> String {
         guard let networkName = vault.contractNetwork?.uppercased() else {
             return vault.chainId
         }

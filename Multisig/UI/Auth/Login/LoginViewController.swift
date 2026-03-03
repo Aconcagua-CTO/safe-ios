@@ -38,10 +38,8 @@ class LoginViewController: UIViewController {
     private var didLogLayoutOnce = false
     private var appleButtonTopToLoginConstraint: NSLayoutConstraint?
     private var appleButtonTopToSubtitleConstraint: NSLayoutConstraint?
-    private var progressIndicatorCenterXToLoginConstraint: NSLayoutConstraint?
-    private var progressIndicatorCenterYToLoginConstraint: NSLayoutConstraint?
-    private var progressIndicatorCenterXToAppleConstraint: NSLayoutConstraint?
-    private var progressIndicatorCenterYToAppleConstraint: NSLayoutConstraint?
+    private var progressIndicatorTopToLoginConstraint: NSLayoutConstraint?
+    private var progressIndicatorTopToAppleConstraint: NSLayoutConstraint?
     
     private var shouldShowEmailPasswordLogin: Bool {
         App.configuration.app.showEmailPasswordLogin
@@ -121,6 +119,15 @@ class LoginViewController: UIViewController {
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
         self.contentView = contentView
+
+        // Spacers keep login content vertically centered when there is extra space.
+        let topSpacerView = UIView()
+        topSpacerView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(topSpacerView)
+
+        let bottomSpacerView = UIView()
+        bottomSpacerView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(bottomSpacerView)
         
         // Create logo
         let logoImageView = UIImageView()
@@ -222,27 +229,31 @@ class LoginViewController: UIViewController {
         self.progressIndicator = progressIndicator
         
         // Setup constraints
-        appleButtonTopToLoginConstraint = appleButton.topAnchor.constraint(equalTo: loginButton.bottomAnchor, constant: 16)
+        appleButtonTopToLoginConstraint = appleButton.topAnchor.constraint(equalTo: progressIndicator.bottomAnchor, constant: 16)
         appleButtonTopToSubtitleConstraint = appleButton.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 32)
         
-        progressIndicatorCenterXToLoginConstraint = progressIndicator.centerXAnchor.constraint(equalTo: loginButton.centerXAnchor)
-        progressIndicatorCenterYToLoginConstraint = progressIndicator.centerYAnchor.constraint(equalTo: loginButton.centerYAnchor)
-        progressIndicatorCenterXToAppleConstraint = progressIndicator.centerXAnchor.constraint(equalTo: appleButton.centerXAnchor)
-        progressIndicatorCenterYToAppleConstraint = progressIndicator.centerYAnchor.constraint(equalTo: appleButton.centerYAnchor)
+        progressIndicatorTopToLoginConstraint = progressIndicator.topAnchor.constraint(equalTo: loginButton.bottomAnchor, constant: 12)
+        progressIndicatorTopToAppleConstraint = progressIndicator.topAnchor.constraint(equalTo: appleButton.bottomAnchor, constant: 12)
         
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+            contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.frameLayoutGuide.heightAnchor),
             
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-            
-            logoImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 32),
+            topSpacerView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            topSpacerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            topSpacerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            topSpacerView.bottomAnchor.constraint(equalTo: logoImageView.topAnchor, constant: -32),
+            topSpacerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 0),
+
             logoImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             logoImageView.widthAnchor.constraint(equalToConstant: 120),
             logoImageView.heightAnchor.constraint(equalToConstant: 120),
@@ -271,18 +282,27 @@ class LoginViewController: UIViewController {
             loginButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
             loginButton.heightAnchor.constraint(equalToConstant: 50),
             
-            progressIndicatorCenterXToLoginConstraint!,
-            progressIndicatorCenterYToLoginConstraint!,
+            progressIndicatorTopToLoginConstraint!,
+            progressIndicator.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
             appleButtonTopToLoginConstraint!,
             appleButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
             appleButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
             appleButton.heightAnchor.constraint(equalToConstant: 50),
             
-            registerLinkButton.topAnchor.constraint(equalTo: appleButton.bottomAnchor, constant: 16),
+            registerLinkButton.topAnchor.constraint(equalTo: progressIndicator.bottomAnchor, constant: 16),
             registerLinkButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            registerLinkButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -32)
+            registerLinkButton.bottomAnchor.constraint(equalTo: bottomSpacerView.topAnchor, constant: -32),
+
+            bottomSpacerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            bottomSpacerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            bottomSpacerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            bottomSpacerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 0)
         ])
+
+        let balancedSpacerConstraint = topSpacerView.heightAnchor.constraint(equalTo: bottomSpacerView.heightAnchor)
+        balancedSpacerConstraint.priority = .defaultHigh
+        balancedSpacerConstraint.isActive = true
         
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
         AuthLogger.debug("setupUIProgrammatically() done")
@@ -369,14 +389,10 @@ class LoginViewController: UIViewController {
             appleTopSubtitle.isActive = !showEmailPassword
         }
         
-        if let centerXLogin = progressIndicatorCenterXToLoginConstraint,
-           let centerYLogin = progressIndicatorCenterYToLoginConstraint,
-           let centerXApple = progressIndicatorCenterXToAppleConstraint,
-           let centerYApple = progressIndicatorCenterYToAppleConstraint {
-            centerXLogin.isActive = showEmailPassword
-            centerYLogin.isActive = showEmailPassword
-            centerXApple.isActive = !showEmailPassword
-            centerYApple.isActive = !showEmailPassword
+        if let progressTopLogin = progressIndicatorTopToLoginConstraint,
+           let progressTopApple = progressIndicatorTopToAppleConstraint {
+            progressTopLogin.isActive = showEmailPassword
+            progressTopApple.isActive = !showEmailPassword
         }
         
         view.setNeedsLayout()

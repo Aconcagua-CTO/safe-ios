@@ -574,26 +574,8 @@ class ReviewExecutionViewController: ContainerViewController, PasscodeProtecting
             submit()
 
         case .walletConnect:
-            guard let clientTx = controller.walletConnectTransaction() else {
-                let gsError = GSError.error(description: NSLocalizedString("ui_tx_unsupported_transaction_type_error", comment: "Unsupported transaction type error"))
-                App.shared.snackbar.show(error: gsError)
-                return
-            }
-
-            let sendTxVC = SendTransactionToWalletViewController(
-                transaction: clientTx,
-                keyInfo: keyInfo,
-                chain: chain
-            )
-
-            sendTxVC.onSuccess = { [weak self] txHashData in
-                guard let self = self else { return }
-                self.controller.didSubmitTransaction(txHash: Eth.Hash(txHashData))
-                self.didSubmitSuccess()
-            }
-
-            let vc = ViewControllerFactory.pageSheet(viewController: sendTxVC, halfScreen: true)
-            present(vc, animated: true)
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message")))
+            return
 
         case .ledgerNanoX:
             let rawTransaction = controller.preimageForSigning()

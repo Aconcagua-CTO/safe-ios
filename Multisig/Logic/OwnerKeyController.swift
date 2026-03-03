@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import WalletConnectSwift
 
 class OwnerKeyController {
 
@@ -97,65 +96,6 @@ class OwnerKeyController {
         } catch {
             App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_import_signing_key_failed_error", comment: "Import signing key failed"),
                                                           error: error))
-            return false
-        }
-    }
-
-    @discardableResult
-    static func importKey(connection: WebConnection?, wallet: WCAppRegistryEntry?, name: String, address: Address? = nil) -> Bool {
-        do {
-            var newKey: KeyInfo? = nil
-            if let connection = connection {
-                 newKey = try KeyInfo.import(connection: connection, wallet: wallet, name: name)
-            } else if let wallet = wallet, let address = address {
-                newKey = try KeyInfo.import(walletEntry: wallet, address: address, name: name)
-            }
-
-            guard newKey != nil else { return false }
-
-            Tracker.setNumKeys(KeyInfo.count(.walletConnect), type: .walletConnect)
-            postNotification(.ownerKeyImported)
-            if let keyInfo = newKey {
-                registerKeyInBackend(keyInfo: keyInfo)
-            }
-
-            let name = wallet?.name ?? connection?.remotePeer?.name ?? "unknown"
-            Tracker.trackEvent(.connectInstalledWallet, parameters: ["wallet": name])
-
-            return true
-        } catch {
-            if let err = error as? GSError.DuplicateKey {
-                App.shared.snackbar.show(error: err)
-            } else {
-                let err = GSError.error(description: NSLocalizedString("ui_add_walletconnect_owner_failed_error", comment: "Add WalletConnect owner failed"),
-                                        error: error)
-                App.shared.snackbar.show(error: err)
-            }
-            return false
-        }
-    }
-
-    static func updateKey(_ keyInfo: KeyInfo, connection: WebConnection, wallet: WCAppRegistryEntry?) -> Bool {
-        do {
-            let updatedKey = try KeyInfo.update(keyInfo: keyInfo, connection: connection)
-
-            guard updatedKey != nil else { return false }
-
-            Tracker.setNumKeys(KeyInfo.count(.walletConnect), type: .walletConnect)
-            postNotification(.ownerKeyUpdated)
-
-            let name = wallet?.name ?? connection.remotePeer?.name ?? "unknown"
-            Tracker.trackEvent(.connectInstalledWallet, parameters: ["wallet": name])
-
-            return true
-        } catch {
-            if let err = error as? DetailedLocalizedError {
-                App.shared.snackbar.show(error: err)
-            } else {
-                let err = GSError.error(description: NSLocalizedString("ui_add_walletconnect_owner_failed_error", comment: "Add WalletConnect owner failed"),
-                                        error: error)
-                App.shared.snackbar.show(error: err)
-            }
             return false
         }
     }
@@ -311,8 +251,6 @@ class OwnerKeyController {
     }
     
     static func remove(keyInfo: KeyInfo) {
-        // this should be done before calling keyInfo.delete()
-        WebConnectionController.shared.userDidDelete(account: keyInfo.address)
         keyInfo.delete(completion: { result in
             do {
                 let result = try result.get()

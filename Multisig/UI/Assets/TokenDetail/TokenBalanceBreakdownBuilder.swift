@@ -5,6 +5,7 @@ enum TokenBalanceBreakdownBuilder {
     static func savingsRows(
         inputs: [(chainId: String, summary: SafeBalanceSummary)],
         tokenSymbol: String,
+        tokenCategory: String,
         fiatCode: String
     ) -> [NetworkTokenBalanceRow] {
         struct ChainAggregate {
@@ -16,14 +17,18 @@ enum TokenBalanceBreakdownBuilder {
 
         let symbolKey = tokenSymbol.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !symbolKey.isEmpty else { return [] }
+        let categorySection = TokenCategory.sectionId(for: tokenCategory)
 
         var perChain: [String: ChainAggregate] = [:]
 
         for input in inputs {
             let chainId = input.chainId
             for item in input.summary.items {
+                let itemSection = TokenCategory.sectionId(for: item.tokenCategory)
+                guard itemSection == categorySection else { continue }
+
                 let token = TokenBalance(item, code: fiatCode, chainId: chainId)
-                let wrap = (TokenWhitelist.by(chainId: chainId, networkAddress: token.address)?.wrapLabel ?? "")
+                let wrap = (item.wrapLabel ?? "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 let displaySymbol = (wrap.isEmpty ? token.symbol : wrap)
                     .trimmingCharacters(in: .whitespacesAndNewlines)

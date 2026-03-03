@@ -33,3 +33,27 @@ struct VaultsListResponse: Codable {
     let offset: Int?
 }
 
+/**
+ * Backend response model for vaults where current user is a delegate
+ */
+struct DelegateVaultResponse: Codable {
+    let id: String
+    let name: String
+    let chainId: String
+    let contractVersion: String?
+    let state: Int
+    let vaultType: String?
+    let contractNetwork: String?
+    let ownerUserId: String?
+    let ownerName: String?
+    let companyId: String?
+    let delegateId: String?
+}
+
+struct DelegateVaultsListResponse: Codable {
+    let items: [DelegateVaultResponse]
+    let total: Int?
+    let limit: Int?
+    let offset: Int?
+}
+

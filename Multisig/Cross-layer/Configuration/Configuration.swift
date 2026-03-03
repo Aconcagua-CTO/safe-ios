@@ -133,14 +133,8 @@ struct AppConfiguration {
         @ConfigurationKey("PAY_FOR_CANCELLATION_URL")
         var payForCancellationURL: URL
 
-        @ConfigurationKey("CONNECT_DAPP_ON_MOBILE_URL")
-        var connectDappOnMobileURL: URL
-
         @ConfigurationKey("ADVANCED_TX_PARAMS_URL")
         var advancedTxParamsURL: URL
-
-        @ConfigurationKey("DESKTOP_PAIRING_URL")
-        var desktopPairingURL: URL
 
         @ConfigurationKey("DELEGATE_KEY_URL")
         var delegateKeyURL: URL

@@ -10,6 +10,7 @@
 		04077B37278BB5C400AF6376 /* ReviewSendFundsTransactionHeaderTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04077B35278BB5C400AF6376 /* ReviewSendFundsTransactionHeaderTableViewCell.swift */; };
 		04077B38278BB5C400AF6376 /* ReviewSendFundsTransactionHeaderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 04077B36278BB5C400AF6376 /* ReviewSendFundsTransactionHeaderTableViewCell.xib */; };
 		04077B3D278CB85000AF6376 /* ActivityButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04077B3C278CB84F00AF6376 /* ActivityButtonView.swift */; };
+		A1B2C3D42FC0AA1100D1E2F3 /* VaultIconFadeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D32FC0AA1100D1E2F3 /* VaultIconFadeView.swift */; };
 		04077B3F278CB85F00AF6376 /* ActivityButtonView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 04077B3E278CB85F00AF6376 /* ActivityButtonView.xib */; };
 		04131FBD2851571E001F60C2 /* CreateInviteOwnerIntroViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04131FBB2851571E001F60C2 /* CreateInviteOwnerIntroViewController.swift */; };
 		04131FBE2851571E001F60C2 /* CreateInviteOwnerIntroViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 04131FBC2851571E001F60C2 /* CreateInviteOwnerIntroViewController.xib */; };
@@ -532,6 +533,7 @@
 		0A93DD602445CC8B00688050 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A93DD5F2445CC8B00688050 /* Assets.xcassets */; };
 		0A93DD632445CC8B00688050 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A93DD622445CC8B00688050 /* Preview Assets.xcassets */; };
 		0A93DD662445CC8B00688050 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0A93DD642445CC8B00688050 /* LaunchScreen.storyboard */; };
+		F1A000012F20000100A1B2C3 /* TokenIcons in Resources */ = {isa = PBXBuildFile; fileRef = F1A000022F20000100A1B2C3 /* TokenIcons */; };
 		0A93DDB32446080000688050 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A93DDB22446080000688050 /* Colors.swift */; };
 		0A93DDB924461C1400688050 /* Fonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A93DDB824461C1400688050 /* Fonts.swift */; };
 		0A93DDBB24461F4800688050 /* Buttons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A93DDBA24461F4800688050 /* Buttons.swift */; };
@@ -625,6 +627,7 @@
 		0AD0273925A34FF600886671 /* MultiSendRowTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD0273725A34FF600886671 /* MultiSendRowTableViewCell.swift */; };
 		0AD0273A25A34FF600886671 /* MultiSendRowTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0AD0273825A34FF600886671 /* MultiSendRowTableViewCell.xib */; };
 		0AD0274525A3586800886671 /* ActionDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD0274425A3586800886671 /* ActionDetailViewController.swift */; };
+		F0E1D2C4B4A5968701234567 /* TransactionRequestDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0E1D2C3B4A5968701234567 /* TransactionRequestDetailViewController.swift */; };
 		0AD062E62577AE7E0030810D /* TransactionDetailCellBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD062E52577AE7E0030810D /* TransactionDetailCellBuilder.swift */; };
 		0AD27A21271053B400E22BDC /* SuggestToAddSignerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AA59CC1270CAD05000CA7B1 /* SuggestToAddSignerViewController.swift */; };
 		0AD6EF1E25CAF5EC00EE5512 /* AppReviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD6EF1D25CAF5EC00EE5512 /* AppReviewController.swift */; };
@@ -1079,7 +1082,6 @@
 		8D7DF1A98F3C869DE4CCB3CC /* CDWCAppRegistryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7DFDBABFA6FD66092A4378 /* CDWCAppRegistryEntry.swift */; };
 		8D7DFB2CEBACCDB9E9CCF6BC /* WebConnectionExpirationMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D7DF152EC9E12AF6029DA1E /* WebConnectionExpirationMonitor.swift */; };
 		930F293E2937BA910040C48B /* ProtectedKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 930F293D2937BA910040C48B /* ProtectedKeyStore.swift */; };
-		931AB80328808EBC00264AAA /* MultiSendApproveMultihopBatchSwapExactIn.json in Resources */ = {isa = PBXBuildFile; fileRef = 931AB80128808EBC00264AAA /* MultiSendApproveMultihopBatchSwapExactIn.json */; };
 		931AB80428808EBC00264AAA /* MockJSONHttpClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931AB80228808EBC00264AAA /* MockJSONHttpClient.swift */; };
 		931AB80628808F3600264AAA /* TransactionPreviewRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931AB80528808F3600264AAA /* TransactionPreviewRequest.swift */; };
 		931B211529BD2CB7009C53B5 /* NativeSocketFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931B211429BD2CB7009C53B5 /* NativeSocketFactory.swift */; };
@@ -1748,6 +1750,7 @@
 		0A93DD562445CC8A00688050 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		0A93DD582445CC8A00688050 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		0A93DD5F2445CC8B00688050 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F1A000022F20000100A1B2C3 /* TokenIcons */ = {isa = PBXFileReference; lastKnownFileType = folder; path = TokenIcons; sourceTree = "<group>"; };
 		0A93DD622445CC8B00688050 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		0A93DD652445CC8B00688050 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		0A93DD672445CC8B00688050 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1848,6 +1851,7 @@
 		0AD0273725A34FF600886671 /* MultiSendRowTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiSendRowTableViewCell.swift; sourceTree = "<group>"; };
 		0AD0273825A34FF600886671 /* MultiSendRowTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MultiSendRowTableViewCell.xib; sourceTree = "<group>"; };
 		0AD0274425A3586800886671 /* ActionDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionDetailViewController.swift; sourceTree = "<group>"; };
+		F0E1D2C3B4A5968701234567 /* TransactionRequestDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionRequestDetailViewController.swift; sourceTree = "<group>"; };
 		0AD062E52577AE7E0030810D /* TransactionDetailCellBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionDetailCellBuilder.swift; sourceTree = "<group>"; };
 		0AD6EF1D25CAF5EC00EE5512 /* AppReviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewController.swift; sourceTree = "<group>"; };
 		0AD89A45246C38920052F4CD /* EmailSupportViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailSupportViewController.swift; sourceTree = "<group>"; };
@@ -2155,6 +2159,7 @@
 		558835E6255AEA390014E8C7 /* InfoCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = InfoCell.xib; sourceTree = "<group>"; };
 		558835EE255BFEDB0014E8C7 /* AddressInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressInfoView.swift; sourceTree = "<group>"; };
 		558835F8255BFEF80014E8C7 /* AddressInfoView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = AddressInfoView.xib; sourceTree = "<group>"; };
+		A1B2C3D32FC0AA1100D1E2F3 /* VaultIconFadeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultIconFadeView.swift; sourceTree = "<group>"; };
 		55883611255C15870014E8C7 /* UIViewController+Safari.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Safari.swift"; sourceTree = "<group>"; };
 		5588363A2562904E0014E8C7 /* ContractVersionStatusCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContractVersionStatusCell.swift; sourceTree = "<group>"; };
 		5588363B2562904E0014E8C7 /* ContractVersionStatusCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ContractVersionStatusCell.xib; sourceTree = "<group>"; };
@@ -2318,7 +2323,6 @@
 		8D7DF152EC9E12AF6029DA1E /* WebConnectionExpirationMonitor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebConnectionExpirationMonitor.swift; sourceTree = "<group>"; };
 		8D7DFDBABFA6FD66092A4378 /* CDWCAppRegistryEntry.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CDWCAppRegistryEntry.swift; sourceTree = "<group>"; };
 		930F293D2937BA910040C48B /* ProtectedKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtectedKeyStore.swift; sourceTree = "<group>"; };
-		931AB80128808EBC00264AAA /* MultiSendApproveMultihopBatchSwapExactIn.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = MultiSendApproveMultihopBatchSwapExactIn.json; sourceTree = "<group>"; };
 		931AB80228808EBC00264AAA /* MockJSONHttpClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MockJSONHttpClient.swift; sourceTree = "<group>"; };
 		931AB80528808F3600264AAA /* TransactionPreviewRequest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TransactionPreviewRequest.swift; sourceTree = "<group>"; };
 		931B211429BD2CB7009C53B5 /* NativeSocketFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSocketFactory.swift; sourceTree = "<group>"; };
@@ -3560,6 +3564,7 @@
 				B4C0A1132F7A000100A1B2C3 /* UnifiedTransactionDetails */,
 				0AD0273F25A354C700886671 /* MultiSendListTableViewController */,
 				0AD0274425A3586800886671 /* ActionDetailViewController.swift */,
+				F0E1D2C3B4A5968701234567 /* TransactionRequestDetailViewController.swift */,
 				0AF8832125A5EC1F00029A43 /* ActionDetailTableViewCell.swift */,
 				0A8AEB0E25A4712B002A3FE1 /* ActionDetailTextCell.swift */,
 				0A8AEB0F25A4712B002A3FE1 /* ActionDetailTextCell.xib */,
@@ -4198,6 +4203,7 @@
 				0491067928F99246005A4A99 /* Fonts */,
 				042626E928EF620E000BD2CC /* Animations */,
 				0A93DD5F2445CC8B00688050 /* Assets.xcassets */,
+				F1A000022F20000100A1B2C3 /* TokenIcons */,
 				0A93DD642445CC8B00688050 /* LaunchScreen.storyboard */,
 			);
 			name = Resources;
@@ -4712,7 +4718,6 @@
 			isa = PBXGroup;
 			children = (
 				931AB80228808EBC00264AAA /* MockJSONHttpClient.swift */,
-				931AB80128808EBC00264AAA /* MultiSendApproveMultihopBatchSwapExactIn.json */,
 				557D809B270B32F80036D6D0 /* WCIncomingTransactionRequestViewController.swift */,
 				046FFE05287C8433007428D7 /* IcommingDappInteractionRequestHeaderTableViewCell.swift */,
 				046FFE06287C8433007428D7 /* IcommingDappInteractionRequestHeaderTableViewCell.xib */,
@@ -4798,6 +4803,7 @@
 				6A252CF828185148001F0887 /* OwnerActionView.xib */,
 				0472B2A72857B43E0049BA17 /* ShareTextView.swift */,
 				0472B2A92857B44F0049BA17 /* ShareTextView.xib */,
+				A1B2C3D32FC0AA1100D1E2F3 /* VaultIconFadeView.swift */,
 				046FFE182899681B007428D7 /* ClaimableAmountView.swift */,
 				046FFE1A28996831007428D7 /* ClaimableAmountView.xib */,
 				0478383928C68E7300459F9B /* BorderedCheveronButton.swift */,
@@ -5462,7 +5468,9 @@
 				0A93DD4F2445CC8A00688050 /* Sources */,
 				0A93DD502445CC8A00688050 /* Frameworks */,
 				0A93DD512445CC8A00688050 /* Resources */,
+				04FAF0D02BD9E50000A1F111 /* [Tangem] Patch SDK NFC titles */,
 				04FAF0C42BD9E50000A1F111 /* Embed Frameworks */,
+				04FAF0D12BD9E50000A1F112 /* [Tangem] Patch embedded SDK NFC titles */,
 				0ACDC01924926081002035A2 /* [FIREBASE] Copy config file */,
 				0AF2732824DAABDC007E4012 /* Embed Foundation Extensions */,
 				B343BEB42A7A5E49006BF46B /* [FIREBASE] Upload dSYMs */,
@@ -5667,9 +5675,7 @@
 				048D72D226875B2D0095999C /* TableHeaderView.xib in Resources */,
 				558835F9255BFEF80014E8C7 /* AddressInfoView.xib in Resources */,
 				6A386C63281AC048003FBCB3 /* ReplaceOwnerTableViewCell.xib in Resources */,
-				557D80B9270B32F80036D6D0 /* SignatureRequestContentViewController.xib in Resources */,
 				0A045077278DACC400650F71 /* MiniAccountAndBalancePiece.xib in Resources */,
-				931AB80328808EBC00264AAA /* MultiSendApproveMultihopBatchSwapExactIn.json in Resources */,
 				938D327128C8808D00198B7E /* NavigatingDAOViewController.xib in Resources */,
 				6A252CF928185148001F0887 /* OwnerActionView.xib in Resources */,
 				55BCFC68255469C200020CE7 /* BasicHeaderView.xib in Resources */,
@@ -5758,7 +5764,6 @@
 				0468FB9525912E8300541536 /* TransactionListHeaderTableViewCell.xib in Resources */,
 				0AADCDB828589DCC00A0139B /* AddOwnerExceptionViewController.xib in Resources */,
 				0468C3502A911E32009872C2 /* InfoTableFooterView.xib in Resources */,
-				0AF78A3227E0E07B001BAFE0 /* PendingWalletActionViewController.xib in Resources */,
 				0468C3602A955F85009872C2 /* WarningBanner.xib in Resources */,
 				6AF6296229C0C5C7004C034A /* ROBenefitsViewController.xib in Resources */,
 				55413678265E4A0000796F91 /* AddOwnerKeyCell.xib in Resources */,
@@ -5833,7 +5838,6 @@
 				0A06533727B6D1070008C5F1 /* ChooseOwnerDetailHeaderView.xib in Resources */,
 				0472B2D3286BD7C60049BA17 /* ClaimedAmountInputCell.xib in Resources */,
 				B32485DA2C11FFD20084EE8F /* SelectDataFileViewController.xib in Resources */,
-				0ADD0FB427C148880099DF7D /* DatePickerViewController.xib in Resources */,
 				0AD0273A25A34FF600886671 /* MultiSendRowTableViewCell.xib in Resources */,
 				04D1323625E43C560032FA03 /* DetailRejectionInfoCell.xib in Resources */,
 				0468C3302A83D1DA009872C2 /* SecurityFactorTableViewCell.xib in Resources */,
@@ -5871,7 +5875,6 @@
 				6A386C6B281ADAFD003FBCB3 /* ValueChangeTableViewCell.xib in Resources */,
 				045769FE27C7DBBF00881206 /* SafeDeployingViewController.xib in Resources */,
 				0AE8C08925793B8C00E62B34 /* DetailArrowPiece.xib in Resources */,
-				6ADEB02827B559370062ADFE /* WebConnectionOwnerView.xib in Resources */,
 				0491068028F99247005A4A99 /* DMSans-Regular.ttf in Resources */,
 				400FFD5F2EF4246E006697BB /* InvertirBalanceTableViewCell.xib in Resources */,
 				043350BA2816D522003725E2 /* ReviewSafeTransactionViewController.xib in Resources */,
@@ -5895,8 +5898,8 @@
 				D8A6B12E2779D01900438460 /* AdvancedParametersViewController.xib in Resources */,
 				B32485CC2C109C240084EE8F /* CreateExportPasswordViewController.xib in Resources */,
 				0AADCDC92859BA9F00A0139B /* RequestAddOwnerViewController.xib in Resources */,
-				0AF5C66C27BAA74300BFEA52 /* WebConnectionTableViewCell.xib in Resources */,
 				0A93DD632445CC8B00688050 /* Preview Assets.xcassets in Resources */,
+				F1A000012F20000100A1B2C3 /* TokenIcons in Resources */,
 				0AE8C0452579317700E62B34 /* DetailDisclosingCell.xib in Resources */,
 				0A478D3425B861D50038363E /* DefaultKeyTableViewCell.xib in Resources */,
 				6A9A770D2804182700C229FC /* BackupIntroViewController.xib in Resources */,
@@ -5914,10 +5917,7 @@
 				0468FB9725912E8300541536 /* TransactionsListConflictHeaderTableViewCell.xib in Resources */,
 				0A93DD602445CC8B00688050 /* Assets.xcassets in Resources */,
 				5534F7382760C7670018E655 /* CreatePasscodeSuggestionViewController.xib in Resources */,
-				B0D618DCACA100B230F936DE /* DesktopPairingHeaderView.xib in Resources */,
-				B0D6178FC710D4E943B4F9F5 /* WebConnectionContainerViewController.xib in Resources */,
 				0A0391CB27C565D4003C871A /* IconButtonTableViewCell.xib in Resources */,
-				B0D613F1FF3262B3A295206C /* ActionPanelView.xib in Resources */,
 				6A947217288FDE8300807B3B /* ClaimNotAvailableViewController.xib in Resources */,
 				0AADCDBC2858AA4700A0139B /* InactiveLinkViewController.xib in Resources */,
 				AD303BDA3B1979B4643DAAB1 /* WarnAboutAnyNestedMultisendWithDelegate.json in Resources */,
@@ -6025,6 +6025,44 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [[ \"${CONFIGURATION}\" == Debug.* ]]; then\n  echo \"[Crashlytics] Skipping dSYM upload for ${CONFIGURATION}\"\n  exit 0\nfi\n\necho \"[Crashlytics] CONFIGURATION=${CONFIGURATION}\"\necho \"[Crashlytics] PRODUCT_BUNDLE_IDENTIFIER=${PRODUCT_BUNDLE_IDENTIFIER}\"\nPRIMARY_PLIST=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\"\nFALLBACK_PLIST=\"${SRCROOT}/Multisig/Cross-layer/Analytics/Firebase/${FIREBASE_CONFIG}.plist\"\nGOOGLE_SERVICE_INFO_PLIST_PATH=\"${PRIMARY_PLIST}\"\n\nif [[ -f \"${PRIMARY_PLIST}\" ]]; then\n  echo \"[Crashlytics] Found primary plist at ${PRIMARY_PLIST}\"\nelse\n  echo \"[Crashlytics] Primary plist missing at ${PRIMARY_PLIST}\" >&2\n  GOOGLE_SERVICE_INFO_PLIST_PATH=\"${FALLBACK_PLIST}\"\nfi\n\nif ! /usr/libexec/PlistBuddy -c \"Print:GOOGLE_APP_ID\" \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" >/dev/null 2>&1; then\n  echo \"[Crashlytics] Primary plist unreadable, trying fallback at ${FALLBACK_PLIST}\" >&2\n  GOOGLE_SERVICE_INFO_PLIST_PATH=\"${FALLBACK_PLIST}\"\n  if ! /usr/libexec/PlistBuddy -c \"Print:GOOGLE_APP_ID\" \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" >/dev/null 2>&1; then\n    echo \"[Crashlytics] ERROR: Unable to read GOOGLE_APP_ID from either primary or fallback plist.\" >&2\n    exit 0\n  fi\nfi\n\necho \"[Crashlytics] Using plist ${GOOGLE_SERVICE_INFO_PLIST_PATH}\"\nexport GOOGLE_SERVICE_INFO_PLIST_PATH\n\nif [[ -z \"${GOOGLE_APP_ID}\" && -f \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" ]]; then\n  GOOGLE_APP_ID=$(/usr/libexec/PlistBuddy -c \"Print:GOOGLE_APP_ID\" \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" 2>/dev/null | tr -d '\\n\\r')\nfi\nif [[ -z \"${GOOGLE_APP_ID}\" && -f \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" ]]; then\n  GOOGLE_APP_ID=$(defaults read \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" GOOGLE_APP_ID 2>/dev/null | tr -d '\\n\\r')\nfi\nif [[ -n \"${GOOGLE_APP_ID}\" ]]; then\n  echo \"[Crashlytics] GOOGLE_APP_ID=${GOOGLE_APP_ID}\"\n  export GOOGLE_APP_ID\nelse\n  echo \"[Crashlytics] ERROR: GOOGLE_APP_ID missing for ${GOOGLE_SERVICE_INFO_PLIST_PATH}. Skipping upload-symbols\" >&2\n  exit 0\nfi\n\n# Export bundle identifier\nexport PRODUCT_BUNDLE_IDENTIFIER\necho \"[Crashlytics] PRODUCT_BUNDLE_IDENTIFIER=${PRODUCT_BUNDLE_IDENTIFIER}\"\n\necho \"[Crashlytics] Uploading dSYMs with ${GOOGLE_SERVICE_INFO_PLIST_PATH}\"\n\"${SRCROOT}/bin/crashlytics\" -gsp \"${GOOGLE_SERVICE_INFO_PLIST_PATH}\" -p ios\n";
+			showEnvVarsInLog = 0;
+		};
+		04FAF0D02BD9E50000A1F111 /* [Tangem] Patch SDK NFC titles */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Tangem] Patch SDK NFC titles";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export SKIP_BACKUP=1\n\"${SRCROOT}/scripts/patch-tangem-sdk-title.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		04FAF0D12BD9E50000A1F112 /* [Tangem] Patch embedded SDK NFC titles */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Tangem] Patch embedded SDK NFC titles";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/scripts/patch-embedded-tangem-sdk.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -6144,13 +6182,11 @@
 				0A04508B278E283D00650F71 /* TransactionExecutionController.swift in Sources */,
 				55F9B7A226D6665C003D1C68 /* LedgerPendingConfirmationViewController.swift in Sources */,
 				0A57C8E92587AECB00B7C019 /* EnterSafeAddressViewController.swift in Sources */,
-				0AFD9DCA27BFDF0200011CF1 /* WebConnectionContainerViewController.swift in Sources */,
 				0A616B9626AEEBB700FCEDB9 /* BoolString.swift in Sources */,
 				0A9366BB27908717001918A9 /* OwnerKeySelectionPolicy.swift in Sources */,
 				6A386C5C281A7792003FBCB3 /* AddRemoveOwnerTableViewCell.swift in Sources */,
 				0A81E310246C062400425DEF /* Icons.swift in Sources */,
 				0AD062E62577AE7E0030810D /* TransactionDetailCellBuilder.swift in Sources */,
-				0A0C75B027E8A66C0083AE01 /* StartWalletConnectionViewController.swift in Sources */,
 				55413673265E493500796F91 /* AddOwnerKeyViewController.swift in Sources */,
 				5532D4BB2449A17D0067505A /* Logger.swift in Sources */,
 				0AEDCE0B2472946600A1EC80 /* BarButton.swift in Sources */,
@@ -6208,7 +6244,6 @@
 				0AC5F56B25DD4A4B00DEF0D7 /* AuthenticationController.swift in Sources */,
 				550FB1CA26691E7500C13D54 /* SafeContract.swift in Sources */,
 				40066C7F2EFAAF73004DC6C5 /* TransferSelectableAsset.swift in Sources */,
-				550FB1C426691E1500C13D54 /* SelectWalletViewController.swift in Sources */,
 				0A616B9B26AEFD4B00FCEDB9 /* MultisigNotification.swift in Sources */,
 				048B3B0E25A5E7AB0005219B /* EditSafeNameViewController.swift in Sources */,
 				0AF2733D24DABAAF007E4012 /* AppDelegate+Messaging.swift in Sources */,
@@ -6315,8 +6350,6 @@
 				6A947216288FDE8300807B3B /* ClaimNotAvailableViewController.swift in Sources */,
 				048643B124DAB5D6003DD966 /* RegisterNotificationTokenRequest.swift in Sources */,
 				0A3FDAF226AEB691006A7DC3 /* Safe+Shared.swift in Sources */,
-				557D80AC270B32F80036D6D0 /* WalletConnectServerController.swift in Sources */,
-				0A0C75B227E8AB620083AE01 /* SendTransactionToWalletViewController.swift in Sources */,
 				6A386C62281AC048003FBCB3 /* ReplaceOwnerTableViewCell.swift in Sources */,
 				55CA3EBB250A237C0080DF7F /* KeychainService.swift in Sources */,
 				D80B5A032769CEAD00D6E024 /* Tooltip.swift in Sources */,
@@ -6337,7 +6370,6 @@
 				40CF54872F102CA700FFA4AC /* FederatedUserSignupRequest.swift in Sources */,
 				41AA00012FAA000100AA0001 /* UsersService.swift in Sources */,
 				41AA00032FAA000200AA0001 /* TransactionRequestsService.swift in Sources */,
-				6AA2724A27DF566B00934B37 /* PendingWalletActionViewController.swift in Sources */,
 				0ADD19C4265EA23200EB0F2B /* SeedPhraseView.swift in Sources */,
 				0AC60C9D2549D63300A63AE2 /* NoSafesViewController.swift in Sources */,
 				6AFD26E62859E8EC00336FFE /* InfoBoxView.swift in Sources */,
@@ -6355,7 +6387,6 @@
 				0A339C5D24C1D16E00DAD84B /* Image+Blockies.swift in Sources */,
 				93EF2FA727C550BC0077BE95 /* InstructionHeaderTableViewCell.swift in Sources */,
 				40066C922EFAF332004DC6C5 /* DualSignatureKeySelector.swift in Sources */,
-				557D80AD270B32F80036D6D0 /* WCRequestsHandler.swift in Sources */,
 				4029FB942EF1754F00933402 /* TokenWhitelistRepository.swift in Sources */,
 				4029FB952EF1754F00933402 /* TokenWhitelistService.swift in Sources */,
 				4029FB962EF1754F00933402 /* TokenWhitelistRequest.swift in Sources */,
@@ -6390,6 +6421,7 @@
 				0A57C5D72577F9E600420303 /* ConfirmationStatusPiece.swift in Sources */,
 				400FFD5E2EF4246E006697BB /* InvertirBalanceTableViewCell.swift in Sources */,
 				04077B3D278CB85000AF6376 /* ActivityButtonView.swift in Sources */,
+				A1B2C3D42FC0AA1100D1E2F3 /* VaultIconFadeView.swift in Sources */,
 				0A045073278DACA200650F71 /* AmountAndValuePiece.swift in Sources */,
 				0ADF9DD428B4E23B00D4FBA2 /* AllocationsRequest.swift in Sources */,
 				04FA9CC62A4354250027F315 /* SafeCreatingViewController.swift in Sources */,
@@ -6413,7 +6445,6 @@
 				0A433E5F25500F87006FFF75 /* BalancesRequest.swift in Sources */,
 				0AE0AFEC2805C6B9002594CB /* VerifyPhraseViewController.swift in Sources */,
 				047691592464026400D73D8B /* SectionHeader.swift in Sources */,
-				0AF5C66D27BAA74300BFEA52 /* WebConnectionTableViewCell.swift in Sources */,
 				0AADCDBE2858CD3800A0139B /* AddOwnerRequestUrlValidator.swift in Sources */,
 				6AF685392937629900E63289 /* CollectibleHeaderTableViewCell.swift in Sources */,
 				0455A44527282EAA008B772D /* FileManagerWrapper.swift in Sources */,
@@ -6422,14 +6453,11 @@
 				04CE3F9D24B62F0800826AEE /* CollectibleMetaDataAttribute.swift in Sources */,
 				93EE3F702760EC7E00111F17 /* IntercomConfig.swift in Sources */,
 				04C97A9A246C3E5F00EBA0F1 /* ViewState.swift in Sources */,
-				557D80B8270B32F80036D6D0 /* SignatureRequestViewController.swift in Sources */,
-				6ADEB02727B559370062ADFE /* WebConnectionOwnerView.swift in Sources */,
 				551DDEE9244F183500C719D3 /* Selection.swift in Sources */,
 				04D093E9284FD348003F38CF /* OnboardingStepCollectionViewCell.swift in Sources */,
 				0A26FABB28C1F22500B0F519 /* SelectedDelegateCell.swift in Sources */,
 				0A5B15802808640F003AD853 /* ChangePasscodeEnterNewViewController.swift in Sources */,
 				04FC26B625CABE2300CDA9A0 /* AdvancedSafeSettingsViewController.swift in Sources */,
-				0AFD9DCE27BFF01000011CF1 /* SendTransactionContentViewController.swift in Sources */,
 				0466877628E6388F0004D488 /* UIViewController+Display.swift in Sources */,
 				0AF1C91F2541DB3F00E28669 /* BalanceTableViewCell.swift in Sources */,
 				6A007E922A60179B000F0ADD /* UIGestures.swift in Sources */,
@@ -6445,7 +6473,6 @@
 				557D80B1270B32F80036D6D0 /* WCIncomingTransactionRequestViewController.swift in Sources */,
 				6A386C5F281A9D46003FBCB3 /* ReviewAddOwnerTxViewController.swift in Sources */,
 				0A791DA124D30FE100D70DA9 /* Spacing.swift in Sources */,
-				557D80AE270B32F80036D6D0 /* WalletConnectSafesServerController.swift in Sources */,
 				55A58534250140B1005E778B /* PrivateKey.swift in Sources */,
 				D86517792767555E000B4C04 /* TotalBalanceView.swift in Sources */,
 				55B6465C253050200050BD95 /* Transaction.swift in Sources */,
@@ -6456,7 +6483,6 @@
 				0AC94458254068D800921CA5 /* NSNotification+Events.swift in Sources */,
 				0471B3BD262742CD001F2D3B /* UpdateAppViewController.swift in Sources */,
 				0468C35B2A94FEBD009872C2 /* UpdateRecoveryKitSuccessViewController.swift in Sources */,
-				0AFD9DCC27BFE18800011CF1 /* SignatureRequestContentViewController.swift in Sources */,
 				55CEFC2024939525003B2B19 /* TrackingEvent.swift in Sources */,
 				0478383F28C699BA00459F9B /* WhatIsSafeTokenViewController.swift in Sources */,
 				937B74AE2A55D02000023D23 /* AppleWeb3AuthLogin.swift in Sources */,
@@ -6496,7 +6522,6 @@
 				0A5307162543110300E8A270 /* ConfirmTransactionRequest.swift in Sources */,
 				0455A42E27204181008B772D /* AddressBookListTableViewController.swift in Sources */,
 				0A93DDB32446080000688050 /* Colors.swift in Sources */,
-				557D80B5270B32F80036D6D0 /* WCSendTransactionRequest.swift in Sources */,
 				0A045089278E282800650F71 /* DefaultAccountBalanceLoader.swift in Sources */,
 				6AD477362898E341004C736D /* TweetBox.swift in Sources */,
 				0A5B157E280863FB003AD853 /* RepeatChangedPasscodeViewController.swift in Sources */,
@@ -6506,13 +6531,11 @@
 				0AFA72A024BF368900A370EE /* SlicedText+Address.swift in Sources */,
 				0ADD199E265E518600EB0F2B /* UIView+Pin.swift in Sources */,
 				04B4B6E525B9A08D00CFE24B /* CardTableViewCell.swift in Sources */,
-				6AC2D47727EC661D00D422CA /* SignatureRequestToWalletViewController.swift in Sources */,
 				04AFFBD2282BBE1900429513 /* RemoveOwnerFlow.swift in Sources */,
 				5596C03E25507F3C00EF23A5 /* CollectibleTableViewCell.swift in Sources */,
 				047A5B9128A5582F00BB8B2A /* GuardiansRequest.swift in Sources */,
 				403F2D682F22C4CE00C61304 /* SafeConfigService.swift in Sources */,
 				403F2D692F22C4CE00C61304 /* ChainsConfigRequest.swift in Sources */,
-				049BE2032912C3B00004B84D /* WalletConnectKeyFlow.swift in Sources */,
 				0A3FDAEC26AEB5BF006A7DC3 /* KeyInfo+Shared.swift in Sources */,
 				04CE3F9924B6120F00826AEE /* CollectibleMetaData.swift in Sources */,
 				0A0EFCAA246EB28600D3D8BF /* Pasteboard.swift in Sources */,
@@ -6659,7 +6682,6 @@
 				0A9D5CEB27D8F48B0075A21D /* WCAppRegistryEntry.swift in Sources */,
 				6AFD26EB2861B0CF00336FFE /* SafeTokenBanner.swift in Sources */,
 				0AE8C06A2579371A00E62B34 /* DetailTransferInfoCell.swift in Sources */,
-				550FB1AD26691D6700C13D54 /* WCSession.swift in Sources */,
 				55413677265E4A0000796F91 /* AddOwnerKeyCell.swift in Sources */,
 				40066C8C2EFAD322004DC6C5 /* NetworkInfoTableViewCell.swift in Sources */,
 				0AA9F2512498CC62005BD60F /* AddressString.swift in Sources */,
@@ -6672,6 +6694,7 @@
 				0ADD19C3265EA23200EB0F2B /* SeedPhraseViewController.swift in Sources */,
 				0A791D9D24D2FD5C00D70DA9 /* SnackbarHostView.swift in Sources */,
 				0AD0274525A3586800886671 /* ActionDetailViewController.swift in Sources */,
+				F0E1D2C4B4A5968701234567 /* TransactionRequestDetailViewController.swift in Sources */,
 				0A045080278DAD9000650F71 /* DisclosureWithContentCell.swift in Sources */,
 				04CF31BF27B6B9D2001BEEED /* TitledMiniPieceView.swift in Sources */,
 				0443A0BD29E0FE7C00ABE93D /* RelayedTransactionMonitor.swift in Sources */,
@@ -6681,7 +6704,6 @@
 				931B211529BD2CB7009C53B5 /* NativeSocketFactory.swift in Sources */,
 				04077B37278BB5C400AF6376 /* ReviewSendFundsTransactionHeaderTableViewCell.swift in Sources */,
 				042221D32AAA0A1F00671594 /* ChooseHardwareWalletTableViewController.swift in Sources */,
-				0ADD0FB327C148880099DF7D /* DatePickerViewController.swift in Sources */,
 				0A6C85B4245080620026139E /* App.swift in Sources */,
 				5562DD732693425E00B56722 /* NetworkIndicatorHeaderView.swift in Sources */,
 				0AB34D6624B71DE300A43988 /* CollectiblesRequest.swift in Sources */,
@@ -6722,9 +6744,7 @@
 				0AA9F25724991988005BD60F /* TokenBalance.swift in Sources */,
 				41AA011A2F91000100AA0001 /* TokenCategory.swift in Sources */,
 				555312ED250663420008206B /* SECP256K1.swift in Sources */,
-				935DCA4C27BD14C600F09EE4 /* WebConnectionDetailsViewController.swift in Sources */,
 				40D40BC92EECB3BE003B4575 /* CustomChainsService.swift in Sources */,
-				931AB80428808EBC00264AAA /* MockJSONHttpClient.swift in Sources */,
 				0A9A1A35257924C600B44405 /* DetailAccountAndTextCell.swift in Sources */,
 				55B6465A253050200050BD95 /* HashString.swift in Sources */,
 				409009F52EB52EBC00550983 /* LoginViewModel.swift in Sources */,
@@ -6748,11 +6768,8 @@
 				0A74EEFD268DF37100EB0EFB /* RibbonViewController.swift in Sources */,
 				04D224C128CA4FFE00853E34 /* NSMutableAttributedString+LineSpacing.swift in Sources */,
 				AD303414E96F6CD45E31FBE7 /* WhatsNewHandler.swift in Sources */,
-				B0D61871594F4DCE72FAD3BD /* WebConnectionRequestViewController.swift in Sources */,
 				40C591302F28A1360016571C /* OndoUSDYPageClient.swift in Sources */,
 				0A0391CF27C56616003C871A /* CreateSafeInstructionsViewController.swift in Sources */,
-				B0D614CA17A38979A1ECFCFB /* ActionPanelView.swift in Sources */,
-				B0D61EB5828298B8F501BA41 /* DesktopPairingHeaderView.swift in Sources */,
 				47DAEDE628C77456000940FB /* KeystoneSignFlow.swift in Sources */,
 				40066C892EFAC1F3004DC6C5 /* TransferRecipientViewController.swift in Sources */,
 				40066C8A2EFAC1F3004DC6C5 /* TransferAmountViewController.swift in Sources */,
@@ -6760,39 +6777,23 @@
 				40F123456789ABCDEF0123459 /* SignAndReadTask.swift in Sources */,
 				40F123456789ABCDEF012345B /* MultipleSignTask.swift in Sources */,
 				40F123456789ABCDEF012345D /* TerminalKeysService.swift in Sources */,
-				B0D61FFF1935AA2484BD940A /* WebConnectionRepository.swift in Sources */,
-				B0D61076463C900689962202 /* WebConnectionController.swift in Sources */,
-				B0D6151108EEDB3F18FA7B6C /* WebConnectionToSessionTransformer.swift in Sources */,
-				B0D614E7E2B36259C9961E48 /* CDWCConnection.swift in Sources */,
 				B0D61701855BDBDFF8963B8B /* NavigationRouter.swift in Sources */,
-				B0D618BE28AD77EA68D0551C /* WebConnectionsViewController.swift in Sources */,
-				B0D61BA23BDD098DE8AD3008 /* CDWCRequest.swift in Sources */,
 				6A386C6A281ADAFD003FBCB3 /* ValueChangeTableViewCell.swift in Sources */,
 				47646ED428AA72DD009DC437 /* ConnectKeystoneFlow.swift in Sources */,
 				04AFFBD0282AFC0100429513 /* ReviewRemoveOwnerViewController.swift in Sources */,
-				B0D61252B0B0760008CF6F19 /* WebConnection.swift in Sources */,
-				B0D61AA858C67B86EC281328 /* GnosisSafeWebPeerInfo.swift in Sources */,
-				B0D61332AFA6BC824EEADB60 /* WebConnectionPeerInfo.swift in Sources */,
 				931AB80628808F3600264AAA /* TransactionPreviewRequest.swift in Sources */,
-				B0D61BDA26F9EB2E994B7860 /* WebConnectionURL.swift in Sources */,
 				04FA9CCA2A43882D0027F315 /* SafeCreationSuccessViewController.swift in Sources */,
 				40066C942EFAF8A1004DC6C5 /* TangemDerivationPathPolicy.swift in Sources */,
 				406FE2C42EC63BD200938806 /* TangemActivationViewController.swift in Sources */,
 				406FE2C52EC63BD200938806 /* TangemCardReaderViewController.swift in Sources */,
 				406FE2C62EC63BD200938806 /* TangemFactoryResetViewController.swift in Sources */,
-				B0D61EC425A934B90D6A4288 /* WebConnectionRequest.swift in Sources */,
 				0468C3442A8CE34C009872C2 /* SafeSecurityViewController.swift in Sources */,
-				B0D61D48E3387B0982F1EAE2 /* WebConnectionSignatureRequest.swift in Sources */,
 				6A252CF72818512D001F0887 /* OwnerActionView.swift in Sources */,
 				6AF6297329C359AF004C034A /* PaymentMethodCell.swift in Sources */,
-				B0D6186603DDC723F98E4282 /* WebConnectionOpenRequest.swift in Sources */,
 				6A1CFA4A2807F24800B2C340 /* NoScreenshotViewController.swift in Sources */,
-				8D7DFB2CEBACCDB9E9CCF6BC /* WebConnectionExpirationMonitor.swift in Sources */,
-				B0D613CC4045E3CCE3AF91AB /* WebConnectionSendTransactionRequest.swift in Sources */,
 				6A9A770C2804182700C229FC /* BackupIntroViewController.swift in Sources */,
 				0A0C7E4D296F04E800DC1C3B /* SwitchDetailedTableViewCell.swift in Sources */,
 				0AADCDBB2858AA4700A0139B /* InactiveLinkViewController.swift in Sources */,
-				B0D61F54F176906A7C5A65CB /* SendTransactionRequestViewController.swift in Sources */,
 				6A21288E29895E1F0088C16C /* FaceIDUnlockViewController.swift in Sources */,
 				B0D6163E30FA92C423E1D6AB /* JsonAppRegistryEntry.swift in Sources */,
 				B0D61167B7886798C36728CC /* WCGetDappsRequest.swift in Sources */,
@@ -7097,6 +7098,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Multisig/$(CODE_SIGN_ENTITLEMENTS)";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -7125,6 +7127,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Multisig/$(CODE_SIGN_ENTITLEMENTS)";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -7313,6 +7316,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Multisig/$(CODE_SIGN_ENTITLEMENTS)";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -7448,6 +7452,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Multisig/$(CODE_SIGN_ENTITLEMENTS)";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -8010,6 +8015,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "Multisig/$(CODE_SIGN_ENTITLEMENTS)";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
@@ -8151,6 +8157,7 @@
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Multisig/MultisigDebug.Development.entitlements;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;

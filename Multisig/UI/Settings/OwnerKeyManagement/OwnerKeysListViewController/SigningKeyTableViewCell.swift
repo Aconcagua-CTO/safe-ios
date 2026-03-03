@@ -57,17 +57,7 @@ class SigningKeyTableViewCell: UITableViewCell {
 
         cellDetailLabel.text = detail
 
-        if keyInfo.connectedAsDapp,
-           let connection = keyInfo.walletConnections?.first,
-           let chain = Chain.by(String(connection.chainId)),
-           let name = chain.name {
-            networkIndicator.isHidden = false
-            networkIndicator.set(title: name, style: .footnote.color(chain.textColor))
-            networkIndicator.backgroundColor = chain.backgroundColor
-            networkIndicator.setMargins(NSDirectionalEdgeInsets(top: 5, leading: 8, bottom: 5, trailing: 8))
-        } else {
-            networkIndicator.isHidden = true
-        }
+        networkIndicator.isHidden = true
 
         cellDetailImageView.image = accessoryImage
         cellDetailImageView.isHidden = accessoryImage == nil
@@ -114,17 +104,7 @@ enum KeyConnectionStatus {
         case .deviceGenerated, .deviceImported, .ledgerNanoX, .keystone, .web3AuthApple, .web3AuthGoogle, .tangem, .tangem0, .burner:
             self = .none
         case .walletConnect:
-            if keyInfo.connectedAsDapp {
-                if let _  = keyInfo.connections!.first(where: { connection in
-                    "\((connection as! CDWCConnection).chainId)" == chainID
-                }) {
-                    self = .connected
-                } else {
-                    self = .connectionProblem
-                }
-            } else {
-                self = .disconnected
-            }
+            self = .disconnected
         }
     }
 }

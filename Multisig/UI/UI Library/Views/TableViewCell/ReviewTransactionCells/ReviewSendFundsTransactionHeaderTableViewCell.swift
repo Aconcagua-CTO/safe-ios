@@ -30,7 +30,8 @@ class ReviewSendFundsTransactionHeaderTableViewCell: UITableViewCell {
         fromAddressInfoView.setAddress(address,
                                        label: label,
                                        showIdenticon: false,
-                                       prefix: prefix)
+                                       prefix: prefix,
+                                       showFullAddress: true)
     }
 
     func setToAddress(_ address: Address, label: String?, imageUri: URL?, prefix: String?) {
@@ -39,7 +40,8 @@ class ReviewSendFundsTransactionHeaderTableViewCell: UITableViewCell {
                                      label: label,
                                      imageUri: imageUri,
                                      showIdenticon: false,
-                                     prefix: prefix)
+                                     prefix: prefix,
+                                     showFullAddress: true)
     }
 
     /// Configure the Amount block:

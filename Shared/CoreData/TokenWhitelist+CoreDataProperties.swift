@@ -17,6 +17,7 @@ extension TokenWhitelist {
     @NSManaged public var tokenType: String?
     @NSManaged public var tokenCategory: String?
     @NSManaged public var wrapLabel: String?
+    @NSManaged public var wrapLabelPriority: Int16
     @NSManaged public var network: String?
     @NSManaged public var networkAddress: String?
     @NSManaged public var decimals: Int16

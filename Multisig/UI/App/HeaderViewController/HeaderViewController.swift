@@ -70,7 +70,12 @@ final class HeaderViewController: ContainerViewController {
 
     private func addObservers() {
         let updateNotifications: [NSNotification.Name] = [
-            .selectedSafeChanged, .selectedSafeUpdated, .ownerKeyImported, .ownerKeyRemoved, .initiateTxNotificationReceived
+            .selectedSafeChanged,
+            .selectedSafeUpdated,
+            .userProfileUpdated,
+            .ownerKeyImported,
+            .ownerKeyRemoved,
+            .initiateTxNotificationReceived
         ]
         for name in updateNotifications {
             notificationCenter.addObserver(self,
@@ -128,7 +133,7 @@ final class HeaderViewController: ContainerViewController {
     @objc private func didTapSafeBarView(_ sender: Any) {
         // Navigate to Transactions > History
         if let tabBarController = tabBarController as? MainTabBarViewController {
-            tabBarController.openTransactions(segment: MainTabBarViewController.Path.historySegment)
+            tabBarController.openTransactions(segment: MainTabBarViewController.Path.queueSegment)
         }
     }
 

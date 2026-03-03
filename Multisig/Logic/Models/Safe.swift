@@ -165,6 +165,7 @@ extension Safe {
     func select() {
         let selection = Selection.current()
         selection.safe = self
+        AppSettings.activeVaultGroupAddress = self.address
         App.shared.coreDataStack.saveContext()
         NotificationCenter.default.post(name: .selectedSafeChanged, object: nil)
     }
@@ -200,6 +201,24 @@ extension Safe {
     static func getAllMatchingSelectedAddress() throws -> [Safe] {
         guard let selected = try getSelected(), let address = selected.address else { return [] }
         return try getAll(matchingAddress: address)
+    }
+
+    static func getOwnVaults() throws -> [Safe] {
+        try getAll().filter { !$0.isDelegate }
+    }
+
+    static func getDelegateVaults() throws -> [Safe] {
+        try getAll().filter { $0.isDelegate }
+    }
+
+    static func getActiveGroup() throws -> [Safe] {
+        if let activeAddress = AppSettings.activeVaultGroupAddress, !activeAddress.isEmpty {
+            return try getAll(matchingAddress: activeAddress)
+        }
+        if let selected = try getSelected(), let selectedAddress = selected.address, !selectedAddress.isEmpty {
+            return try getAll(matchingAddress: selectedAddress)
+        }
+        return try getOwnVaults()
     }
 
     static func exists(_ address: String, chainId: String) -> Bool {

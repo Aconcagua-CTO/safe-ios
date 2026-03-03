@@ -9,26 +9,56 @@ import XCTest
 @testable import Multisig
 
 final class PostLoginGateEvaluatorTests: XCTestCase {
-    func test_startMobileKeyWhenMissingEvenIfNotSynced() {
+    func test_showMainForSignInEvenWhenMobileKeyMissingAndNotSynced() {
         let state = PostLoginGateState(
             hasSyncedVaults: false,
             hasVaults: false,
             hasMobileKey: false,
-            hasCardKey: false
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: false
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
+    }
+
+    func test_startMobileKeyForSignupWhenMissingAndNotSynced() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            hasMobileKey: false,
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .startMobileKeyFlow)
     }
 
-    func test_syncVaultsWhenKeysPresent() {
+    func test_showMainWhenNotSignupAndNotSynced() {
         let state = PostLoginGateState(
             hasSyncedVaults: false,
             hasVaults: false,
             hasMobileKey: true,
-            hasCardKey: true
+            hasCardKey: true,
+            requiresCardKey: false,
+            isSignUp: false
         )
 
-        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .syncVaults)
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
+    }
+
+    func test_showPendingVaultActivationWhenSignupAndNotSynced() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            hasMobileKey: true,
+            hasCardKey: true,
+            requiresCardKey: false,
+            isSignUp: true
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showPendingVaultActivation)
     }
 
     func test_showPendingVaultActivationWhenNoVaultsAfterSync() {
@@ -36,7 +66,9 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             hasSyncedVaults: true,
             hasVaults: false,
             hasMobileKey: true,
-            hasCardKey: true
+            hasCardKey: true,
+            requiresCardKey: false,
+            isSignUp: false
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showPendingVaultActivation)
@@ -47,7 +79,9 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             hasSyncedVaults: true,
             hasVaults: true,
             hasMobileKey: true,
-            hasCardKey: true
+            hasCardKey: true,
+            requiresCardKey: false,
+            isSignUp: false
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)

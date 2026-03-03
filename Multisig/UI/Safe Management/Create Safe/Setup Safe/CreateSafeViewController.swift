@@ -863,24 +863,8 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             }
 
         case .walletConnect:
-            guard let clientTx = walletConnectTransaction() else {
-                let gsError = GSError.error(description: NSLocalizedString("ui_tx_unsupported_transaction_type_error", comment: "Unsupported transaction type error"))
-                App.shared.snackbar.show(error: gsError)
-                return
-            }
-
-            let sendTxVC = SendTransactionToWalletViewController(
-                transaction: clientTx,
-                keyInfo: keyInfo,
-                chain: uiModel.chain
-            )
-            sendTxVC.onSuccess = { [weak self] txHashData in
-                guard let self = self else { return }
-                self.uiModel.didSubmitTransaction(txHash: Eth.Hash(txHashData))
-                self.uiModel.didSubmitSuccess()
-            }
-            let vc = ViewControllerFactory.pageSheet(viewController: sendTxVC, halfScreen: true)
-            present(vc, animated: true)
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message")))
+            return
 
         case .ledgerNanoX:
             let rawTransaction = uiModel.transaction.preImageForSigning()
@@ -1014,72 +998,6 @@ class CreateSafeViewController: UIViewController, UITableViewDelegate, UITableVi
             present(flow: keystoneSignFlow)
         }
     }
-
-    func walletConnectTransaction() -> WCTransaction? {
-        guard let ethTransaction = uiModel.transaction else {
-            return nil
-        }
-        let clientTx: WCTransaction
-
-        // NOTE: only legacy parameters seem to work with current wallets.
-        switch ethTransaction {
-        case let tx as Eth.TransactionLegacy:
-            let rpcTx = EthRpc1.TransactionLegacy(tx)
-            clientTx = .init(
-                from: rpcTx.from!.hex,
-                to: rpcTx.to?.hex,
-                data: rpcTx.data.hex,
-                gas: rpcTx.gas?.hex,
-                gasPrice: rpcTx.gasPrice?.hex,
-                value: rpcTx.value.hex,
-                nonce: rpcTx.nonce?.hex,
-                type: nil,
-                accessList: nil,
-                chainId: nil,
-                maxPriorityFeePerGas: nil,
-                maxFeePerGas: nil
-            )
-
-        case let tx as Eth.TransactionEip2930:
-            let rpcTx = EthRpc1.Transaction2930(tx)
-            clientTx = .init(
-                from: rpcTx.from!.hex,
-                to: rpcTx.to?.hex,
-                data: rpcTx.data.hex,
-                gas: rpcTx.gas?.hex,
-                gasPrice: rpcTx.gasPrice?.hex,
-                value: rpcTx.value.hex,
-                nonce: rpcTx.nonce?.hex,
-                type: nil,
-                accessList: nil,
-                chainId: nil,
-                maxPriorityFeePerGas: nil,
-                maxFeePerGas: nil
-            )
-
-        case let tx as Eth.TransactionEip1559:
-            let rpcTx = EthRpc1.Transaction1559(tx)
-            clientTx = .init(
-                from: rpcTx.from!.hex,
-                to: rpcTx.to?.hex,
-                data: rpcTx.data.hex,
-                gas: rpcTx.gas?.hex,
-                gasPrice: rpcTx.maxFeePerGas?.hex,
-                value: rpcTx.value.hex,
-                nonce: rpcTx.nonce?.hex,
-                type: nil,
-                accessList: nil,
-                chainId: nil,
-                maxPriorityFeePerGas: nil,
-                maxFeePerGas: nil
-            )
-        default:
-            return nil
-        }
-
-        return clientTx
-    }
-
 
     func localSignerSubmit() {
         uiModel.userDidSubmit()

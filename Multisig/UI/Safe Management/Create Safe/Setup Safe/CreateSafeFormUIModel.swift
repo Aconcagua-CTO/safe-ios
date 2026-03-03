@@ -536,24 +536,11 @@ class CreateSafeFormUIModel {
 
     // returns the execution keys valid for executing this transaction
     func executionKeys() -> [KeyInfo] {
-        // all keys that can sign this tx on its chain.
-        // currently, only wallet connect keys are chain-specific, so we filter those out.
         guard let allKeys = try? KeyInfo.all(), !allKeys.isEmpty else {
             return []
         }
 
-        let validKeys = allKeys.filter { keyInfo in
-            // if it's a wallet connect key which chain doesn't match then do not use it
-            if keyInfo.keyType == .walletConnect,
-               let chainId = keyInfo.walletConnections?.first?.chainId,
-               // when chainId is 0 then it is 'any' chain
-               chainId != 0 && String(chainId) != chain.id {
-                return false
-            }
-            // else use the key
-            return true
-        }
-        .filter {
+        let validKeys = allKeys.filter {
             // filter out the ledger keys until they are supported
             return $0.keyType != .ledgerNanoX
         }

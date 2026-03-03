@@ -28,6 +28,7 @@ class ReviewSafeTransactionViewController: UIViewController {
 
     private var currentDataTask: URLSessionTask?
     private var keystoneSignFlow: KeystoneSignFlow!
+    private var didShowNoSigningKeysMessage = false
     var trackingEvent: TrackingEvent = .assetsTransferReview
 
     var safe: Safe!
@@ -95,6 +96,11 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     func didConfirm() {
+        guard hasAvailableSigningOwners() else {
+            setConfirmButtonAvailability(showUnavailableMessage: true)
+            return
+        }
+
         guard let transaction = transactionWithFee(),
               let safeTxHash = transaction.safeTxHash?.description,
               let safeTxHashData = Data(exactlyHex: safeTxHash),
@@ -186,18 +192,10 @@ class ReviewSafeTransactionViewController: UIViewController {
                     // Use standard flow for existing transaction with confirmations
                     self.confirmExistingTransaction(existingTx: existingTx, safeTxHash: safeTxHash)
                 } else {
-                    #if DEBUG
-                    LogService.shared.debug("[DualSignatureFlow] ⚠️ Transaction exists but NO confirmations - using DUAL SIGNATURE flow")
-                    #endif
-                    // Transaction exists but no confirmations - use dual signature flow
-                    self.proceedWithDualSignatureFlow(transaction: transaction, safeTxHash: safeTxHash)
+                    self.routeDualPathForAvailableOwners(transaction: transaction, safeTxHash: safeTxHash)
                 }
             case .failure:
-                #if DEBUG
-                LogService.shared.debug("[DualSignatureFlow] ⚠️ Transaction fetch failed - using DUAL SIGNATURE flow")
-                #endif
-                // Transaction doesn't exist - use dual signature flow
-                self.proceedWithDualSignatureFlow(transaction: transaction, safeTxHash: safeTxHash)
+                self.routeDualPathForAvailableOwners(transaction: transaction, safeTxHash: safeTxHash)
             }
         }
     }
@@ -348,6 +346,7 @@ class ReviewSafeTransactionViewController: UIViewController {
         DispatchQueue.main.async {
             self.endLoading()
             self.bindData()
+            self.setConfirmButtonAvailability(showUnavailableMessage: true)
         }
     }
 
@@ -406,10 +405,67 @@ class ReviewSafeTransactionViewController: UIViewController {
             }
             return
         }
-        self.confirmButtonView.state = .normal
+        if hasAvailableSigningOwners() {
+            self.confirmButtonView.state = .normal
+        } else {
+            self.confirmButtonView.state = .disabled
+        }
     }
 
     // MARK: - Dual signature orchestration
+
+    private func availableSigningOwners() -> [KeyInfo] {
+        KeyInfo.owners(safe: safe)
+    }
+
+    private func hasAvailableSigningOwners() -> Bool {
+        !availableSigningOwners().isEmpty
+    }
+
+    private func setConfirmButtonAvailability(showUnavailableMessage: Bool) {
+        let hasOwners = hasAvailableSigningOwners()
+        confirmButtonView.state = hasOwners ? .normal : .disabled
+
+        guard showUnavailableMessage, !hasOwners, !didShowNoSigningKeysMessage else {
+            if hasOwners {
+                didShowNoSigningKeysMessage = false
+            }
+            return
+        }
+
+        didShowNoSigningKeysMessage = true
+        App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_signing_keys_available", comment: "No keys available to sign message"))
+    }
+
+    private func routeDualPathForAvailableOwners(transaction: Transaction, safeTxHash: String) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.routeDualPathForAvailableOwners(transaction: transaction, safeTxHash: safeTxHash)
+            }
+            return
+        }
+
+        let ownersCount = availableSigningOwners().count
+
+        switch ownersCount {
+        case let count where count >= 2:
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] Using dual-signature flow (\(ownersCount) owners available)")
+            #endif
+            proceedWithDualSignatureFlow(transaction: transaction, safeTxHash: safeTxHash)
+        case 1:
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] Using picker flow (single owner available)")
+            #endif
+            fallbackToPickerForProposal(transaction: transaction, safeTxHash: safeTxHash)
+        default:
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] No owners available - blocking confirmation")
+            #endif
+            endConfirm()
+            setConfirmButtonAvailability(showUnavailableMessage: true)
+        }
+    }
 
     private func proceedWithDualSignatureFlow(transaction: Transaction, safeTxHash: String) {
         // Dual-signature flow: auto-pick local, then card.
@@ -429,10 +485,9 @@ class ReviewSafeTransactionViewController: UIViewController {
         
         guard let localKey = localKeys.first else {
             #if DEBUG
-            LogService.shared.debug("[DualSignatureFlow] ❌ No local key found - showing error message")
+            LogService.shared.debug("[DualSignatureFlow] ❌ No local key found - falling back to picker")
             #endif
-            endConfirm()
-            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_local_key_error", comment: "Local key not found error"))
+            fallbackToPickerForProposal(transaction: transaction, safeTxHash: safeTxHash)
             return
         }
 
@@ -453,8 +508,126 @@ class ReviewSafeTransactionViewController: UIViewController {
             } catch {
                 App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_tx_failed_confirm_error", comment: "Failed to confirm transaction error"),
                                                               error: error))
-                endConfirm()
+                fallbackToPickerForProposal(transaction: transaction, safeTxHash: safeTxHash, excludeKey: localKey)
             }
+        }
+    }
+
+    private func fallbackToPickerForProposal(transaction: Transaction,
+                                             safeTxHash: String,
+                                             excludeKey: KeyInfo? = nil) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.fallbackToPickerForProposal(transaction: transaction, safeTxHash: safeTxHash, excludeKey: excludeKey)
+            }
+            return
+        }
+
+        let allOwners = KeyInfo.owners(safe: safe)
+        let candidates: [KeyInfo]
+        if let excludeKey {
+            candidates = allOwners.filter { $0.address != excludeKey.address }
+        } else {
+            candidates = allOwners
+        }
+
+        guard !candidates.isEmpty else {
+            endConfirm()
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_signing_keys_available", comment: "No keys available to sign message"))
+            return
+        }
+
+        let descriptionText = NSLocalizedString("ui_tx_confirm_transaction_description", comment: "Confirm transaction description")
+        let vc = ChooseOwnerKeyViewController(
+            owners: { candidates },
+            chainID: safe.chain!.id,
+            header: .text(description: descriptionText)
+        ) { [weak self] keyInfo in
+            self?.dismiss(animated: true) {
+                guard let self = self, let keyInfo = keyInfo else {
+                    self?.endConfirm()
+                    return
+                }
+                switch keyInfo.keyType {
+                case .tangem, .tangem0, .burner:
+                    self.signWithCardAndPropose(transaction: transaction, cardKey: keyInfo, safeTxHash: safeTxHash)
+                default:
+                    self.signAndPropose(transaction: transaction, localKey: keyInfo, safeTxHash: safeTxHash)
+                }
+            }
+        }
+
+        let navigationController = UINavigationController(rootViewController: vc)
+        presentModal(navigationController)
+    }
+
+    private func signWithCardAndPropose(transaction: Transaction, cardKey: KeyInfo, safeTxHash: String) {
+        let request = SignRequest(
+            title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
+            tracking: ["action": "confirm"],
+            signer: cardKey,
+            hexToSign: safeTxHash
+        )
+
+        let onSignature: (String) -> Void = { [weak self] signature in
+            guard let self = self else { return }
+            self.currentDataTask = self.gatewayService.asyncProposeTransaction(
+                transaction: transaction,
+                sender: AddressString(cardKey.address),
+                signature: signature,
+                chainId: self.safe.chain!.id!
+            ) { [weak self] result in
+                guard let self = self else { return }
+                DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .failure(let error):
+                            if (error as NSError).code == URLError.cancelled.rawValue &&
+                                (error as NSError).domain == NSURLErrorDomain {
+                                return
+                            }
+                            self.endConfirm()
+                            App.shared.snackbar.show(error: GSError.error(
+                                description: NSLocalizedString("ui_tx_failed_create_error", comment: "Failed to create transaction error"),
+                                error: error))
+                        case .success(let transactionDetails):
+                            NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
+                            self.endConfirm()
+                            self.onSuccess(transaction: transactionDetails)
+                        }
+                    }
+                }
+            }
+        }
+
+        switch cardKey.keyType {
+        case .tangem, .tangem0:
+            let tangemService: TangemSigningService = cardKey.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
+            var didSign = false
+            vc.completion = { signature in
+                didSign = true
+                onSignature(signature)
+            }
+            vc.onClose = { [weak self] in
+                if !didSign { self?.endConfirm() }
+            }
+            presentModal(vc)
+
+        case .burner:
+            let vc = BurnerSignerViewController(request: request)
+            var didSign = false
+            vc.completion = { signature in
+                didSign = true
+                onSignature(signature)
+            }
+            vc.onClose = { [weak self] in
+                if !didSign { self?.endConfirm() }
+            }
+            presentModal(vc)
+
+        default:
+            signAndPropose(transaction: transaction, localKey: cardKey, safeTxHash: safeTxHash)
         }
     }
 
@@ -497,36 +670,9 @@ class ReviewSafeTransactionViewController: UIViewController {
         guard let cardKey = cardKeys.first else {
             let usermail = App.shared.authRepository.getCurrentUser()?.email ?? "unknown"
             LogService.shared.info("User (\(usermail)) no card available, falling back to standard transaction confirmation")
-
-            let owners = KeyInfo.owners(safe: safe)
-            let candidates = owners.filter { $0.address != localKey.address }
-            if candidates.isEmpty {
-                // No card key available; leave as-is.
-                endConfirm()
-                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_card_key_available", comment: "No card key available message"))
-                onSuccess(transaction: proposedTransaction)
-                return
-            }
-
-            let descriptionText = NSLocalizedString("ui_tx_confirm_transaction_description", comment: "Confirm transaction description")
-            let vc = ChooseOwnerKeyViewController(
-                owners: { candidates },
-                chainID: safe.chain!.id,
-                header: .text(description: descriptionText)
-            ) { [weak self] keyInfo in
-                self?.dismiss(animated: true) {
-                    guard let keyInfo = keyInfo else {
-                        self?.endConfirm()
-                        return
-                    }
-                    self?.signExistingTransaction(keyInfo: keyInfo,
-                                                  existingTx: proposedTransaction,
-                                                  safeTxHash: safeTxHash)
-                }
-            }
-
-            let navigationController = UINavigationController(rootViewController: vc)
-            presentModal(navigationController)
+            presentTraditionalPickerFallback(proposedTransaction: proposedTransaction,
+                                             safeTxHash: safeTxHash,
+                                             localKey: localKey)
             return
         }
 
@@ -536,10 +682,54 @@ class ReviewSafeTransactionViewController: UIViewController {
         case .burner:
             presentBurnerSigner(cardKey: cardKey, safeTxHash: safeTxHash, proposedTransaction: proposedTransaction)
         default:
-            // Fallback: unsupported card type, finish with proposed tx.
-            endConfirm()
-            onSuccess(transaction: proposedTransaction)
+            // Fallback: unsupported card type, switch to standard picker flow.
+            presentTraditionalPickerFallback(proposedTransaction: proposedTransaction,
+                                             safeTxHash: safeTxHash,
+                                             localKey: localKey)
         }
+    }
+
+    private func presentTraditionalPickerFallback(proposedTransaction: SCGModels.TransactionDetails,
+                                                  safeTxHash: String,
+                                                  localKey: KeyInfo) {
+        if !Thread.isMainThread {
+            DispatchQueue.main.async { [weak self] in
+                self?.presentTraditionalPickerFallback(proposedTransaction: proposedTransaction,
+                                                       safeTxHash: safeTxHash,
+                                                       localKey: localKey)
+            }
+            return
+        }
+
+        let owners = KeyInfo.owners(safe: safe)
+        let candidates = owners.filter { $0.address != localKey.address }
+        if candidates.isEmpty {
+            // No card key available; leave as-is.
+            endConfirm()
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_card_key_available", comment: "No card key available message"))
+            onSuccess(transaction: proposedTransaction)
+            return
+        }
+
+        let descriptionText = NSLocalizedString("ui_tx_confirm_transaction_description", comment: "Confirm transaction description")
+        let vc = ChooseOwnerKeyViewController(
+            owners: { candidates },
+            chainID: safe.chain!.id,
+            header: .text(description: descriptionText)
+        ) { [weak self] keyInfo in
+            self?.dismiss(animated: true) {
+                guard let keyInfo = keyInfo else {
+                    self?.endConfirm()
+                    return
+                }
+                self?.signExistingTransaction(keyInfo: keyInfo,
+                                              existingTx: proposedTransaction,
+                                              safeTxHash: safeTxHash)
+            }
+        }
+
+        let navigationController = UINavigationController(rootViewController: vc)
+        presentModal(navigationController)
     }
 
     private func presentTangemSigner(cardKey: KeyInfo, safeTxHash: String, proposedTransaction: SCGModels.TransactionDetails) {
@@ -704,12 +894,8 @@ class ReviewSafeTransactionViewController: UIViewController {
             }
 
         case .walletConnect:
-            let signVC = SignatureRequestToWalletViewController(transaction, keyInfo: keyInfo, chain: safe.chain!)
-            signVC.onSuccess = { [weak self] signature in
-                self?.confirmExistingTransactionWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
-            }
-            let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
-            presentModal(vc)
+            endConfirm()
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message")))
 
         case .ledgerNanoX:
             let request = SignRequest(title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
@@ -977,6 +1163,29 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
 
     func onSuccess(transaction: SCGModels.TransactionDetails) {
+        if AppSettings.selfHostedExecuteEnabled {
+            AutoExecutionCoordinator.shared.attemptAutoExecute(
+                safe: safe,
+                transaction: transaction,
+                source: "review_safe_confirmation"
+            ) { [weak self] outcome in
+                guard let self else { return }
+                switch outcome {
+                case .success:
+                    self.showAutoExecutionSuccess(transaction: transaction)
+                case .failure:
+                    self.routePostConfirmation(transaction: transaction)
+                case .skipped:
+                    self.routePostConfirmation(transaction: transaction)
+                }
+            }
+            return
+        }
+
+        routePostConfirmation(transaction: transaction)
+    }
+
+    private func routePostConfirmation(transaction: SCGModels.TransactionDetails) {
         // Check if transaction is ready to execute
         if isReadyToExecute(transaction: transaction) {
             // Navigate to execution screen
@@ -998,7 +1207,7 @@ class ReviewSafeTransactionViewController: UIViewController {
     }
     
     private func executionKeys() -> [KeyInfo] {
-        guard let safe = safe, let chain = safe.chain else {
+        guard safe != nil else {
             return []
         }
         
@@ -1006,18 +1215,7 @@ class ReviewSafeTransactionViewController: UIViewController {
             return []
         }
         
-        let validKeys = allKeys.filter { keyInfo in
-            // if it's a wallet connect key which chain doesn't match then do not use it
-            if keyInfo.keyType == .walletConnect,
-               let chainId = keyInfo.walletConnections?.first?.chainId,
-               // when chainId is 0 then it is 'any' chain
-               chainId != 0 && String(chainId) != chain.id {
-                return false
-            }
-            // else use the key
-            return true
-        }
-        .filter {
+        let validKeys = allKeys.filter {
             // filter out ledger until it is supported
             $0.keyType != .ledgerNanoX
         }
@@ -1065,6 +1263,28 @@ class ReviewSafeTransactionViewController: UIViewController {
             }
         }
         
+        show(successVC, sender: self)
+    }
+
+    private func showAutoExecutionSuccess(transaction: SCGModels.TransactionDetails) {
+        let successVC = SuccessViewController(
+            titleText: NSLocalizedString("ui_tx_submit_success_title", comment: "Transaction submitted title"),
+            bodyText: NSLocalizedString("ui_tx_submit_success_body", comment: "Transaction submitted body"),
+            primaryAction: NSLocalizedString("ui_tx_view_transaction_details_action", comment: "View transaction details action"),
+            secondaryAction: NSLocalizedString("button_done", comment: "Done button title")
+        )
+        successVC.onDone = { [weak self] isPrimaryAction in
+            guard let self else { return }
+            self.dismiss(animated: true) {
+                if isPrimaryAction {
+                    NotificationCenter.default.post(
+                        name: .initiateTxNotificationReceived,
+                        object: self,
+                        userInfo: ["transactionDetails": transaction]
+                    )
+                }
+            }
+        }
         show(successVC, sender: self)
     }
 }

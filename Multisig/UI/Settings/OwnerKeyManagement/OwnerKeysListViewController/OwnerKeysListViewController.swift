@@ -57,6 +57,20 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         Tracker.trackEvent(.ownerKeysList)
+        // Refresh list when screen is shown so a newly imported key is visible (e.g. after returning from add-key flow)
+        refreshKeysFromStore()
+    }
+
+    /// Updates keys from KeyInfo store and reloads table so a newly imported key is visible when returning to this screen.
+    private func refreshKeysFromStore() {
+        keys = (try? KeyInfo.all()) ?? []
+        chainID = try? Safe.getSelected()?.chain?.id
+        if isEmpty {
+            showOnly(view: emptyView)
+        } else {
+            showOnly(view: tableView)
+        }
+        tableView.reloadData()
     }
 
     @objc private func didTapAddButton(_ sender: Any) {
@@ -135,14 +149,7 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
                 [unowned self] _, _, completion in
 
                 if isConnected {
-                    let alertController = DisconnectionConfirmationController.create(key: keyInfo)
-                    
-                    if let popoverPresentationController = alertController.popoverPresentationController {
-                        popoverPresentationController.sourceView = tableView
-                        popoverPresentationController.sourceRect = tableView.rectForRow(at: indexPath)
-                    }
-
-                    self.present(alertController, animated: true)
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message"))
                 } else {
                     self.connect(keyInfo: keyInfo)
                 }
@@ -164,11 +171,7 @@ class OwnerKeysListViewController: LoadableViewController, UITableViewDelegate, 
     }
 
     func connect(keyInfo: KeyInfo) {
-        let wcWallet = keyInfo.wallet.flatMap { WCAppRegistryRepository().entry(from: $0) }
-        let chain = Selection.current().safe?.chain ?? Chain.mainnetChain()
-        let walletConnectionVC = StartWalletConnectionViewController(wallet: wcWallet, chain: chain, keyInfo: keyInfo)
-        let vc = ViewControllerFactory.pageSheet(viewController: walletConnectionVC, halfScreen: wcWallet != nil)
-        present(vc, animated: true)
+        App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message"))
     }
 
     private func remove(key: KeyInfo, sourceIndexPath: IndexPath) {

@@ -71,6 +71,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
     private var actionsContainerView: UIStackView!
 
     private let tokenMetadataResolver = TokenMetadataResolver.shared
+    private let batchLegTitleResolver = BatchLegTitleResolver.shared
 
     private lazy var dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -280,7 +281,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         }
     }
 
-    private func onLoadingCompleted(result: Result<SCGModels.TransactionDetails, Error>) {
+    private func onLoadingCompleted(result: Result<SCGModels.TransactionDetails, Error>, triggerAutoExecution: Bool = false) {
         switch result {
         case .failure(let error):
             DispatchQueue.main.async { [weak self] in
@@ -300,7 +301,30 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
                     self.txSource = .id(details.txId)
                 }
                 self.buildRows(from: details)
+                if triggerAutoExecution {
+                    self.autoExecuteIfReady(details)
+                }
                 self.onSuccess()
+            }
+        }
+    }
+
+    private func autoExecuteIfReady(_ transaction: SCGModels.TransactionDetails) {
+        AutoExecutionCoordinator.shared.attemptAutoExecute(
+            safe: safe,
+            transaction: transaction,
+            source: "unified_transaction_details_confirm"
+        ) { outcome in
+            switch outcome {
+            case .success:
+                App.shared.snackbar.show(message: NSLocalizedString("ui_tx_submit_success_title", comment: "Transaction submitted title"))
+            case .failure(let error):
+                App.shared.snackbar.show(error: GSError.error(
+                    description: NSLocalizedString("ui_tx_submitting_failed_error", comment: "Submitting failed error"),
+                    error: error
+                ))
+            case .skipped:
+                break
             }
         }
     }
@@ -527,12 +551,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             }
 
         case .walletConnect:
-            let signVC = SignatureRequestToWalletViewController(transaction, keyInfo: keyInfo, chain: safe.chain!)
-            signVC.onSuccess = { [weak self] signature in
-                self?.confirmAndRefresh(safeTxHash: safeTxHash, signature: signature, keyInfo: keyInfo)
-            }
-            let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
-            present(vc, animated: true)
+            onError(GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message")))
 
         case .ledgerNanoX:
             let request = SignRequest(title: "Confirm Transaction",
@@ -643,7 +662,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
                         )
                     }
                 }
-                self?.onLoadingCompleted(result: result)
+                self?.onLoadingCompleted(result: result, triggerAutoExecution: true)
             }
         }
     }
@@ -741,7 +760,9 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         let amount: UInt256? = decodedTransfer?.amount ?? resolveLargestAmount(for: action)
         let tokenAddress = isTransfer ? action.to.address : nil
         let method = isTransfer ? "transfer" : action.dataDecoded?.method
-        let amountText = amount.map { $0.asDecimalString } ?? NSLocalizedString("ui_tx_not_available_title", comment: "Not available label")
+        let amountText = resolveInitialAmountText(amount: amount,
+                                                  tokenAddress: tokenAddress,
+                                                  isERC20Transfer: isTransfer)
 
         return ActionDisplay(method: method,
                              fromAddress: fromAddress,
@@ -781,7 +802,9 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         let method = txData.dataDecoded?.method
         let isTransfer = method?.lowercased() == "transfer"
         let tokenAddress = isTransfer ? txData.to.value.address : nil
-        let amountText = amount.map { $0.asDecimalString } ?? NSLocalizedString("ui_tx_not_available_title", comment: "Not available label")
+        let amountText = resolveInitialAmountText(amount: amount,
+                                                  tokenAddress: tokenAddress,
+                                                  isERC20Transfer: isTransfer)
 
         return ActionDisplay(method: method,
                              fromAddress: fromAddress,
@@ -937,6 +960,21 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         return amountString
     }
 
+    private func resolveInitialAmountText(amount: UInt256?,
+                                          tokenAddress: Address?,
+                                          isERC20Transfer: Bool) -> String {
+        guard let amount else {
+            return NSLocalizedString("ui_tx_not_available_title", comment: "Not available label")
+        }
+        guard isERC20Transfer,
+              let tokenAddress,
+              let chain = safe.chain,
+              let metadata = tokenMetadataResolver.resolveSynchronously(token: tokenAddress, chain: chain) else {
+            return amount.asDecimalString
+        }
+        return formattedAmount(amount, decimals: metadata.decimals ?? 0, symbol: metadata.symbol)
+    }
+
     private func categoryDisplay(for tx: SCGModels.TransactionDetails) -> (title: String, icon: UIImage?, iconURL: URL?, placeholderAddress: AddressString?, tag: String) {
         var title = ""
         var tag = ""
@@ -963,6 +1001,9 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             } else {
                 title = NSLocalizedString("ui_tx_contract_interaction_title", comment: "Contract interaction title")
                 icon = UIImage(named: "ico-custom-tx")
+            }
+            if let legTitle = batchLegTitleResolver.firstLegTitle(from: tx) {
+                title = legTitle
             }
         case .rejection(_):
             title = NSLocalizedString("ui_tx_onchain_rejection_title", comment: "Transaction type label for on-chain rejection")
@@ -1060,7 +1101,6 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             cell.setText(actions[index].amountText)
             cell.setExpandableTitle(nil)
             cell.setCopyText(nil)
-            updateActionAmountIfNeeded(for: index)
             return cell
         case .actionFrom(let index):
             let cell = tableView.dequeueCell(UnifiedAddressRowCell.self, for: indexPath)
@@ -1089,7 +1129,9 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             return cell
         case .network:
             let cell = tableView.dequeueCell(NetworkInfoTableViewCell.self, for: indexPath)
-            cell.set(chainId: safe.chain?.id, name: safe.chain?.name)
+            cell.set(chainId: safe.chain?.id,
+                     title: NSLocalizedString("ui_tx_network_title", comment: "Network title"),
+                     name: safe.chain?.name)
             return cell
         case .signatures:
             let cell = tableView.dequeueCell(DetailConfirmationCell.self, for: indexPath)
@@ -1126,21 +1168,13 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         guard tx?.multisigInfo != nil else {
             return []
         }
-        guard let safe = safe, let chain = safe.chain else {
+        guard safe != nil else {
             return []
         }
         guard let allKeys = try? KeyInfo.all(), !allKeys.isEmpty else {
             return []
         }
-        let validKeys = allKeys.filter { keyInfo in
-            if keyInfo.keyType == .walletConnect,
-               let chainId = keyInfo.walletConnections?.first?.chainId,
-               chainId != 0 && String(chainId) != chain.id {
-                return false
-            }
-            return true
-        }
-        .filter {
+        let validKeys = allKeys.filter {
             $0.keyType != .ledgerNanoX
         }
         return validKeys

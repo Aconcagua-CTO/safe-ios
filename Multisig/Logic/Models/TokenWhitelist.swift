@@ -42,12 +42,17 @@ extension TokenWhitelist {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
 
-        // Group all entries by symbol, then select the best match for the current chain.
+        // Group all entries by display symbol:
+        // - if wrapLabel is non-empty, use it
+        // - otherwise fall back to tokenSymbol
         let allEntries = TokenWhitelist.all
         let grouped = Dictionary(grouping: allEntries) { entry in
-            (entry.tokenSymbol ?? "")
+            let wrap = (entry.wrapLabel ?? "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-                .uppercased()
+            let symbol = (entry.tokenSymbol ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let display = wrap.isEmpty ? symbol : wrap
+            return display.uppercased()
         }
 
         var result: [TokenWhitelist] = []
@@ -58,6 +63,8 @@ extension TokenWhitelist {
         var debugPickedChainMatch = 0
         var debugPickedNetworkMatch = 0
         var debugPickedFallback = 0
+        var debugPickedByPriority = 0
+        var debugPickedFromMoneyMarketSubset = 0
 
         for (symbol, entries) in grouped {
             guard !symbol.isEmpty else {
@@ -65,28 +72,45 @@ extension TokenWhitelist {
                 continue
             }
 
-            // Group-by-symbol only (backend "name"): pick best candidate by preference, but if there's
-            // no entry for the current chain we still show the symbol by falling back to any enabled entry.
-            // Preference: chainId match > network match > first enabled.
+            // Group-by-display-symbol: pick the representative by highest wrapLabelPriority first.
+            // Then apply the previous preference among ties:
+            // chainId match > network match > first enabled.
             let enabledCandidates = entries.filter { $0.enabled != false }
             if enabledCandidates.isEmpty {
                 debugSkippedNoEnabledCandidate += 1
                 continue
             }
 
-            if let picked = enabledCandidates.first(where: { ($0.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines) == chainId }) {
+            let moneyMarketCandidates = enabledCandidates.filter {
+                TokenCategory.isMoneyMarket($0.tokenCategory)
+            }
+            let baseCandidates: [TokenWhitelist]
+            if moneyMarketCandidates.isEmpty {
+                baseCandidates = enabledCandidates
+            } else {
+                baseCandidates = moneyMarketCandidates
+                debugPickedFromMoneyMarketSubset += 1
+            }
+
+            let maxPriority = baseCandidates.map { Int($0.wrapLabelPriority) }.max() ?? 0
+            let priorityCandidates = baseCandidates.filter { Int($0.wrapLabelPriority) == maxPriority }
+            if maxPriority > 0 {
+                debugPickedByPriority += 1
+            }
+
+            if let picked = priorityCandidates.first(where: { ($0.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines) == chainId }) {
                 result.append(picked)
                 debugPickedChainMatch += 1
                 continue
             }
             if let normalizedNetwork,
-               let picked = enabledCandidates.first(where: { ($0.network ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedNetwork }) {
+               let picked = priorityCandidates.first(where: { ($0.network ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedNetwork }) {
                 result.append(picked)
                 debugPickedNetworkMatch += 1
                 continue
             }
             // Fallback: unknown chain/network but not explicitly mismatching.
-            result.append(enabledCandidates[0])
+            result.append(priorityCandidates[0])
             debugPickedFallback += 1
         }
 
@@ -95,6 +119,7 @@ extension TokenWhitelist {
             """
             [TokenWhitelist.markets] chainId=\(chainId) network=\(network ?? "nil") total=\(allEntries.count) grouped=\(grouped.count) result=\(result.count) \
             picked(chain=\(debugPickedChainMatch), network=\(debugPickedNetworkMatch), fallback=\(debugPickedFallback)) \
+            priorityGroups=\(debugPickedByPriority) moneyMarketPreferredGroups=\(debugPickedFromMoneyMarketSubset) \
             skipped(emptySymbol=\(debugSkippedEmptySymbol), noEnabled=\(debugSkippedNoEnabledCandidate))
             """
         )
@@ -195,6 +220,7 @@ extension TokenWhitelist {
             existing.tokenType = entry.tokenType
             existing.tokenCategory = entry.tokenCategory
             existing.wrapLabel = entry.wrapLabel
+            existing.wrapLabelPriority = entry.wrapLabelPriority.map { Int16(clamping: $0) } ?? 0
             existing.network = entry.network
             existing.networkAddress = entry.networkAddress
             if let decimals = entry.decimals {
@@ -269,6 +295,7 @@ extension TokenWhitelist {
             target.tokenType = entry.tokenType
             target.tokenCategory = entry.tokenCategory
             target.wrapLabel = entry.wrapLabel
+            target.wrapLabelPriority = entry.wrapLabelPriority.map { Int16(clamping: $0) } ?? 0
             target.network = entry.network
             target.networkAddress = entry.networkAddress
             if let decimals = entry.decimals {

@@ -34,8 +34,8 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
         tableView.registerCell(StepInstructionTableViewCell.self)
 
         tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = 100
-        
+        tableView.estimatedRowHeight = 120
+
         button.setText("OK, Let’s start", .filled)
     }
     
@@ -76,6 +76,8 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
         case let .finalStep(title: title):
             let cell = tableView.dequeueCell(FinalStepInstructionTableViewCell.self, for: indexPath)
             cell.cellLabel.text = title
+            cell.cellLabel.numberOfLines = 0
+            cell.cellLabel.lineBreakMode = .byWordWrapping
             cell.selectionStyle = .none
             cell.separatorInset.left = .greatestFiniteMagnitude
             return cell

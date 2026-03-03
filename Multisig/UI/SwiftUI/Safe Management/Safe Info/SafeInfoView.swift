@@ -31,16 +31,16 @@ struct SafeInfoContentView: View {
     @ObservedObject var safe: Safe
     var body: some View {
         VStack (alignment: .center, spacing: 0) {
+            AddressImage(safe.address)
+                .frame(width: 56, height: 56)
+                .padding(.top, 16)
+
             Text(NSLocalizedString("ui_receive_transfer_instructions", comment: "Deposit transfer instructions"))
                 .font(.subheadline)
                 .foregroundColor(.labelSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, 16)
-                .padding(.horizontal, 24)
-
-            AddressImage(safe.address)
-                .frame(width: 56, height: 56)
                 .padding(.top, 12)
+                .padding(.horizontal, 24)
 
             if safe.hasAddress {
                 let prefix = prependingPrefixString()
@@ -78,10 +78,15 @@ struct SafeInfoContentView: View {
             }
 
             LoadableENSNameText(safe: safe, showsLoading: false)
+
+            Text("Redes disponibles")
+                .font(.subheadline)
+                .foregroundColor(.labelSecondary)
+                .padding(.top, 14)
             
             // Chain list (excluding the active network)
             chainListView
-                .padding(.top, 20)
+                .padding(.top, 8)
                 .padding(.horizontal, 8)
             
             // WhatsApp link
@@ -104,8 +109,8 @@ struct SafeInfoContentView: View {
     
     private var chainListView: some View {
         let allChains: [(String, String?)] = [
-            ("Arbitrum", "42161"),
-            ("Plasma", nil)
+            ("Ethereum", "1"),
+            ("Rootstock", "30")
         ]
         
         let columns: [GridItem] = [
@@ -163,7 +168,7 @@ struct ChainListItem: View {
                     .truncationMode(.tail)
                     .minimumScaleFactor(0.75)
                 
-                Text("14 sec")
+                Text("5 min")
                     .font(.subheadline)
                     .foregroundColor(.labelSecondary)
                     .lineLimit(1)

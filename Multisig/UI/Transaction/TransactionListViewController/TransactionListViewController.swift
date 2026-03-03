@@ -12,6 +12,7 @@ import SwiftCryptoTokenFormatter
 
 class TransactionListViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
     var clientGatewayService = App.shared.clientGatewayService
+    private let batchLegTitleResolver = BatchLegTitleResolver.shared
 
     #if DEBUG
     // #region agent log
@@ -75,6 +76,8 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
     private var chainByTransactionId: [String: Chain] = [:]
     private var safeByTransactionId: [String: Safe] = [:]
     private var isLoadingNextPages: Bool = false
+    private var batchLegTitleByTransactionId: [String: String] = [:]
+    private var batchLegTitleInFlight: Set<String> = []
 
     internal var safe: Safe!
 
@@ -132,13 +135,6 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 name: notification,
                 object: nil)
         }
-        
-        notificationCenter.addObserver(
-            self,
-            selector: #selector(lazyReloadData),
-            name: .transactionNamesUpdated,
-            object: nil
-        )
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -163,6 +159,8 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         safeByChainId = [:]
         chainByTransactionId = [:]
         safeByTransactionId = [:]
+        batchLegTitleByTransactionId = [:]
+        batchLegTitleInFlight = []
         mergedTransactions = []
 
         safe = (try? Safe.getSelected())
@@ -174,59 +172,79 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             guard usesMultiSafeTransactions else {
                 return [selectedSafe]
             }
-            return (try? Safe.getAll()) ?? [selectedSafe]
+            return (try? Safe.getActiveGroup()) ?? [selectedSafe]
         }()
 
-        if usesMultiSafeTransactions, safesToLoad.count > 1 {
+        let startLoadingTransactions: () -> Void = { [weak self] in
+            guard let self else { return }
+            self.loadTransactions(selectedSafe: selectedSafe, safesToLoad: safesToLoad)
+        }
+
+        // Ensure transaction friendly names are synced before rendering the list.
+        App.shared.transactionNamesRepository.syncTransactionNames(force: false) { _ in
+            DispatchQueue.main.async {
+                startLoadingTransactions()
+            }
+        }
+    }
+
+    private func loadTransactions(selectedSafe: Safe, safesToLoad: [Safe]) {
+        if usesMultiSafeTransactions {
             if AppSettings.multiVaultTransactionsEnabled {
-                loadFirstPagesFromSummary(for: safesToLoad)
+                if safesToLoad.contains(where: { $0.isDelegate }) {
+                    // Summary endpoint is user-scoped and does not support delegate groups yet.
+                    loadFirstPages(for: safesToLoad)
+                } else {
+                    loadFirstPagesFromSummary(for: safesToLoad)
+                }
             } else {
                 loadFirstPages(for: safesToLoad)
             }
-        } else {
-            loadFirstPageDataTask = asyncTransactionList(for: selectedSafe) { [weak self] result in
-                guard let `self` = self else { return }
-                switch result {
-                case .failure(let error):
-                    DispatchQueue.main.async { [weak self] in
-                        guard let `self` = self else { return }
-                        // ignore cancellation error due to cancelling the
-                        // currently running task. Otherwise user will see
-                        // meaningless message.
-                        if (error as NSError).code == URLError.cancelled.rawValue &&
-                            (error as NSError).domain == NSURLErrorDomain {
-                            return
-                        }
-                        self.onError(GSError.error(description: NSLocalizedString("ui_tx_failed_load_transactions_error", comment: "Failed to load transactions error"),
-                                                   error: error))
+            return
+        }
+
+        loadFirstPageDataTask = asyncTransactionList(for: selectedSafe) { [weak self] result in
+            guard let `self` = self else { return }
+            switch result {
+            case .failure(let error):
+                DispatchQueue.main.async { [weak self] in
+                    guard let `self` = self else { return }
+                    // ignore cancellation error due to cancelling the
+                    // currently running task. Otherwise user will see
+                    // meaningless message.
+                    if (error as NSError).code == URLError.cancelled.rawValue &&
+                        (error as NSError).domain == NSURLErrorDomain {
+                        return
                     }
-                case .success(let page):
-                    var model = FlatTransactionsListViewModel(page.results)
-                    model.next = page.next
+                    self.onError(GSError.error(description: NSLocalizedString("ui_tx_failed_load_transactions_error", comment: "Failed to load transactions error"),
+                                               error: error))
+                }
+            case .success(let page):
+                var model = FlatTransactionsListViewModel(page.results)
+                model.next = page.next
 
-                    DispatchQueue.main.async { [weak self] in
-                        guard let `self` = self else { return }
+                DispatchQueue.main.async { [weak self] in
+                    guard let `self` = self else { return }
 
-                        let transformer = TransactionDataTransformer(safe: selectedSafe, chain: selectedSafe.chain!)
-                        model.items = transformer.transformed(list: model.items)
+                    let transformer = TransactionDataTransformer(safe: selectedSafe, chain: selectedSafe.chain!)
+                    model.items = transformer.transformed(list: model.items)
 
-                        // For single-safe mode, apply the same "past nonce" semantics as multi-safe:
-                        // - Queue tab: hide past-nonce ("replaced") items
-                        // - History tab: show past-nonce queued items under a section label
-                        switch self.transactionListStyle {
-                        case .queue:
-                            model.items = model.items.filter { item in
-                                guard case let .transaction(txItem) = item else { return true }
-                                return !self.isReplacedTransaction(tx: txItem.transaction, safe: selectedSafe)
-                            }
-                            self.model = model
-                            self.onSuccess()
-
-                        case .history:
-                            self.model = model
-                            self.onSuccess()
-                            self.appendReplacedQueuedTransactionsToHistory(for: selectedSafe)
+                    // For single-safe mode, apply the same "past nonce" semantics as multi-safe:
+                    // - Queue tab: hide past-nonce ("replaced") items
+                    // - History tab: show past-nonce queued items under a section label
+                    switch self.transactionListStyle {
+                    case .queue:
+                        model.items = model.items.filter { item in
+                            guard case let .transaction(txItem) = item else { return true }
+                            return !self.isReplacedTransaction(tx: txItem.transaction, safe: selectedSafe)
                         }
+                        self.model = model
+                        self.onSuccess()
+
+                    case .history:
+                        self.model = model
+                        self.onSuccess()
+                        self.appendReplacedQueuedTransactionsToHistory(for: selectedSafe)
                     }
                 }
             }
@@ -421,7 +439,10 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
 
     private func loadFirstPagesFromSummary(for safes: [Safe]) {
         LogService.shared.debug("[TxList] loadFirstPagesFromSummary - safes.count=\(safes.count) style=\(transactionListStyle)")
-        loadSummaryTask = TransactionsSummaryStore.shared.fetchSummary(forceRefresh: false) { [weak self] (result: Result<MultiVaultTransactionsSummaryResponse, Error>) in
+        // Queue must reflect the latest actionable tx state from gateway.
+        // Using cached summary here can hide freshly-created AWAITING_EXECUTION txs after refresh.
+        let forceRefresh = transactionListStyle == .queue
+        loadSummaryTask = TransactionsSummaryStore.shared.fetchSummary(forceRefresh: forceRefresh) { [weak self] (result: Result<MultiVaultTransactionsSummaryResponse, Error>) in
             guard let self else { return }
             self.loadSummaryTask = nil
             switch result {
@@ -519,10 +540,68 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             chainByTransactionId.merge(replacedMapping) { _, new in new }
         }
 
-        LogService.shared.debug("[TxSummary] Before rebuildMergedModel - mergedTransactions=\(mergedTransactions.count)")
-        rebuildMergedModel()
-        LogService.shared.debug("[TxSummary] After rebuildMergedModel - model.items=\(model.items.count)")
-        onSuccess()
+        LogService.shared.debug("[TxSummary] Before prefetch/rebuild - mergedTransactions=\(mergedTransactions.count)")
+        prefetchBatchLegTitlesIfNeeded(for: mergedTransactions) { [weak self] in
+            guard let self else { return }
+            self.rebuildMergedModel()
+            LogService.shared.debug("[TxSummary] After rebuildMergedModel - model.items=\(self.model.items.count)")
+            self.onSuccess()
+        }
+    }
+
+    private func prefetchBatchLegTitlesIfNeeded(
+        for transactions: [SCGModels.TransactionSummaryItemTransaction],
+        completion: @escaping () -> Void
+    ) {
+        let uniqueTransactions = Dictionary(uniqueKeysWithValues: transactions.map { ($0.transaction.id, $0) }).values
+        let batchTransactions: [SCGModels.TransactionSummaryItemTransaction] = uniqueTransactions.compactMap { item in
+            guard case let .custom(customInfo) = item.transaction.txInfo,
+                  batchLegTitleResolver.isBatch(customInfo: customInfo),
+                  batchLegTitleByTransactionId[item.transaction.id] == nil
+            else {
+                return nil
+            }
+            return item
+        }
+
+        guard !batchTransactions.isEmpty else {
+            completion()
+            return
+        }
+
+        let group = DispatchGroup()
+        for item in batchTransactions {
+            let tx = item.transaction
+            guard !batchLegTitleInFlight.contains(tx.id),
+                  let chain = chainByTransactionId[tx.id] ?? safe?.chain,
+                  let chainId = chain.id
+            else {
+                continue
+            }
+
+            batchLegTitleInFlight.insert(tx.id)
+            group.enter()
+            let service = chain.gatewayService()
+            _ = service.asyncTransactionDetails(id: tx.id, chainId: chainId) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self else {
+                        group.leave()
+                        return
+                    }
+                    self.batchLegTitleInFlight.remove(tx.id)
+                    if case let .success(details) = result,
+                       let legTitle = self.batchLegTitleResolver.firstLegTitle(from: details),
+                       !legTitle.isEmpty {
+                        self.batchLegTitleByTransactionId[tx.id] = legTitle
+                    }
+                    group.leave()
+                }
+            }
+        }
+
+        group.notify(queue: .main) {
+            completion()
+        }
     }
 
     private func fetchReplacedQueuedTransactions(
@@ -873,10 +952,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                     active.append(item)
                 }
             }
-            var items: [SCGModels.TransactionSummaryItem] = []
-            items.append(.label(.init(label: NSLocalizedString("ui_tx_queue_label", comment: "Queue label for transaction list"))))
-            items.append(contentsOf: active.map { .transaction($0) })
-            return items
+            return active.map { .transaction($0) }
         }
     }
 
@@ -960,6 +1036,13 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         }
 
         guard let tx = transaction else { return }
+        if isRequestedTransaction(tx),
+           let meta = tx.transactionRequestMeta {
+            let vc = TransactionRequestDetailViewController(transaction: tx, meta: meta)
+            let ribbon = RibbonViewController(rootViewController: vc)
+            show(ribbon, sender: self)
+            return
+        }
         let detailSafe = safeForTransaction(tx) ?? safe
         let vc: UnifiedTransactionDetailsViewController
 
@@ -1019,6 +1102,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
 
     func configure(cell: TransactionListTableViewCell, transaction: SCGModels.TransactionSummaryItemTransaction) {
         let tx = transaction.transaction
+        let isRequestedTx = isRequestedTransaction(tx)
         let displayChain = chainByTransactionId[tx.id] ?? safe.chain
         var title = ""
         var titleCandidates: [String] = []
@@ -1076,7 +1160,13 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             titleCandidates = [title]
             image = UIImage(named: "ico-settings-tx")
         case .custom(let customInfo):
-            if let safeAppInfo = tx.safeAppInfo {
+            if isRequestedTx {
+                title = customInfo.to.name ?? NSLocalizedString("ui_tx_contract_interaction_title", comment: "Contract interaction title")
+                titleCandidates = [title]
+                image = UIImage(named: "ico-custom-tx")
+                info = customInfo.methodName ?? ""
+                infoColor = .labelPrimary
+            } else if let safeAppInfo = tx.safeAppInfo {
                 title = safeAppInfo.name
                 tag = NSLocalizedString("ui_tx_app_tag", comment: "Transaction app tag")
                 imageURL = URL(string: safeAppInfo.logoUri)
@@ -1099,6 +1189,10 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 titleCandidates = [methodName, title]
             } else {
                 titleCandidates = [title]
+            }
+            if let legTitle = resolvedBatchLegTitle(for: tx, customInfo: customInfo, chain: displayChain) {
+                title = legTitle
+                titleCandidates = [legTitle] + titleCandidates
             }
             info = customInfo.actionCount != nil ? "\(customInfo.actionCount!) actions" : customInfo.methodName ?? ""
         case .rejection(_):
@@ -1154,9 +1248,19 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             cell.set(contractAddress: placeholderAddress)
         }
 
-        cell.set(status: status, isReplaced: isReplaced)
+        if isRequestedTx {
+            cell.set(status: status, isReplaced: false, overrideStatusText: "Solicitado")
+        } else {
+            cell.set(status: status, isReplaced: isReplaced)
+        }
+        let shouldShowNonce = App.configuration.services.environment.isDevelopment
         let chainPrefix = displayChain?.shortName ?? displayChain?.id
-        let nonceText = (chainPrefix != nil && !nonce.isEmpty) ? "\(chainPrefix!) \(nonce)" : nonce
+        let nonceText: String
+        if shouldShowNonce {
+            nonceText = (chainPrefix != nil && !nonce.isEmpty) ? "\(chainPrefix!) \(nonce)" : nonce
+        } else {
+            nonceText = ""
+        }
         cell.set(nonce: nonceText)
         cell.set(date: date)
         cell.set(info: info, color: infoColor)
@@ -1167,7 +1271,58 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         cell.set(highlight: shouldHighlight(transaction: tx))
     }
 
+    private func resolvedBatchLegTitle(
+        for tx: SCGModels.TxSummary,
+        customInfo: SCGModels.TxInfo.Custom,
+        chain: Chain?
+    ) -> String? {
+        guard batchLegTitleResolver.isBatch(customInfo: customInfo) else {
+            return nil
+        }
+
+        if let cachedTitle = batchLegTitleByTransactionId[tx.id], !cachedTitle.isEmpty {
+            return cachedTitle
+        }
+
+        guard !batchLegTitleInFlight.contains(tx.id),
+              let chainId = chain?.id
+        else {
+            return nil
+        }
+
+        batchLegTitleInFlight.insert(tx.id)
+        let service = chain?.gatewayService() ?? clientGatewayService
+        _ = service.asyncTransactionDetails(id: tx.id, chainId: chainId) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.batchLegTitleInFlight.remove(tx.id)
+                guard case let .success(details) = result,
+                      let legTitle = self.batchLegTitleResolver.firstLegTitle(from: details),
+                      !legTitle.isEmpty
+                else {
+                    return
+                }
+                self.batchLegTitleByTransactionId[tx.id] = legTitle
+                self.reloadTransactionRow(with: tx.id)
+            }
+        }
+        return nil
+    }
+
+    private func reloadTransactionRow(with transactionId: String) {
+        guard let row = model.items.firstIndex(where: { item in
+            guard case let .transaction(itemTx) = item else { return false }
+            return itemTx.transaction.id == transactionId
+        }) else {
+            return
+        }
+        tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .none)
+    }
+
     private func isReplacedTransaction(tx: SCGModels.TxSummary, safe: Safe?) -> Bool {
+        if isRequestedTransaction(tx) {
+            return false
+        }
         guard let safeNonce = safe?.nonce else { return false }
         guard tx.txStatus.isInQueue else { return false }
         guard let executionInfo = tx.executionInfo,
@@ -1202,6 +1357,10 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         }
         #endif
         return replaced
+    }
+
+    private func isRequestedTransaction(_ tx: SCGModels.TxSummary) -> Bool {
+        tx.id.hasPrefix("txrequest_")
     }
 
     func formattedAmount(transferInfo: SCGModels.TxInfo.Transfer, chain: Chain?) -> String {

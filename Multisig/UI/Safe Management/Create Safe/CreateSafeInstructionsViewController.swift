@@ -18,6 +18,10 @@ class CreateSafeInstructionsViewController: InstructionsViewController {
         super.viewDidLoad()
         navigationItem.largeTitleDisplayMode = .never
         title = NSLocalizedString("ui_safe_how_it_works_title", comment: "Safe creation how it works title")
+        let finalStepTitle = NSLocalizedString("ui_safe_final_step_title", comment: "Final step title")
+#if DEBUG
+        print("[CreateSafeInstructions] ui_safe_final_step_title=\(finalStepTitle)")
+#endif
 
         steps = [
             .header,
@@ -30,7 +34,7 @@ class CreateSafeInstructionsViewController: InstructionsViewController {
             .step(number: "3",
                   title: NSLocalizedString("ui_safe_step_pay_network_fee_title", comment: "Pay network fee step title"),
                   description: NSLocalizedString("ui_safe_step_pay_network_fee_description", comment: "Pay network fee step description")),
-            .finalStep(title: NSLocalizedString("ui_safe_final_step_title", comment: "Final step title"))
+            .finalStep(title: finalStepTitle)
         ]
 
         button.setText(NSLocalizedString("ui_safe_ok_lets_start_button", comment: "OK let's start button"), .filled)

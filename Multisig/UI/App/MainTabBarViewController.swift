@@ -19,12 +19,6 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
     private var addSafeFlow: AddSafeFlow!
     private var createSafeFlow: CreateSafeFlow!
     
-    // In-memory queue of incoming requests to present. Due to limitation of UIKit,
-    // only one view controller can be presented at the same time.
-    fileprivate var requestQueue: [WebConnectionRequest] = []
-    fileprivate var debounceTimer: Timer?
-    fileprivate var presentingRequest: Bool = false
-
     enum Path {
         static let assets: IndexPath = [0]
         static let balances: IndexPath = assets
@@ -38,7 +32,6 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         static let settings: IndexPath = [4]
         static let appSettings: IndexPath = settings.appending(0)
         static let safeSettings: IndexPath = settings.appending(1)
-        static let dappsSettings: IndexPath = settings.appending(2)
 
         static let queueSegment = 0
         static let historySegment = 1
@@ -117,11 +110,9 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
             name: .passcodeDeleted,
             object: nil)
 
-        WebConnectionController.shared.attach(observer: self)
     }
 
     deinit {
-        WebConnectionController.shared.detach(observer: self)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -136,8 +127,6 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         if let whatsNewVC = WhatsNewHandler().whatsNewViewController {
             present(whatsNewVC, animated: true)
         }
-
-        WebConnectionController.shared.reconnect()
 
         presentDelayedControllers()
     }
@@ -175,8 +164,8 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
 
         let segmentVC = SegmentViewController(namedClass: nil)
         segmentVC.segmentItems = [
-            SegmentBarItem(image: UIImage(named: "ico-queued-transactions")!, title: "QUEUE"),
-            SegmentBarItem(image: UIImage(named: "ico-history-transactions")!, title: "HISTORY")
+            SegmentBarItem(image: UIImage(named: "ico-queued-transactions")!, title: "Firmas"),
+            SegmentBarItem(image: UIImage(named: "ico-history-transactions")!, title: "Movimientos")
         ]
         segmentVC.viewControllers = [
             queuedTransactionsViewController,
@@ -226,21 +215,10 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         let loadSafeViewController = LoadSafeViewController()
         let deploySafeVC = SafeDeployingViewController()
         let safeSettingsVC = SafeSettingsViewController()
-        let dappsVC = DappsViewController(namedClass: nil)
-        
         loadSafeViewController.trackingEvent = .settingsSafeNoSafe
         noSafesVC.hasSafeViewController = safeSettingsVC
         noSafesVC.noSafeViewController = loadSafeViewController
         noSafesVC.safeDepolyingViewContoller = deploySafeVC
-
-        let dappsNoSafesVC = NoSafesViewController()
-        let dappsLoadSafeViewController = LoadSafeViewController()
-        dappsLoadSafeViewController.trackingEvent = .dappsNoSafe
-        let dappsDeploySafeVC = SafeDeployingViewController()
-
-        dappsNoSafesVC.hasSafeViewController = dappsVC
-        dappsNoSafesVC.noSafeViewController = dappsLoadSafeViewController
-        dappsNoSafesVC.safeDepolyingViewContoller = dappsDeploySafeVC
 
         let appSettingsVC = AppSettingsViewController()
 
@@ -248,16 +226,14 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         segmentVC.showsSegmentBar = App.configuration.services.environment.isDevelopment
         
         if App.configuration.services.environment.isDevelopment {
-            // Development environment (Debug + Release): show all tabs
+            // Development environment (Debug + Release): show settings and account tabs
             segmentVC.segmentItems = [
                 SegmentBarItem(image: UIImage(named: "ico-app-settings")!, title: "App Settings"),
-                SegmentBarItem(image: UIImage(named: "ico-safe-settings")!, title: "My Safe Account"),
-                SegmentBarItem(image: UIImage(named: "tab-icon-dapps")!, title: "Dapps")
+                SegmentBarItem(image: UIImage(named: "ico-safe-settings")!, title: "My Safe Account")
             ]
             segmentVC.viewControllers = [
                 appSettingsVC,
-                noSafesVC,
-                dappsNoSafesVC
+                noSafesVC
             ]
         } else {
             // Staging/Production (Debug + Release): only show App Settings
@@ -302,7 +278,9 @@ class MainTabBarViewController: UITabBarController, UITabBarControllerDelegate {
         return tabViewController(
             root: tabRoot,
             title: "Pedir",
-            image: UIImage(named: "tab-icon-coins")!,
+            image: UIImage(named: "ico-app-settings-fiat")!
+                .scaled(to: tabIconSize)
+                .withRenderingMode(.alwaysTemplate),
             tag: Path.pedir[0]
         )
     }
@@ -496,8 +474,6 @@ extension MainTabBarViewController: NavigationRouter {
             return true
         } else if route.path == NavigationRoute.createSafe().path {
             return true
-        } else if route.path == NavigationRoute.dapps().path {
-            return true
         }
 
         return false
@@ -576,9 +552,6 @@ extension MainTabBarViewController: NavigationRouter {
             })
             
             present(flow: createSafeFlow)
-        } else if route.path == NavigationRoute.dapps().path {
-            selectSafe(from: route)
-            switchTo(indexPath: Path.dappsSettings)
         } else if route.path.starts(with: "/pedir/") {
             switchTo(indexPath: Path.pedir)
         }
@@ -677,11 +650,6 @@ class SettingsUINavigationController: UINavigationController {
             selector: #selector(showBadge),
             name: NSNotification.Name.IntercomUnreadConversationCountDidChange,
             object: nil)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(showBadge),
-            name: NSNotification.Name.didReadConnectToWebBanner,
-            object: nil)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -689,8 +657,7 @@ class SettingsUINavigationController: UINavigationController {
     }
     
     var shouldShowBadge: Bool {
-        IntercomConfig.unreadConversationCount() > 0 ||
-            AppSettingsViewController.shouldBringAttentionToDesktopPairing()
+        IntercomConfig.unreadConversationCount() > 0
     }
     
     @objc func showBadge() {
@@ -706,82 +673,3 @@ class SettingsUINavigationController: UINavigationController {
 class BalancesUINavigationController: UINavigationController {
     weak var assetsViewController: AssetsViewController?
 }
-
-
-extension MainTabBarViewController: WebConnectionRequestObserver {
-    func didUpdate(request: WebConnectionRequest) {
-        guard request.status == .pending else { return }
-        requestQueue.append(request)
-        debounceTimer?.invalidate()
-        debounceTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: false, block: { [weak self] _ in
-            self?.presentRequests()
-        })
-    }
-
-    /// Presents next request from the queue.
-    /// The way how UIKit presentation works is that you can present only one
-    /// screen at the same time, and you can't present another one during any presentation animation.
-    /// That's why we queue the requests and open next from the queue when the current one is closed.
-    func presentRequests() {
-        guard !requestQueue.isEmpty && !presentingRequest else { return }
-        let request = requestQueue.removeLast()
-
-        // need to skip the requests that are retained in memory but for which connection is closed.
-        // otherwise the view controllers would crash (they expect the connection to be opened)
-        guard let connection = WebConnectionController.shared.connection(for: request), connection.status == .opened else {
-            presentRequests()
-            return
-        }
-
-        presentingRequest = true
-        let completion: () -> Void = { [weak self] in
-            self?.presentingRequest = false
-            self?.presentRequests()
-        }
-
-        switch request {
-        case let signRequest as WebConnectionSignatureRequest:
-            let vc = SignatureRequestViewController()
-            present(controller: vc, request: signRequest, completion: completion)
-
-        case let txRequest as WebConnectionSendTransactionRequest:
-            let vc = SendTransactionRequestViewController()
-            present(controller: vc, request: txRequest, completion: completion)
-
-        default:
-            presentingRequest = false
-            presentRequests()
-            break
-        }
-    }
-
-    fileprivate func present<T, R>(controller: T, request: R, completion: @escaping () -> Void) where T: WebRequestViewController, T: UIViewController, T.Request == R, R: WebConnectionRequest {
-        controller.request = request
-        controller.controller = WebConnectionController.shared
-        controller.connection = WebConnectionController.shared.connection(for: request)
-        controller.onFinish = { [weak self] in
-            self?.dismiss(animated: true, completion: completion)
-        }
-        let vc = ViewControllerFactory.modal(viewController: controller)
-
-        if let existing = presentedViewController {
-            existing.dismiss(animated: true) { [unowned self] in
-                present(vc, animated: true)
-            }
-        } else {
-            present(vc, animated: true)
-        }
-    }
-}
-
-protocol WebRequestViewController: AnyObject {
-    associatedtype Request
-    var request: Request! { get set }
-    var controller: WebConnectionController! { get set }
-    var connection: WebConnection! { get set }
-    var onFinish: () -> Void { get set }
-}
-
-extension SignatureRequestViewController: WebRequestViewController {}
-
-extension SendTransactionRequestViewController: WebRequestViewController {}

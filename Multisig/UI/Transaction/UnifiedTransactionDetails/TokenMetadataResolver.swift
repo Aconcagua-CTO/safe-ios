@@ -71,6 +71,19 @@ final class TokenMetadataResolver {
         }
     }
 
+    func resolveSynchronously(token: Address, chain: Chain) -> TokenMetadata? {
+        let key = cacheKey(token: token, chainId: chain.id)
+        if let cached = cache[key] {
+            return cached
+        }
+        let metadata = fetchMetadata(token: token, chain: chain)
+        cache[key] = metadata
+        if metadata.symbol == nil && metadata.decimals == nil {
+            return nil
+        }
+        return metadata
+    }
+
     private func cacheKey(token: Address, chainId: String?) -> String {
         let chainKey = chainId ?? "unknown"
         return "\(chainKey):\(token.checksummed.lowercased())"
@@ -81,7 +94,7 @@ final class TokenMetadataResolver {
         var whitelistDecimals: Int?
 
         if let chainId = chain.id {
-            DispatchQueue.main.sync {
+            let readWhitelist = {
                 let addressString = token.checksummed
                 if let entry = TokenWhitelist.by(chainId: chainId, networkAddress: addressString) {
                     whitelistSymbol = entry.tokenSymbol?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -89,8 +102,88 @@ final class TokenMetadataResolver {
                     whitelistDecimals = Int(entry.decimals)
                 }
             }
+            if Thread.isMainThread {
+                readWhitelist()
+            } else {
+                DispatchQueue.main.sync(execute: readWhitelist)
+            }
+        }
+        
+        // Fallback: when whitelist metadata is missing/stale, use the latest balances cache.
+        // This avoids rendering raw units (e.g. "10 WBTC") for MultiSend ERC-20 legs.
+        if whitelistSymbol == nil || whitelistDecimals == nil {
+            let cached = LatestBalancesCache.shared.retrieve(chainId: chain.id) ?? []
+            if let tokenBalance = cached.first(where: { $0.address.caseInsensitiveCompare(token.checksummed) == .orderedSame }) {
+                if whitelistSymbol == nil {
+                    let trimmed = tokenBalance.symbol.trimmingCharacters(in: .whitespacesAndNewlines)
+                    whitelistSymbol = trimmed.isEmpty ? nil : trimmed
+                }
+                if whitelistDecimals == nil {
+                    whitelistDecimals = tokenBalance.decimals
+                }
+            }
+        }
+        
+        return TokenMetadata(symbol: whitelistSymbol, decimals: whitelistDecimals)
+    }
+}
+
+final class BatchLegTitleResolver {
+    static let shared = BatchLegTitleResolver()
+
+    private init() {}
+
+    func isBatch(customInfo: SCGModels.TxInfo.Custom) -> Bool {
+        normalizedMethod(customInfo.methodName) == "multisend"
+    }
+
+    func isBatch(details: SCGModels.TransactionDetails) -> Bool {
+        if case let .custom(customInfo) = details.txInfo, isBatch(customInfo: customInfo) {
+            return true
+        }
+        return normalizedMethod(details.txData?.dataDecoded?.method) == "multisend"
+    }
+
+    func firstLegTitle(from details: SCGModels.TransactionDetails) -> String? {
+        guard isBatch(details: details),
+              let multiSendActions = extractMultiSendActions(from: details),
+              let firstLeg = multiSendActions.first
+        else {
+            return nil
         }
 
-        return TokenMetadata(symbol: whitelistSymbol, decimals: whitelistDecimals)
+        if let method = normalizedMethod(firstLeg.dataDecoded?.method) {
+            return method
+        }
+        if let data = firstLeg.data, isERC20TransferCalldata(data) {
+            return "transfer"
+        }
+        return nil
+    }
+
+    private func extractMultiSendActions(from details: SCGModels.TransactionDetails) -> [SCGModels.DataDecoded.Parameter.ValueDecoded.MultiSendTx]? {
+        guard normalizedMethod(details.txData?.dataDecoded?.method) == "multisend",
+              let firstParam = details.txData?.dataDecoded?.parameters?.first,
+              firstParam.type == "bytes",
+              case let .multiSend(actions)? = firstParam.valueDecoded
+        else {
+            return nil
+        }
+        return actions
+    }
+
+    private func normalizedMethod(_ method: String?) -> String? {
+        guard let method = method?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !method.isEmpty
+        else {
+            return nil
+        }
+        return method.lowercased()
+    }
+
+    private func isERC20TransferCalldata(_ data: DataString) -> Bool {
+        let bytes = data.data
+        let selector = Data([0xA9, 0x05, 0x9C, 0xBB])
+        return bytes.count >= 4 && bytes.prefix(4) == selector
     }
 }

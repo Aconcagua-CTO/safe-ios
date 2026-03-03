@@ -145,7 +145,7 @@ final class TangemScanViewController: UIViewController, UITableViewDataSource, U
             guard let self else { return }
             do {
                 let message = Message(
-                    header: NSLocalizedString("ui_tangem_scan_message_header", comment: "Tangem scan message header"),
+                    header: nil,
                     body: NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")
                 )
 

@@ -41,6 +41,23 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
         navigationController = nav
     }
 
+    func startWithToken(_ token: TokenBalance) {
+        let fiatCode = AppSettings.selectedFiatCode
+        let s2 = VenderAmountViewController(tokenBalance: token, fiatCode: fiatCode)
+        s2.onContinue = { [weak self] draft in
+            self?.showConfirm(draft: draft)
+        }
+
+        let nav = UINavigationController(rootViewController: s2)
+        nav.modalPresentationStyle = .pageSheet
+        if #unavailable(iOS 15) {
+            nav.navigationBar.backgroundColor = .backgroundSecondary
+        }
+        nav.presentationController?.delegate = self
+        presenter?.present(nav, animated: true)
+        navigationController = nav
+    }
+
     private func showEnterAmount(selectedToken: TokenBalance) {
         let fiatCode = AppSettings.selectedFiatCode
         let s2 = VenderAmountViewController(tokenBalance: selectedToken, fiatCode: fiatCode)
@@ -54,7 +71,7 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
         let s3 = VenderConfirmViewController(draft: draft)
         s3.onConfirmSell = { [weak self] in
             self?.createSellTransactionRequest(draft: draft)
-            self?.showInProgress()
+            self?.showSubmittedSuccess(draft: draft)
         }
         navigationController?.pushViewController(s3, animated: true)
     }
@@ -65,7 +82,9 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
             return
         }
 
-        let vaultId = selected.addressValue.checksummed
+        let vaultEvmAddress = selected.addressValue.checksummed
+        let tokenChainId = draft.selectedToken.chainId ?? selected.chain?.id
+
         let amountString = TokenFormatter().string(from: draft.sellAmount,
                                                    decimalSeparator: ".",
                                                    thousandSeparator: "")
@@ -76,9 +95,12 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
             "estimatedFiat=\(draft.estimatedFiat);" +
             " fiatCode=\(draft.fiatCode)"
 
+        let rawSymbol = draft.selectedToken.tokenSymbol ?? draft.selectedToken.symbol
+        LogService.shared.debug("[TransactionRequests][sell] tokenChainId=\(tokenChainId ?? "nil") rawSymbol=\(rawSymbol) displaySymbol=\(draft.selectedToken.symbol) evm=\(vaultEvmAddress)")
+
         let payload = CreateTransactionRequestBody(
             transactionType: .sell,
-            currency: draft.selectedToken.symbol,
+            currency: rawSymbol,
             amount: max(0, tokenAmount),
             requestStatus: .requested,
             destinationAddress: nil,
@@ -87,8 +109,8 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
 
         let service = TransactionRequestsService(authRepository: App.shared.authRepository, logger: LogService.shared)
         service.createTransactionRequestForCurrentSession(
-            vaultEvmAddress: vaultId,
-            chainId: selected.chain?.id,
+            vaultEvmAddress: vaultEvmAddress,
+            chainId: tokenChainId,
             payload: payload
         ) { [service] result in
             switch result {
@@ -100,14 +122,49 @@ final class InvestSellFlowCoordinator: NSObject, UIAdaptivePresentationControlle
         }
     }
 
-    private func showInProgress() {
-        let vc = VenderInProgressViewController()
-        vc.onFinish = { [weak self] in
+    private func showSubmittedSuccess(draft: InvestSellDraft) {
+        let qty = formatNumber5(decimalDoubleValue(from: draft.sellAmount))
+        let symbolUpper = draft.selectedToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let body = String(
+            format: NSLocalizedString(
+                "ui_vender_sell_request_created_body_format",
+                comment: "Vender sell request created body"
+            ),
+            qty,
+            symbolUpper
+        )
+
+        let successVC = SuccessViewController(
+            titleText: NSLocalizedString("ui_vender_sell_request_created_title", comment: "Vender sell request created title"),
+            bodyText: body,
+            primaryAction: NSLocalizedString("button_done", comment: "Done button title"),
+            secondaryAction: nil,
+            trackingEvent: nil
+        )
+        successVC.onDone = { [weak self] _ in
             self?.navigationController?.dismiss(animated: true) { [weak self] in
                 self?.onDismiss?()
             }
         }
-        navigationController?.pushViewController(vc, animated: true)
+        navigationController?.show(successVC, sender: self)
+    }
+
+    private func decimalDoubleValue(from value: BigDecimal) -> Double {
+        let decimalString = TokenFormatter().string(from: value,
+                                                    decimalSeparator: ".",
+                                                    thousandSeparator: "")
+        guard let dec = Decimal(string: decimalString) else { return 0 }
+        return (dec as NSDecimalNumber).doubleValue
+    }
+
+    private func formatNumber5(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 5
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.5f", value)
     }
 
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {

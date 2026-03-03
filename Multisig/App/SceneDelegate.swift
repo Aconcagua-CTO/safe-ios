@@ -100,7 +100,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         PendingTransactionMonitor.scheduleMonitoring()
         RelayedTransactionMonitor.scheduleMonitoring()
         SafeCreationMonitor.scheduleMonitoring()
-        WebConnectionExpirationMonitor.scheduleMonitoring()
 
         privacyShieldWindow?.isHidden = true
 
@@ -120,7 +119,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         App.shared.clientGatewayHostObserver.stopObserving()
 
         PendingTransactionMonitor.stopMonitoring()
-        WebConnectionExpirationMonitor.stopMonitoring()
 
         if presentedWindow === tabBarWindow {
             privacyShieldWindow?.isHidden = false
@@ -199,10 +197,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let wcURL = wcURL, (try? Safe.getSelected()) != nil else { return false }
         if WalletConnectManager.shared.canConnect(url: wcURL) {
             WalletConnectManager.shared.pairClient(url: wcURL, trackingEvent: .dappConnectedWithUniversalLink)
-            return true
-        } else if WalletConnectSafesServerController.shared.canConnect(url: wcURL) {
-            try? WalletConnectSafesServerController.shared.connect(url: wcURL)
-            WalletConnectSafesServerController.shared.dappConnectedTrackingEvent = .dappConnectedWithUniversalLink
             return true
         } else {
             return false

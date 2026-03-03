@@ -6,24 +6,28 @@
 //
 
 import UIKit
-import SwiftCryptoTokenFormatter
 
 struct InvertirDraft {
     let selectedToken: TokenBalance
-    let investAmount: BigDecimal
-    let estimatedFiat: Double
+    let investAmountFiat: Double
+    let estimatedTokenAmount: Double
+    let availableUsdBalanceFiat: Double
     let fiatCode: String
 }
 
 final class InvertirFromTokenDetailFlowCoordinator {
     private weak var navigationController: UINavigationController?
     private let token: TokenBalance
+    private let availableUsdBalanceFiat: Double?
 
     var onFinish: (() -> Void)?
 
-    init(navigationController: UINavigationController, token: TokenBalance) {
+    init(navigationController: UINavigationController,
+         token: TokenBalance,
+         availableUsdBalanceFiat: Double? = nil) {
         self.navigationController = navigationController
         self.token = token
+        self.availableUsdBalanceFiat = availableUsdBalanceFiat
     }
 
     func start() {
@@ -32,7 +36,10 @@ final class InvertirFromTokenDetailFlowCoordinator {
 
     private func showEnterAmount() {
         let fiatCode = AppSettings.selectedFiatCode
-        let s1 = InvertirAmountViewController(tokenBalance: token, fiatCode: fiatCode)
+        let available = availableUsdBalanceFiat ?? max(0, token.fiatValue)
+        let s1 = InvertirAmountViewController(tokenBalance: token,
+                                              fiatCode: fiatCode,
+                                              availableUsdBalanceFiat: available)
         s1.onContinue = { [weak self] draft in
             self?.showConfirm(draft: draft)
         }
@@ -43,7 +50,7 @@ final class InvertirFromTokenDetailFlowCoordinator {
         let s2 = InvertirConfirmViewController(draft: draft)
         s2.onConfirmInvestment = { [weak self] in
             self?.createInvestTransactionRequest(draft: draft)
-            self?.showInProgress()
+            self?.showSubmittedSuccess(draft: draft)
         }
         navigationController?.pushViewController(s2, animated: true)
     }
@@ -55,14 +62,14 @@ final class InvertirFromTokenDetailFlowCoordinator {
         }
 
         let vaultId = selected.addressValue.checksummed
-        let amountString = TokenFormatter().string(from: draft.investAmount,
-                                                   decimalSeparator: ".",
-                                                   thousandSeparator: "")
-        let dec = Decimal(string: amountString) ?? 0
-        let tokenAmount = (dec as NSDecimalNumber).doubleValue
+        let tokenAmount = draft.estimatedTokenAmount > 0
+            ? draft.estimatedTokenAmount
+            : draft.investAmountFiat
 
         let notes =
-            "estimatedFiat=\(draft.estimatedFiat);" +
+            "estimatedFiat=\(draft.investAmountFiat);" +
+            " estimatedTokenAmount=\(draft.estimatedTokenAmount);" +
+            " availableUsdBalanceFiat=\(draft.availableUsdBalanceFiat);" +
             " fiatCode=\(draft.fiatCode)"
 
         let payload = CreateTransactionRequestBody(
@@ -89,13 +96,38 @@ final class InvertirFromTokenDetailFlowCoordinator {
         }
     }
 
-    private func showInProgress() {
-        let vc = InvertirInProgressViewController()
-        vc.onFinish = { [weak self] in
+    private func showSubmittedSuccess(draft: InvertirDraft) {
+        let amountUsd = formatFiatAmount(draft.investAmountFiat)
+        let body = String(
+            format: NSLocalizedString(
+                "ui_invertir_invest_request_created_body_format",
+                comment: "Invertir invest request created body"
+            ),
+            amountUsd
+        )
+
+        let successVC = SuccessViewController(
+            titleText: NSLocalizedString("ui_vender_sell_request_created_title", comment: "Order created title"),
+            bodyText: body,
+            primaryAction: NSLocalizedString("button_done", comment: "Done button title"),
+            secondaryAction: nil,
+            trackingEvent: nil
+        )
+        successVC.onDone = { [weak self] _ in
             self?.navigationController?.popToRootViewController(animated: true)
             self?.onFinish?()
         }
-        navigationController?.pushViewController(vc, animated: true)
+        navigationController?.show(successVC, sender: self)
+    }
+
+    private func formatFiatAmount(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: max(0, value))) ?? String(format: "%.2f", value)
     }
 }
 

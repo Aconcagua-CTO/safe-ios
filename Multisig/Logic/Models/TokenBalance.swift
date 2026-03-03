@@ -43,11 +43,34 @@ struct TokenBalance: Identifiable, Hashable {
     let aaveMarketName: String?
     let tokenSymbol: String?
     let tokenName: String?
+    /// The blockchain chain ID where this token balance originated (e.g. "8453" for BASE).
+    /// Used to build the correct vault-scoped ID when creating transaction requests.
+    let chainId: String?
 }
 
 extension TokenBalance {
     private static func preferredTokenPlaceholderImage() -> UIImage? {
         UIImage(named: "ico-coin") ?? UIImage(named: "ico-token-placeholder")
+    }
+
+    private static func resolveImageString(_ raw: String) -> URL? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if trimmed.contains("://") || trimmed.hasPrefix("//") {
+            return URL(string: trimmed)
+        }
+
+        let nsString = trimmed as NSString
+        let name = nsString.deletingPathExtension
+        let ext = nsString.pathExtension
+        if let bundleURL = Bundle.main.url(forResource: name,
+                                           withExtension: ext.isEmpty ? nil : ext,
+                                           subdirectory: "TokenIcons") {
+            return bundleURL
+        }
+
+        return URL(string: trimmed)
     }
 
     private static func resolveWhitelistLogoUri(chainId: String, tokenAddress: Address) -> String? {
@@ -70,6 +93,22 @@ extension TokenBalance {
             value = resolve()
         }
         return value
+    }
+
+    private static func fallbackWhitelistImageURL(entry: TokenWhitelist, resolvedAddress: String) -> URL? {
+        let address = resolvedAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !address.isEmpty else { return nil }
+
+        let chainId = (entry.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !chainId.isEmpty else { return nil }
+
+        if address.lowercased() == Self.nativeTokenAddress.lowercased() {
+            return Chain.by(chainId)?.nativeCurrency?.logoUrl
+        }
+
+        // Best-effort fallback used by Invertir/markets rows when whitelist `image` is missing.
+        // Example: WBTC on Ethereum -> https://assets.smold.app/api/token/1/<address>/logo-128.png
+        return URL(string: "https://assets.smold.app/api/token/\(chainId)/\(address)/logo-128.png")
     }
 
     init(_ item: SCGBalance, code: String, chainId: String) {
@@ -98,7 +137,8 @@ extension TokenBalance {
                   aaveUnderlyingTokenAddress: item.aaveUnderlyingTokenAddress,
                   aaveMarketName: item.aaveMarketName,
                   tokenSymbol: item.tokenSymbol,
-                  tokenName: item.tokenName)
+                  tokenName: item.tokenName,
+                  chainId: chainId)
     }
 
     init(address: Address,
@@ -121,16 +161,23 @@ extension TokenBalance {
          aaveUnderlyingTokenAddress: String? = nil,
          aaveMarketName: String? = nil,
          tokenSymbol: String? = nil,
-         tokenName: String? = nil) {
+         tokenName: String? = nil,
+         chainId: String? = nil) {
         self.address = address.checksummed
         let coin = Chain.nativeCoin
 
         self.name = name ?? coin?.name ?? "Ether"
         self.symbol = symbol ?? coin?.symbol ?? "ETH"
         self.category = category
-        self.imageURL = logoUri
-            .flatMap { URL(string: $0) }
-            ?? coin?.logoUrl
+        let explicitImage = logoUri.flatMap { Self.resolveImageString($0) }
+        if let url = explicitImage {
+            self.imageURL = url
+        } else if self.address.lowercased() == Self.nativeTokenAddress.lowercased(),
+                  let cid = chainId, let chain = Chain.by(cid) {
+            self.imageURL = chain.nativeCurrency?.logoUrl
+        } else {
+            self.imageURL = nil
+        }
         if self.imageURL == nil {
             self.image = Self.preferredTokenPlaceholderImage()
         } else {
@@ -165,6 +212,7 @@ extension TokenBalance {
         self.aaveMarketName = aaveMarketName
         self.tokenSymbol = tokenSymbol
         self.tokenName = tokenName
+        self.chainId = chainId
     }
 
     /// Creates a zero-balance token row from a whitelist entry (used for Markets screens).
@@ -186,7 +234,9 @@ extension TokenBalance {
         self.address = Address(stringLiteral: normalized).checksummed
 
         let resolvedSymbol = (entry.tokenSymbol ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        self.symbol = resolvedSymbol.isEmpty ? "—" : resolvedSymbol
+        let resolvedWrapLabel = (entry.wrapLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let displaySymbol = resolvedWrapLabel.isEmpty ? resolvedSymbol : resolvedWrapLabel
+        self.symbol = displaySymbol.isEmpty ? "—" : displaySymbol
 
         let resolvedName = (entry.tokenName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         self.name = resolvedName.isEmpty ? self.symbol : resolvedName
@@ -194,10 +244,11 @@ extension TokenBalance {
         let resolvedCategory = (entry.tokenCategory ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         self.category = resolvedCategory.isEmpty ? "otros" : resolvedCategory
 
-        if let image = entry.image, let url = URL(string: image) {
-            self.imageURL = url
+        let explicitImage = (entry.image ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !explicitImage.isEmpty {
+            self.imageURL = Self.resolveImageString(explicitImage)
         } else {
-            self.imageURL = nil
+            self.imageURL = Self.fallbackWhitelistImageURL(entry: entry, resolvedAddress: self.address)
         }
         if self.imageURL == nil {
             self.image = Self.preferredTokenPlaceholderImage()
@@ -224,6 +275,7 @@ extension TokenBalance {
         self.aaveMarketName = entry.aaveMarketName
         self.tokenSymbol = entry.tokenSymbol
         self.tokenName = entry.tokenName
+        self.chainId = entry.chainId
     }
 
     static var serverCurrencyFormatter: NumberFormatter = {
@@ -260,7 +312,8 @@ extension TokenBalance {
     }
 
     var balanceWithSymbol: String {
-        "\(balance) \(symbol)"
+        let sym = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return "\(balance) \(sym)"
     }
 
     var fullBalanceWithSymbol: String {
@@ -269,7 +322,8 @@ extension TokenBalance {
                 value: value,
                 decimals: decimals)
         let fullBalance = tokenAmount.description
-        return "\(fullBalance) \(symbol)"
+        let sym = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        return "\(fullBalance) \(sym)"
     }
 
     static let nativeTokenAddress: String = Address.zero.checksummed

@@ -66,9 +66,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         KeyInfo.updateCachedNames()
 
         App.shared.notificationHandler.setUpMessaging(delegate: self)
-        // Reconnect all WalletConnect sessions
-        WalletConnectSafesServerController.shared.reconnectAllSessions()
-
         WCAppRegistryMigration.shared.run()
 
         SecurityCenter.setUp()

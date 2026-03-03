@@ -38,6 +38,7 @@ final class TangemCardKeyProvisioningCoordinator {
     }
 
     func start() {
+        TangemLogger.info("[TangemProvisioning] Starting card key provisioning flow")
         let introVC = buildIntroViewController { [weak self] in
             self?.showActivation()
         }
@@ -66,6 +67,7 @@ final class TangemCardKeyProvisioningCoordinator {
     }
 
     private func showActivation() {
+        TangemLogger.info("[TangemProvisioning] Starting activation step")
         let activationVC = TangemActivationViewController(service: TangemService.shared)
         activationVC.autoStartActivation = true
         activationVC.shouldSuppressError = { [weak self] error in
@@ -83,8 +85,10 @@ final class TangemCardKeyProvisioningCoordinator {
     private func handleActivationResult(_ result: Result<ActivatedCardInfo, Error>) {
         switch result {
         case .success:
+            TangemLogger.info("[TangemProvisioning] Activation completed, waiting for second scan")
             pendingImport = true
         case .failure(let error):
+            TangemLogger.error("[TangemProvisioning] Activation failed", error: error)
             pendingImport = isTangemWalletAlreadyCreated(error: error)
         }
     }
@@ -102,9 +106,11 @@ final class TangemCardKeyProvisioningCoordinator {
     }
 
     private func startImportFlow() {
+        TangemLogger.info("[TangemProvisioning] Starting second scan step for key import")
         DispatchQueue.main.asyncAfter(deadline: .now() + importStartDelay) { [weak self] in
             guard let self else { return }
             let flow = TangemKeyFlow(service: TangemService.shared) { [weak self] success in
+                TangemLogger.info("[TangemProvisioning] Key import completed. success=\(success)")
                 self?.onImportCompletion(success)
             }
             self.configureImportFlow(flow)

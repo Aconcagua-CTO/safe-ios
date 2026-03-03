@@ -81,14 +81,12 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
 
     override func headerCell() -> UITableViewCell {
         let cell = tableView.dequeueCell(ReviewSendFundsTransactionHeaderTableViewCell.self)
-        let prefix = safe.chain!.shortName
-        cell.setFromAddress(safe.addressValue, label: safe.name, prefix: prefix)
+        cell.setFromAddress(safe.addressValue, label: safe.name, prefix: nil)
         let (name, imageURL) = NamingPolicy.name(for: recipient, info: nil, chainId: safe.chain!.id!)
-        // Show just the address in white. Prefer a resolved name if available.
-        let toLabel = name ?? recipient.ellipsized()
-        cell.setToAddress(recipient, label: toLabel, imageUri: imageURL, prefix: prefix)
+        let toLabel = name ?? recipient.checksummed
+        cell.setToAddress(recipient, label: toLabel, imageUri: imageURL, prefix: nil)
 
-        let tokenAmount = Self.formatAmount5(amount)
+        let tokenAmount = "\(Self.formatAmount5(amount)) \(tokenBalance.symbol)"
         let fiatValue = Self.formatFiatForAmount(amount: amount, tokenBalance: tokenBalance)
         cell.setToken(fiatValue: fiatValue,
                       tokenAmount: tokenAmount,
@@ -99,30 +97,76 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
 
     override func onSuccess(transaction: SCGModels.TransactionDetails) {
         createBackendTransactionRequestIfPossible()
+        if AppSettings.selfHostedExecuteEnabled {
+            AutoExecutionCoordinator.shared.attemptAutoExecute(
+                safe: safe,
+                transaction: transaction,
+                source: "review_send_funds_confirmation"
+            ) { [weak self] outcome in
+                guard let self else { return }
+                switch outcome {
+                case .success:
+                    self.showAutoExecutionSuccess(transaction: transaction)
+                case .failure, .skipped:
+                    self.showQueuedSuccess(transaction: transaction)
+                }
+            }
+            return
+        }
 
+        showQueuedSuccess(transaction: transaction)
+    }
+
+    private func showQueuedSuccess(transaction: SCGModels.TransactionDetails) {
         let token = tokenBalance.symbol
-
         let title = NSLocalizedString("ui_tx_queued_title", comment: "Title shown after submitting a transaction that is queued")
-        let body = String(format: NSLocalizedString("ui_tx_send_request_body_format", comment: "Send request submitted body"),
-                          formattedAmount,
-                          token)
+        let body = String(
+            format: NSLocalizedString("ui_tx_send_request_body_format", comment: "Send request submitted body"),
+            formattedAmount,
+            token
+        )
 
         let successVC = SuccessViewController(
             titleText: title,
             bodyText: body,
             primaryAction: NSLocalizedString("ui_tx_view_details_action", comment: "View details action"),
             secondaryAction: NSLocalizedString("button_done", comment: "Done button title"),
-            trackingEvent: .assetsTransferSuccess)
+            trackingEvent: .assetsTransferSuccess
+        )
         successVC.onDone = { [weak self] isPrimaryAction in
             guard let self = self else { return }
             self.dismiss(animated: true) {
                 NotificationCenter.default.post(
                     name: .initiateTxNotificationReceived,
                     object: self,
-                    userInfo: isPrimaryAction ? ["transactionDetails": transaction] : [:])
+                    userInfo: isPrimaryAction ? ["transactionDetails": transaction] : [:]
+                )
             }
         }
 
+        show(successVC, sender: self)
+    }
+
+    private func showAutoExecutionSuccess(transaction: SCGModels.TransactionDetails) {
+        let successVC = SuccessViewController(
+            titleText: NSLocalizedString("ui_tx_submit_success_title", comment: "Transaction submitted title"),
+            bodyText: NSLocalizedString("ui_tx_submit_success_body", comment: "Transaction submitted body"),
+            primaryAction: NSLocalizedString("ui_tx_view_transaction_details_action", comment: "View transaction details action"),
+            secondaryAction: NSLocalizedString("button_done", comment: "Done button title"),
+            trackingEvent: .assetsTransferSuccess
+        )
+        successVC.onDone = { [weak self] isPrimaryAction in
+            guard let self = self else { return }
+            self.dismiss(animated: true) {
+                if isPrimaryAction {
+                    NotificationCenter.default.post(
+                        name: .initiateTxNotificationReceived,
+                        object: self,
+                        userInfo: ["transactionDetails": transaction]
+                    )
+                }
+            }
+        }
         show(successVC, sender: self)
     }
 
@@ -165,19 +209,12 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
 
         // Network row below the \"A\" section
         let networkCell = tableView.dequeueCell(NetworkInfoTableViewCell.self)
-        networkCell.set(chainId: safe.chain?.id, name: safe.chain?.name)
+        networkCell.set(chainId: safe.chain?.id, title: NSLocalizedString("ui_tx_network_title", comment: "Network title"), name: safe.chain?.name)
         sectionItems.append(.safeInfo(networkCell))
 
-        if let summary = feeSummaryCell() {
-            sectionItems.append(.valueChange(summary))
-        }
         if let feeAmountCell = feeAmountCell() {
             sectionItems.append(.valueChange(feeAmountCell))
         }
-        if let feeRecipient = feeRecipientCell() {
-            sectionItems.append(.safeInfo(feeRecipient))
-        }
-        sectionItems.append(.advanced(parametersCell()))
     }
 
     private static func formatAmount5(_ amount: BigDecimal) -> String {
@@ -241,15 +278,43 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
     private func feeAmountCell() -> UITableViewCell? {
         guard let batch = feeBatchResult else { return nil }
         let cell = tableView.dequeueCell(ValueChangeTableViewCell.self)
-        let formatter = TokenFormatter()
-        let decimals = tokenBalance.decimals
-        let fee = formatter.string(from: BigDecimal(Int256(batch.feeAmount), decimals), shortFormat: false)
-        let percentage = Double(batch.basisPoints) / 100.0
-        cell.set(title: String(format: NSLocalizedString("ui_tx_fee_percentage_format", comment: "Fee percentage title"),
-                               percentage),
-                 value: "\(fee) \(tokenBalance.symbol)")
+        let feeTokenAmount = decimalFromRawUnits(rawAmount: batch.feeAmount, decimals: tokenBalance.decimals)
+        let usdFeeValue = (feeTokenAmount * Decimal(tokenBalance.fiatConversion) as NSDecimalNumber).doubleValue
+        cell.set(title: NSLocalizedString("ui_tx_gas_fees_title", comment: "Gas and fees title"),
+                 value: formatGasFeesCurrency(usdFeeValue, code: AppSettings.selectedFiatCode))
         cell.selectionStyle = .none
         return cell
+    }
+
+    private func decimalFromRawUnits(rawAmount: UInt256, decimals: Int) -> Decimal {
+        let raw = Decimal(string: rawAmount.description, locale: Locale(identifier: "en_US")) ?? 0
+        guard decimals > 0 else { return raw }
+        let divisor = NSDecimalNumber(mantissa: 1, exponent: Int16(decimals), isNegative: false).decimalValue
+        guard divisor != 0 else { return raw }
+        return raw / divisor
+    }
+
+    private func formatGasFeesCurrency(_ value: Double, code: String) -> String {
+        let rounding = NSDecimalNumberHandler(roundingMode: .plain,
+                                              scale: 6,
+                                              raiseOnExactness: false,
+                                              raiseOnOverflow: false,
+                                              raiseOnUnderflow: false,
+                                              raiseOnDivideByZero: false)
+        let rounded = NSDecimalNumber(value: max(0, value)).rounding(accordingToBehavior: rounding)
+        let isTiny = rounded.compare(NSDecimalNumber.zero) == .orderedDescending
+            && rounded.compare(NSDecimalNumber(string: "0.01")) == .orderedAscending
+
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = isTiny ? 6 : 2
+        formatter.roundingMode = .halfUp
+
+        let formatted = formatter.string(from: rounded) ?? "0.00"
+        return "\(formatted) \(code)"
     }
 
     private func feeRecipientCell() -> UITableViewCell? {

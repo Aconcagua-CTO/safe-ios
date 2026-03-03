@@ -133,7 +133,7 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
     }
 
     private func loadMultiVaultBalances() {
-        guard let safes = try? Safe.getAll() else {
+        guard let safes = try? Safe.getActiveGroup() else {
             apply(balances: [])
             return
         }
@@ -203,21 +203,25 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
 
     private func isSellableSectionId(_ id: String) -> Bool {
         [
+            TokenCategory.sectionMoneyMarket,
             TokenCategory.sectionAcciones,
             TokenCategory.sectionEtfIndices,
             TokenCategory.sectionEtfOtros,
             TokenCategory.sectionCripto,
-            TokenCategory.sectionOro
+            TokenCategory.sectionOro,
+            TokenCategory.sectionRootstock
         ].contains(id)
     }
 
     private var sellSectionOrder: [(id: String, title: String)] {
         [
+            (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
             (id: TokenCategory.sectionAcciones, title: "Acciones"),
             (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
             (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
             (id: TokenCategory.sectionCripto, title: "Cripto"),
             (id: TokenCategory.sectionOro, title: "Oro"),
+            (id: TokenCategory.sectionRootstock, title: "Rootstock"),
         ]
     }
 
@@ -257,7 +261,7 @@ final class VenderSelectAssetViewController: UIViewController, UITableViewDelega
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let item = sections[indexPath.section].items[indexPath.row]
         let cell = tableView.dequeueCell(BalanceTableViewCell.self, for: indexPath)
-        cell.setMainText(item.symbol)
+        cell.setMainText(item.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
         cell.setDetailText(item.fiatBalance)
         cell.setSubDetailText(item.balanceFormatted5)
         cell.setBadge(text: nil)

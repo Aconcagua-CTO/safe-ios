@@ -45,6 +45,25 @@ final class MultiVaultBalancesAggregatorTests: XCTestCase {
         XCTAssertEqual(symbols, Set(["USDC", "DAI"]))
         XCTAssertTrue(aggregated.totalFiat.contains("5"), "Total fiat should sum across symbols")
     }
+
+    func testExcludesZeroBalanceTokensFromDisplayList() {
+        let summaryWithZeroAndNonZero = SafeBalanceSummary(
+            fiatTotal: "2.0",
+            items: [
+                makeBalance(symbol: "USDT", amount: UInt256(2_000_000), decimals: 6, fiat: "2.0"),
+                makeBalance(symbol: "ETH", amount: UInt256(0), decimals: 18, fiat: "0")
+            ]
+        )
+
+        let aggregated = MultiVaultBalancesAggregator.aggregate(
+            [("1", summaryWithZeroAndNonZero)],
+            fiatCode: "USD"
+        )
+
+        XCTAssertEqual(aggregated.balances.count, 1, "Zero-balance ETH should be excluded from display list")
+        XCTAssertEqual(aggregated.balances.first?.symbol, "USDT")
+        XCTAssertFalse(aggregated.balances.contains { $0.symbol == "ETH" })
+    }
     
     private func makeBalance(symbol: String, amount: UInt256, decimals: Int, fiat: String) -> SCGBalance {
         let tokenInfo = TokenInfo(

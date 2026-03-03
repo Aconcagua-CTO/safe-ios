@@ -84,7 +84,12 @@ protocol TangemSigner {
 
 /// Card signer implementation following Tangem app patterns
 class CardSigner: TangemSigner {
-    private let initialMessage = Message(header: nil, body: "Safe Wallet\n\nHold your Tangem card near the top of your iPhone to connect.")
+    // Títulos NFC: prueba A — pasar literal "Listo para escanear" como header para ver si el SDK lo usa como título de la hoja.
+    // Si tras esto sigue "Ready to Scan", el SDK ignora initialMessage.header para el título.
+    private let initialMessage = Message(
+        header: "Listo para escanear",
+        body: NSLocalizedString("ui_tangem_scan_message_body", comment: "")
+    )
     private let sdk: TangemSdk
 
     init(sdk: TangemSdk) {
@@ -134,9 +139,46 @@ class CardSigner: TangemSigner {
                 print("▶️ TangemService ▶️ Starting Tangem SDK session")
                 print("🔗 SDK linkedTerminal config: \(String(describing: sdk.config.linkedTerminal))")
                 print("🎯 Using session filter: cardId(\(cardId))")
-                print("💬 Initial message: configured")
+                let scanTitle = NSLocalizedString("view_delegate_scan_title", comment: "")
+                print("💬 [NFC title] view_delegate_scan_title = \"\(scanTitle)\" (length=\(scanTitle.count))")
                 print("🔄 Task type: MultipleSignTask")
                 print("📤 Sending to SDK...")
+
+                // #region agent log
+                #if MULTISIG_DEV_LOGS
+                do {
+                    let preferredLang = Locale.preferredLanguages.first ?? "n/a"
+                    let mainPath = Bundle.main.bundlePath
+                    let sdkBundle = Bundle(identifier: "org.cocoapods.TangemSdk") ?? Bundle(for: type(of: self.sdk))
+                    let payload: [String: Any] = [
+                        "sessionId": "481528",
+                        "location": "TangemService.swift:startSession",
+                        "message": "NFC session starting",
+                        "data": [
+                            "preferredLanguage": preferredLang,
+                            "mainBundlePath": mainPath,
+                            "sdkBundlePath": sdkBundle.bundlePath,
+                            "app_scan_title": Bundle.main.localizedString(forKey: "view_delegate_scan_title", value: nil, table: nil),
+                            "sdk_scan_title": sdkBundle.localizedString(forKey: "view_delegate_scan_title", value: nil, table: nil)
+                        ],
+                        "timestamp": Int(Date().timeIntervalSince1970 * 1000),
+                        "hypothesisId": "H_bundle"
+                    ]
+                    let data = try JSONSerialization.data(withJSONObject: payload)
+                    if let line = String(data: data, encoding: .utf8) {
+                        let logPath = "/Users/manuelrm/Documents/GitHub/CTO/.cursor/debug-481528.log"
+                        if !FileManager.default.fileExists(atPath: logPath) {
+                            FileManager.default.createFile(atPath: logPath, contents: nil)
+                        }
+                        if let handle = FileHandle(forWritingAtPath: logPath) {
+                            handle.seekToEndOfFile()
+                            handle.write((line + "\n").data(using: .utf8)!)
+                            handle.closeFile()
+                        }
+                    }
+                } catch {}
+                #endif
+                // #endregion
 
                 // Use session filter like official app
                 sdk.startSession(with: task, filter: sessionFilter, initialMessage: initialMessage) { result in
@@ -504,7 +546,7 @@ final class TangemService {
         do {
             let runnable = TangemActivationTask(curve: .secp256k1, accessCode: accessCode)
             let initialMessage = Message(
-                header: NSLocalizedString("ui_tangem_scan_message_header", comment: "Tangem scan message header"),
+                header: nil,
                 body: NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")
             )
 

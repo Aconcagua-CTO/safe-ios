@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import SwiftCryptoTokenFormatter
 
 /// Screen 2 (Invertir): confirm the investment.
 final class InvertirConfirmViewController: UIViewController {
@@ -18,18 +17,14 @@ final class InvertirConfirmViewController: UIViewController {
     private let contentView = UIView()
     private let stack = UIStackView()
 
-    private let titleLabel = UILabel()
-
-    private let assetTitleLabel = UILabel()
-    private let assetValueLabel = UILabel()
-
     private let amountTitleLabel = UILabel()
     private let amountValueLabel = UILabel()
 
-    private let estFiatTitleLabel = UILabel()
-    private let estFiatValueLabel = UILabel()
+    private let variableRateTitleLabel = UILabel()
+    private let variableRateValueLabel = UILabel()
 
     private let confirmButton = UIButton(type: .system)
+    private let savingsYieldService = SavingsYieldService()
 
     init(draft: InvertirDraft) {
         self.draft = draft
@@ -43,10 +38,11 @@ final class InvertirConfirmViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = NSLocalizedString("ui_invertir_confirm_title", comment: "Invertir confirm title")
+        title = NSLocalizedString("ui_review_title", comment: "Review title")
 
         configureLayout()
         configureValues()
+        loadVariableRate()
     }
 
     private func configureLayout() {
@@ -88,39 +84,29 @@ final class InvertirConfirmViewController: UIViewController {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -24)
         ])
 
-        titleLabel.setStyle(.title3)
-        titleLabel.text = "Revisá tu inversión"
-
-        for label in [assetTitleLabel, amountTitleLabel, estFiatTitleLabel] {
+        for label in [amountTitleLabel, variableRateTitleLabel] {
             label.setStyle(.caption1Medium)
             label.textColor = .labelSecondary
         }
-        assetTitleLabel.text = "Vas a invertir"
-        amountTitleLabel.text = "Cantidad"
-        estFiatTitleLabel.text = "Valor estimado"
+        amountTitleLabel.text = NSLocalizedString("ui_invertir_review_amount_title", comment: "Invertir review amount title")
+        variableRateTitleLabel.text = NSLocalizedString("ui_invertir_variable_rate_title", comment: "Invertir variable rate title")
 
-        for label in [assetValueLabel, amountValueLabel, estFiatValueLabel] {
+        for label in [amountValueLabel, variableRateValueLabel] {
             label.setStyle(.title3)
             label.textColor = .labelPrimary
             label.numberOfLines = 0
         }
+        variableRateValueLabel.text = NSLocalizedString("ui_invertir_variable_rate_loading", comment: "Invertir variable rate loading")
 
-        confirmButton.setText(NSLocalizedString("ui_invertir_confirm_investment_action", comment: "Confirm investment action"), .filled)
+        confirmButton.setText(NSLocalizedString("ui_invertir_progress_title", comment: "Invertir action"), .filled)
         confirmButton.addTarget(self, action: #selector(didTapConfirm), for: .touchUpInside)
-
-        stack.addArrangedSubview(titleLabel)
-        stack.addArrangedSubview(spacer(18))
-
-        stack.addArrangedSubview(assetTitleLabel)
-        stack.addArrangedSubview(assetValueLabel)
-        stack.addArrangedSubview(spacer(10))
 
         stack.addArrangedSubview(amountTitleLabel)
         stack.addArrangedSubview(amountValueLabel)
         stack.addArrangedSubview(spacer(10))
 
-        stack.addArrangedSubview(estFiatTitleLabel)
-        stack.addArrangedSubview(estFiatValueLabel)
+        stack.addArrangedSubview(variableRateTitleLabel)
+        stack.addArrangedSubview(variableRateValueLabel)
     }
 
     private func spacer(_ height: CGFloat) -> UIView {
@@ -131,36 +117,52 @@ final class InvertirConfirmViewController: UIViewController {
     }
 
     private func configureValues() {
-        assetValueLabel.text = draft.selectedToken.symbol
-        amountValueLabel.text = "\(formatNumber5(decimalValue(from: draft.investAmount))) \(draft.selectedToken.symbol)"
-        estFiatValueLabel.text = formatFiat(draft.estimatedFiat, code: draft.fiatCode)
+        amountValueLabel.text = formatFiat(draft.investAmountFiat, code: draft.fiatCode)
     }
 
     @objc private func didTapConfirm() {
         onConfirmInvestment?()
     }
 
-    private func formatFiat(_ value: Double, code: String) -> String {
-        let fiatString = String(format: "%.6f", max(0, value))
-        return TokenBalance.displayCurrency(from: fiatString, code: code)
+    private func loadVariableRate() {
+        let symbol = draft.selectedToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard ["USDC", "USDT"].contains(symbol) else {
+            variableRateValueLabel.text = NSLocalizedString("ui_invertir_variable_rate_unavailable", comment: "Invertir variable rate unavailable")
+            return
+        }
+
+        savingsYieldService.fetchEthereumSupplyApyPercents(symbolsUpper: [symbol]) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let map):
+                if let apy = map[symbol] {
+                    self.variableRateValueLabel.text = self.formatApyPercent(apy)
+                } else {
+                    self.variableRateValueLabel.text = NSLocalizedString("ui_invertir_variable_rate_unavailable", comment: "Invertir variable rate unavailable")
+                }
+            case .failure:
+                self.variableRateValueLabel.text = NSLocalizedString("ui_invertir_variable_rate_unavailable", comment: "Invertir variable rate unavailable")
+            }
+        }
     }
 
-    private func formatNumber5(_ value: Double) -> String {
+    private func formatApyPercent(_ apyPercent: Double) -> String {
+        guard apyPercent > 0 else { return "0.00%" }
+        if apyPercent > 0, apyPercent < 0.01 {
+            return "<0.01%"
+        }
+        return String(format: "%.2f%%", apyPercent)
+    }
+
+    private func formatFiat(_ value: Double, code: String) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.locale = Locale.autoupdatingCurrent
         formatter.usesGroupingSeparator = true
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 5
-        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.5f", value)
-    }
-
-    private func decimalValue(from amount: BigDecimal) -> Double {
-        let decimalString = TokenFormatter().string(from: amount,
-                                                    decimalSeparator: ".",
-                                                    thousandSeparator: "")
-        guard let dec = Decimal(string: decimalString) else { return 0 }
-        return (dec as NSDecimalNumber).doubleValue
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        let formatted = formatter.string(from: NSNumber(value: max(0, value))) ?? "0.00"
+        return "\(formatted) \(code)"
     }
 }
 

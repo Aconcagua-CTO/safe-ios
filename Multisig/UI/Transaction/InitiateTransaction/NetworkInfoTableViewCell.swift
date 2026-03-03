@@ -8,6 +8,7 @@
 import UIKit
 
 final class NetworkInfoTableViewCell: UITableViewCell {
+    private let titleLabel = UILabel()
     private let iconView = UIImageView()
     private let nameLabel = UILabel()
 
@@ -26,17 +27,26 @@ final class NetworkInfoTableViewCell: UITableViewCell {
         backgroundColor = .clear
         contentView.backgroundColor = .clear
 
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.setStyle(.headlineSecondary)
+
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.contentMode = .scaleAspectFit
 
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        nameLabel.setStyle(.headlineSecondary)
+        nameLabel.setStyle(.bodyPrimary)
 
-        let stack = UIStackView(arrangedSubviews: [iconView, nameLabel, UIView()])
+        let rowStack = UIStackView(arrangedSubviews: [iconView, nameLabel, UIView()])
+        rowStack.translatesAutoresizingMaskIntoConstraints = false
+        rowStack.axis = .horizontal
+        rowStack.alignment = .center
+        rowStack.spacing = 12
+
+        let stack = UIStackView(arrangedSubviews: [titleLabel, rowStack])
         stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .horizontal
-        stack.alignment = .center
-        stack.spacing = 12
+        stack.axis = .vertical
+        stack.alignment = .fill
+        stack.spacing = 10
         contentView.addSubview(stack)
 
         NSLayoutConstraint.activate([
@@ -50,7 +60,8 @@ final class NetworkInfoTableViewCell: UITableViewCell {
         ])
     }
 
-    func set(chainId: String?, name: String?) {
+    func set(chainId: String?, title: String, name: String?) {
+        titleLabel.text = title
         nameLabel.text = name
         if let chainId, let image = UIImage(named: "ico-chain-\(chainId)") {
             iconView.image = image

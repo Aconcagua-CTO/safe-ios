@@ -39,10 +39,7 @@ final class TransferRecipientViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationItem.title = String(
-            format: NSLocalizedString("ui_send_token_title_format", comment: "Title for sending a specific token, e.g. 'Send ETH'"),
-            tokenBalance.symbol
-        )
+        navigationItem.title = NSLocalizedString("ui_withdraw_recipient_title", comment: "Withdraw recipient title")
         navigationItem.backButtonTitle = NSLocalizedString("button_back", comment: "Back button title")
         navigationItem.rightBarButtonItem = nil
 

@@ -9,6 +9,13 @@ import UIKit
 import Ethereum
 import SwiftCryptoTokenFormatter
 
+private extension TokenBalance {
+    var invertirDisplaySymbol: String {
+        let wrap = (wrapLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return wrap.isEmpty ? symbol : wrap
+    }
+}
+
 /// Container for the Invertir tab. Mirrors AssetsViewController but uses the invertir balances list.
 class InvertirViewController: AssetsViewController {
     private var investBuyFlow: InvestBuyFlowCoordinator?
@@ -198,6 +205,7 @@ final class InvestSelectTokenViewController: UIViewController {
         guard !t.isEmpty else { return items }
         return items.filter { item in
             item.symbol.lowercased().contains(t)
+            || item.invertirDisplaySymbol.lowercased().contains(t)
             || item.name.lowercased().contains(t)
             || item.category.lowercased().contains(t)
         }
@@ -265,17 +273,20 @@ final class InvestSelectTokenViewController: UIViewController {
 
 extension InvestSelectTokenViewController {
     private var sectionOrder: [(id: String, title: String)] {
-        [
+        var order: [(id: String, title: String)] = [
             // Match the main Invertir screen ordering (`InvertirBalancesViewController.balanceSectionOrder`)
             (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
-            (id: TokenCategory.sectionAcciones, title: "Acciones"),
-            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
-            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
             (id: TokenCategory.sectionCripto, title: "Cripto"),
-            (id: TokenCategory.sectionOro, title: "Oro"),
-            (id: TokenCategory.sectionOtros, title: "Otros"),
-            (id: TokenCategory.sectionBlackToken, title: "blackToken")
+            (id: TokenCategory.sectionOro, title: "Commodities"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            (id: TokenCategory.sectionOtros, title: "Otros")
         ]
+        if App.configuration.services.environment.isDevelopment {
+            order.append((id: TokenCategory.sectionBlackToken, title: "blackToken"))
+        }
+        return order
     }
 
     private func isSavings(_ item: TokenBalance) -> Bool {
@@ -385,7 +396,7 @@ extension InvestSelectTokenViewController: UITableViewDataSource, UITableViewDel
         let item = section.items[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: "BalanceTableViewCell", for: indexPath) as! BalanceTableViewCell
 
-        cell.setMainText(item.symbol)
+        cell.setMainText(item.invertirDisplaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
         // Invertir hides fiat + amount in the list.
         cell.setDetailText("")
         cell.setSubDetailText("")
@@ -523,6 +534,7 @@ final class InvestSellSourceSelectViewController: UIViewController {
         guard !t.isEmpty else { return items }
         return items.filter { item in
             item.symbol.lowercased().contains(t)
+            || item.invertirDisplaySymbol.lowercased().contains(t)
             || item.name.lowercased().contains(t)
             || item.category.lowercased().contains(t)
         }
@@ -551,17 +563,20 @@ final class InvestSellSourceSelectViewController: UIViewController {
 
 extension InvestSellSourceSelectViewController {
     private var sectionOrder: [(id: String, title: String)] {
-        [
+        var order: [(id: String, title: String)] = [
             (id: TokenCategory.sectionUSD, title: ""),
             (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
-            (id: TokenCategory.sectionAcciones, title: "Acciones"),
-            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
-            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
             (id: TokenCategory.sectionCripto, title: "Cripto"),
-            (id: TokenCategory.sectionOro, title: "Oro"),
-            (id: TokenCategory.sectionOtros, title: "Otros"),
-            (id: TokenCategory.sectionBlackToken, title: "blackToken")
+            (id: TokenCategory.sectionOro, title: "Commodities"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
+            (id: TokenCategory.sectionOtros, title: "Otros")
         ]
+        if App.configuration.services.environment.isDevelopment {
+            order.append((id: TokenCategory.sectionBlackToken, title: "blackToken"))
+        }
+        return order
     }
 
     private func mapCategoryToSectionId(_ item: TokenBalance) -> String {
@@ -611,7 +626,7 @@ extension InvestSellSourceSelectViewController: UITableViewDataSource, UITableVi
         let item = section.items[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: "BalanceTableViewCell", for: indexPath) as! BalanceTableViewCell
 
-        cell.setMainText(item.symbol)
+        cell.setMainText(item.invertirDisplaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
         // Show balance in detail and fiat in sub-detail
         cell.setDetailText(item.balance)
         cell.setSubDetailText(item.fiatBalance)
@@ -727,22 +742,99 @@ struct InvestBuyDraft {
 
 // MARK: - Invest (Comprar) Flow - Screen 2
 
-/// Screen 2: user enters how much they want to invest (in fiat).
+/// Screen 2: user selects the payment method (USD category only).
+final class InvestSelectPaymentMethodViewController: UIViewController {
+    var onPaymentSelected: ((TokenBalance) -> Void)?
+
+    private var paymentBalances: [TokenBalance]
+    private let tableView = UITableView(frame: .zero, style: .plain)
+
+    init(paymentBalances: [TokenBalance]) {
+        self.paymentBalances = paymentBalances
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .backgroundPrimary
+        title = NSLocalizedString("ui_invertir_payment_method_title", comment: "Invertir payment method title")
+        configureTable()
+    }
+
+    func updatePaymentBalances(_ balances: [TokenBalance]) {
+        paymentBalances = balances
+        tableView.reloadData()
+    }
+
+    private func configureTable() {
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.backgroundColor = .backgroundPrimary
+        tableView.separatorColor = .separator
+        tableView.rowHeight = 64
+        tableView.estimatedRowHeight = 64
+        tableView.tableFooterView = UIView()
+        tableView.register(SelectAssetRowCell.self, forCellReuseIdentifier: SelectAssetRowCell.reuseID)
+        tableView.dataSource = self
+        tableView.delegate = self
+
+        view.addSubview(tableView)
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        ])
+    }
+}
+
+extension InvestSelectPaymentMethodViewController: UITableViewDataSource, UITableViewDelegate {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        paymentBalances.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let item = paymentBalances[indexPath.row]
+        let cell = tableView.dequeueReusableCell(withIdentifier: SelectAssetRowCell.reuseID, for: indexPath) as! SelectAssetRowCell
+        let displaySymbol = item.invertirDisplaySymbol
+        let symbolUpper = displaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        cell.setSymbol(displaySymbol)
+        cell.setChain("")
+        cell.setFiat(item.fiatBalance)
+        cell.setAmount("\(item.balanceFormatted5) \(symbolUpper)")
+        cell.accessoryType = .disclosureIndicator
+        cell.setBadge(text: nil)
+        if let image = item.image {
+            cell.setImage(image)
+        } else {
+            cell.setImage(with: item.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
+        }
+        return cell
+    }
+
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        onPaymentSelected?(paymentBalances[indexPath.row])
+    }
+}
+
+// MARK: - Invest (Comprar) Flow - Screen 3
+
+/// Screen 3: user enters how much they want to invest (in fiat).
 final class InvestEnterAmountViewController: UIViewController, UITextFieldDelegate {
     var onContinue: ((InvestBuyDraft) -> Void)?
 
     private let selectedToken: TokenBalance
     private let fiatCode: String
-    private var paymentBalances: [TokenBalance]
-    private var selectedPaymentToken: TokenBalance?
+    private var selectedPaymentToken: TokenBalance
     private var unitPriceFiatPerToken: Double?
 
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let stack = UIStackView()
-
-    private let paymentAssetsTableView = UITableView(frame: .zero, style: .plain)
-    private var paymentAssetsTableHeightConstraint: NSLayoutConstraint?
 
     private let amountTitleLabel = UILabel()
     private let amountField = UITextField()
@@ -765,14 +857,12 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
     private let debounceDuration: TimeInterval = 0.15
 
     init(selectedToken: TokenBalance,
-         paymentTotalFiat _: Double,
+         selectedPaymentToken: TokenBalance,
          fiatCode: String,
-         paymentBalances: [TokenBalance],
          unitPriceFiatPerToken: Double?) {
         self.selectedToken = selectedToken
+        self.selectedPaymentToken = selectedPaymentToken
         self.fiatCode = fiatCode
-        self.paymentBalances = paymentBalances
-        self.selectedPaymentToken = paymentBalances.first
         self.unitPriceFiatPerToken = unitPriceFiatPerToken
         super.init(nibName: nil, bundle: nil)
     }
@@ -785,7 +875,7 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
 
-        title = NSLocalizedString("ui_invertir_payment_method_title", comment: "Invertir payment method title")
+        title = NSLocalizedString("ui_invertir_buy_amount_title", comment: "Invertir buy amount title")
 
         configureLayout()
         configureKeyboardBehavior()
@@ -804,19 +894,8 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         TooltipSource.hideAll()
     }
 
-    func updatePaymentBalances(_ balances: [TokenBalance], totalFiat _: Double) {
-        paymentBalances = balances
-        if let current = selectedPaymentToken,
-           let match = balances.first(where: { $0.address == current.address }) {
-            selectedPaymentToken = match
-        } else {
-            selectedPaymentToken = balances.first
-        }
-
-        let height = CGFloat(paymentBalances.count) * paymentAssetsTableView.rowHeight
-        paymentAssetsTableHeightConstraint?.constant = max(0, height)
-        paymentAssetsTableView.reloadData()
-        applySelectedPaymentSelection(animated: false)
+    func updateSelectedPaymentToken(_ token: TokenBalance) {
+        selectedPaymentToken = token
         recompute()
     }
 
@@ -851,8 +930,6 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
             stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -24)
         ])
-
-        configurePaymentAssetsTable()
 
         amountTitleLabel.setStyle(.caption1Medium)
         amountTitleLabel.textColor = .labelSecondary
@@ -924,9 +1001,6 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
             continueButton.heightAnchor.constraint(equalToConstant: 48)
         ])
 
-        stack.addArrangedSubview(paymentAssetsTableView)
-        stack.addArrangedSubview(spacer(12))
-
         stack.addArrangedSubview(amountTitleLabel)
         stack.addArrangedSubview(amountField)
         stack.addArrangedSubview(amountErrorLabel)
@@ -958,34 +1032,8 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         amountField.inputAccessoryView = keyboardToolbar
     }
 
-    private func configurePaymentAssetsTable() {
-        paymentAssetsTableView.translatesAutoresizingMaskIntoConstraints = false
-        paymentAssetsTableView.backgroundColor = .backgroundPrimary
-        paymentAssetsTableView.separatorColor = .separator
-        paymentAssetsTableView.rowHeight = 64
-        paymentAssetsTableView.estimatedRowHeight = 64
-        paymentAssetsTableView.isScrollEnabled = false
-        paymentAssetsTableView.allowsSelection = true
-        paymentAssetsTableView.tableFooterView = UIView()
-        paymentAssetsTableView.register(SelectAssetRowCell.self, forCellReuseIdentifier: SelectAssetRowCell.reuseID)
-        paymentAssetsTableView.dataSource = self
-        paymentAssetsTableView.delegate = self
-
-        let height = CGFloat(paymentBalances.count) * paymentAssetsTableView.rowHeight
-        paymentAssetsTableHeightConstraint = paymentAssetsTableView.heightAnchor.constraint(equalToConstant: max(0, height))
-        paymentAssetsTableHeightConstraint?.isActive = true
-    }
-
     private func configureInitialValues() {
-        assetSymbolLabel.text = selectedToken.symbol
-        applySelectedPaymentSelection(animated: false)
-    }
-
-    private func applySelectedPaymentSelection(animated: Bool) {
-        guard let selected = selectedPaymentToken else { return }
-        guard let idx = paymentBalances.firstIndex(where: { $0.address == selected.address }) else { return }
-        let indexPath = IndexPath(row: idx, section: 0)
-        paymentAssetsTableView.selectRow(at: indexPath, animated: animated, scrollPosition: .none)
+        assetSymbolLabel.text = selectedToken.invertirDisplaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     }
 
     private func spacer(_ height: CGFloat) -> UIView {
@@ -1009,7 +1057,7 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
     }
 
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        return true
+        true
     }
 
     @objc private func didTapKeyboardDone() {
@@ -1035,13 +1083,6 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
 
         assetPriceLabel.text = "Precio: \(formatFiat(unitPrice, code: fiatCode))"
 
-        guard let paymentToken = selectedPaymentToken else {
-            amountErrorLabel.text = "Seleccioná un token para pagar"
-            amountErrorLabel.isHidden = false
-            quantityValueLabel.text = "—"
-            return nil
-        }
-
         guard let amountFiat = parseUserFiatAmount(amountField.text),
               amountFiat > 0
         else {
@@ -1049,7 +1090,7 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
             return nil
         }
 
-        if amountFiat > paymentToken.fiatValue + 0.000_000_1 {
+        if amountFiat > selectedPaymentToken.fiatValue + 0.000_000_1 {
             amountErrorLabel.text = "Saldo insuficiente"
             amountErrorLabel.isHidden = false
             quantityValueLabel.text = "—"
@@ -1057,12 +1098,13 @@ final class InvestEnterAmountViewController: UIViewController, UITextFieldDelega
         }
 
         let qty = amountFiat / unitPrice
-        quantityValueLabel.text = "\(formatNumber5(qty)) \(selectedToken.symbol)"
+        let symbolUpper = selectedToken.invertirDisplaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        quantityValueLabel.text = "\(formatNumber5(qty)) \(symbolUpper)"
 
-        let remaining = max(0, paymentToken.fiatValue - amountFiat)
+        let remaining = max(0, selectedPaymentToken.fiatValue - amountFiat)
         let draft = InvestBuyDraft(
             selectedToken: selectedToken,
-            savingsTotalFiat: paymentToken.fiatValue,
+            savingsTotalFiat: selectedPaymentToken.fiatValue,
             investAmountFiat: amountFiat,
             unitPriceFiatPerToken: unitPrice,
             buyQuantity: qty,
@@ -1127,51 +1169,6 @@ extension InvestEnterAmountViewController {
     }
 }
 
-// MARK: - Payment assets table (Savings + Money market)
-
-extension InvestEnterAmountViewController: UITableViewDataSource {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        paymentBalances.count
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let item = paymentBalances[indexPath.row]
-        let cell = tableView.dequeueReusableCell(withIdentifier: SelectAssetRowCell.reuseID, for: indexPath) as! SelectAssetRowCell
-        cell.setSymbol(item.symbol)
-        cell.setChain("")
-        cell.setFiat(item.fiatBalance)
-        cell.setAmount(item.balanceFormatted5)
-        cell.accessoryType = (item.address == selectedPaymentToken?.address) ? .checkmark : .none
-
-        let normalized = item.category
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-        if normalized == "moneymarket" || normalized == "savings" {
-            cell.setBadge(text: "3.75%", backgroundColor: .success)
-        } else if normalized == "stablecoin" || normalized == "stablecoins" {
-            cell.setBadge(text: nil)
-        } else {
-            cell.setBadge(text: nil)
-        }
-
-        if let image = item.image {
-            cell.setImage(image)
-        } else {
-            cell.setImage(with: item.imageURL, placeholder: UIImage(named: "ico-token-placeholder")!)
-        }
-        return cell
-    }
-}
-
-extension InvestEnterAmountViewController: UITableViewDelegate {
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        selectedPaymentToken = paymentBalances[indexPath.row]
-        tableView.reloadData()
-        recompute()
-    }
-}
-
 // MARK: - Invest (Comprar) Flow - Screen 3
 
 /// Screen 3: confirmation of the purchase (stage 1: stubbed execution).
@@ -1184,8 +1181,6 @@ final class InvestConfirmViewController: UIViewController {
     private let contentView = UIView()
     private let stack = UIStackView()
 
-    private let titleLabel = UILabel()
-
     private let whatTitleLabel = UILabel()
     private let whatValueLabel = UILabel()
 
@@ -1194,9 +1189,6 @@ final class InvestConfirmViewController: UIViewController {
 
     private let qtyTitleLabel = UILabel()
     private let qtyValueLabel = UILabel()
-
-    private let remainingTitleLabel = UILabel()
-    private let remainingValueLabel = UILabel()
 
     private let buyButton = UIButton(type: .system)
 
@@ -1212,7 +1204,7 @@ final class InvestConfirmViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .backgroundPrimary
-        title = NSLocalizedString("ui_invertir_confirm_title", comment: "Invertir confirm title")
+        title = NSLocalizedString("ui_review_title", comment: "Review title")
         configureLayout()
         configureValues()
     }
@@ -1248,19 +1240,15 @@ final class InvestConfirmViewController: UIViewController {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -24)
         ])
 
-        titleLabel.setStyle(.title3)
-        titleLabel.text = "Revisá tu compra"
-
-        for label in [whatTitleLabel, costTitleLabel, qtyTitleLabel, remainingTitleLabel] {
+        for label in [whatTitleLabel, costTitleLabel, qtyTitleLabel] {
             label.setStyle(.caption1Medium)
             label.textColor = .labelSecondary
         }
         whatTitleLabel.text = "Vas a comprar"
-        costTitleLabel.text = "Costo"
+        costTitleLabel.text = "Monto"
         qtyTitleLabel.text = "Cantidad"
-        remainingTitleLabel.text = "Te quedan en ahorros"
 
-        for label in [whatValueLabel, costValueLabel, qtyValueLabel, remainingValueLabel] {
+        for label in [whatValueLabel, costValueLabel, qtyValueLabel] {
             label.setStyle(.title3)
             label.textColor = .labelPrimary
             label.numberOfLines = 0
@@ -1271,9 +1259,6 @@ final class InvestConfirmViewController: UIViewController {
         NSLayoutConstraint.activate([
             buyButton.heightAnchor.constraint(equalToConstant: 48)
         ])
-
-        stack.addArrangedSubview(titleLabel)
-        stack.addArrangedSubview(spacer(18))
 
         stack.addArrangedSubview(whatTitleLabel)
         stack.addArrangedSubview(whatValueLabel)
@@ -1286,9 +1271,6 @@ final class InvestConfirmViewController: UIViewController {
         stack.addArrangedSubview(qtyTitleLabel)
         stack.addArrangedSubview(qtyValueLabel)
         stack.addArrangedSubview(spacer(10))
-
-        stack.addArrangedSubview(remainingTitleLabel)
-        stack.addArrangedSubview(remainingValueLabel)
         stack.addArrangedSubview(spacer(20))
 
         stack.addArrangedSubview(buyButton)
@@ -1302,10 +1284,10 @@ final class InvestConfirmViewController: UIViewController {
     }
 
     private func configureValues() {
-        whatValueLabel.text = draft.selectedToken.symbol
+        let symbolUpper = draft.selectedToken.invertirDisplaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        whatValueLabel.text = symbolUpper
         costValueLabel.text = formatFiat(draft.investAmountFiat, code: draft.fiatCode)
-        qtyValueLabel.text = "\(formatNumber5(draft.buyQuantity)) \(draft.selectedToken.symbol)"
-        remainingValueLabel.text = formatFiat(draft.remainingSavingsFiat, code: draft.fiatCode)
+        qtyValueLabel.text = "\(formatNumber5(draft.buyQuantity)) \(symbolUpper)"
     }
 
     @objc private func didTapBuy() {
@@ -1378,10 +1360,11 @@ final class InvestPurchaseInProgressViewController: UIViewController {
 final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationControllerDelegate {
     private weak var presenter: UIViewController?
     private weak var navigationController: UINavigationController?
+    private weak var selectPaymentMethodViewController: InvestSelectPaymentMethodViewController?
     private weak var enterAmountViewController: InvestEnterAmountViewController?
 
-    private var paymentTotalFiat: Double = 0
     private var paymentBalances: [TokenBalance] = []
+    private var selectedPaymentToken: TokenBalance?
     private var balancesObserver: NSObjectProtocol?
     private var fallbackBalancesTask: URLSessionTask?
     private var fallbackMultiTasks: [URLSessionTask] = []
@@ -1397,7 +1380,7 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
             // Markets list is provided by whitelist; payment balances are loaded separately.
         }
         s1.onTokenSelected = { [weak self] token, unitPrice in
-            self?.showEnterAmount(selectedToken: token, unitPriceFiatPerToken: unitPrice)
+            self?.showSelectPaymentMethod(selectedToken: token, unitPriceFiatPerToken: unitPrice)
         }
 
         let nav = UINavigationController(rootViewController: s1)
@@ -1413,12 +1396,48 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         applyFromCacheOrFetchIfNeeded()
     }
 
-    private func showEnterAmount(selectedToken: TokenBalance, unitPriceFiatPerToken: Double?) {
+    func startWithToken(_ token: TokenBalance, unitPriceFiatPerToken: Double?) {
+        let s2 = InvestSelectPaymentMethodViewController(paymentBalances: paymentBalances)
+        selectPaymentMethodViewController = s2
+        s2.onPaymentSelected = { [weak self] paymentToken in
+            self?.selectedPaymentToken = paymentToken
+            self?.showEnterAmount(selectedToken: token,
+                                  selectedPaymentToken: paymentToken,
+                                  unitPriceFiatPerToken: unitPriceFiatPerToken)
+        }
+
+        let nav = UINavigationController(rootViewController: s2)
+        nav.modalPresentationStyle = .pageSheet
+        if #unavailable(iOS 15) {
+            nav.navigationBar.backgroundColor = .backgroundSecondary
+        }
+        nav.presentationController?.delegate = self
+        presenter?.present(nav, animated: true)
+        navigationController = nav
+
+        subscribeToBalances()
+        applyFromCacheOrFetchIfNeeded()
+    }
+
+    private func showSelectPaymentMethod(selectedToken: TokenBalance, unitPriceFiatPerToken: Double?) {
+        let s2 = InvestSelectPaymentMethodViewController(paymentBalances: paymentBalances)
+        selectPaymentMethodViewController = s2
+        s2.onPaymentSelected = { [weak self] paymentToken in
+            self?.selectedPaymentToken = paymentToken
+            self?.showEnterAmount(selectedToken: selectedToken,
+                                  selectedPaymentToken: paymentToken,
+                                  unitPriceFiatPerToken: unitPriceFiatPerToken)
+        }
+        navigationController?.pushViewController(s2, animated: true)
+    }
+
+    private func showEnterAmount(selectedToken: TokenBalance,
+                                 selectedPaymentToken: TokenBalance,
+                                 unitPriceFiatPerToken: Double?) {
         let fiatCode = AppSettings.selectedFiatCode
         let s2 = InvestEnterAmountViewController(selectedToken: selectedToken,
-                                                 paymentTotalFiat: paymentTotalFiat,
+                                                 selectedPaymentToken: selectedPaymentToken,
                                                  fiatCode: fiatCode,
-                                                 paymentBalances: paymentBalances,
                                                  unitPriceFiatPerToken: unitPriceFiatPerToken)
         enterAmountViewController = s2
         s2.onContinue = { [weak self] draft in
@@ -1431,7 +1450,7 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         let s3 = InvestConfirmViewController(draft: draft)
         s3.onPurchase = { [weak self] in
             self?.createBuyTransactionRequest(draft: draft)
-            self?.showInProgress()
+            self?.showSubmittedSuccess(draft: draft)
         }
         navigationController?.pushViewController(s3, animated: true)
     }
@@ -1442,6 +1461,7 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
             return
         }
         let vaultEvmAddress = selected.addressValue.checksummed
+        let tokenChainId = draft.selectedToken.chainId ?? selected.chain?.id
 
         let notes =
             "investAmountFiat=\(draft.investAmountFiat);" +
@@ -1449,9 +1469,10 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
             " fiatCode=\(draft.fiatCode);" +
             " buyQuantity=\(draft.buyQuantity)"
 
+        let rawSymbol = draft.selectedToken.tokenSymbol ?? draft.selectedToken.symbol
         let payload = CreateTransactionRequestBody(
             transactionType: .buy,
-            currency: draft.selectedToken.symbol,
+            currency: rawSymbol,
             amount: max(0, draft.buyQuantity),
             requestStatus: .requested,
             destinationAddress: nil,
@@ -1461,7 +1482,7 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         let service = TransactionRequestsService(authRepository: App.shared.authRepository, logger: LogService.shared)
         service.createTransactionRequestForCurrentSession(
             vaultEvmAddress: vaultEvmAddress,
-            chainId: selected.chain?.id,
+            chainId: tokenChainId,
             payload: payload
         ) { result in
             switch result {
@@ -1473,14 +1494,31 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         }
     }
 
-    private func showInProgress() {
-        let vc = InvestPurchaseInProgressViewController()
-        vc.onFinish = { [weak self] in
+    private func showSubmittedSuccess(draft: InvestBuyDraft) {
+        let qty = formatNumber5(draft.buyQuantity)
+        let symbolUpper = draft.selectedToken.invertirDisplaySymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let body = String(
+            format: NSLocalizedString(
+                "ui_invertir_buy_request_created_body_format",
+                comment: "Invertir buy request created body"
+            ),
+            qty,
+            symbolUpper
+        )
+
+        let successVC = SuccessViewController(
+            titleText: NSLocalizedString("ui_tx_queued_title", comment: "Title shown after submitting a transaction that is queued"),
+            bodyText: body,
+            primaryAction: NSLocalizedString("button_done", comment: "Done button title"),
+            secondaryAction: nil,
+            trackingEvent: nil
+        )
+        successVC.onDone = { [weak self] _ in
             self?.navigationController?.dismiss(animated: true) { [weak self] in
                 self?.onDismiss?()
             }
         }
-        navigationController?.pushViewController(vc, animated: true)
+        navigationController?.show(successVC, sender: self)
     }
 
     private func subscribeToBalances() {
@@ -1496,20 +1534,14 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
             guard balances.contains(where: { $0.balanceValue.value > 0 }) else { return }
 
             LatestBalancesCache.shared.update(balances: balances)
-            let payments = self.paymentBalancesFromAllBalances(balances)
-            self.paymentBalances = payments
-            self.paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
-            self.enterAmountViewController?.updatePaymentBalances(payments, totalFiat: self.paymentTotalFiat)
+            self.refreshPaymentBalances(from: balances)
         }
     }
 
     private func applyFromCacheOrFetchIfNeeded() {
         let cached = LatestBalancesCache.shared.retrieve(chainId: nil) ?? []
         if !cached.isEmpty {
-            let payments = paymentBalancesFromAllBalances(cached)
-            paymentBalances = payments
-            paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
-            enterAmountViewController?.updatePaymentBalances(payments, totalFiat: paymentTotalFiat)
+            refreshPaymentBalances(from: cached)
             return
         }
         fetchBalancesForCache()
@@ -1537,16 +1569,13 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
                 guard case .success(let summary) = result else { return }
                 let balances = summary.items.map { TokenBalance($0, code: AppSettings.selectedFiatCode, chainId: chainId) }
                 LatestBalancesCache.shared.update(balances: balances)
-                let payments = self.paymentBalancesFromAllBalances(balances)
-                self.paymentBalances = payments
-                self.paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
-                self.enterAmountViewController?.updatePaymentBalances(payments, totalFiat: self.paymentTotalFiat)
+                self.refreshPaymentBalances(from: balances)
             }
         }
     }
 
     private func fetchMultiVaultBalancesForCache() {
-        guard let safes = try? Safe.getAll() else { return }
+        guard let safes = try? Safe.getActiveGroup() else { return }
         let deployedSafes = safes.filter { $0.safeStatus == .deployed }
         if deployedSafes.isEmpty { return }
 
@@ -1583,10 +1612,7 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
             guard !results.isEmpty else { return }
             let aggregated = MultiVaultBalancesAggregator.aggregate(results, fiatCode: AppSettings.selectedFiatCode)
             LatestBalancesCache.shared.update(balances: aggregated.balances)
-            let payments = self.paymentBalancesFromAllBalances(aggregated.balances)
-            self.paymentBalances = payments
-            self.paymentTotalFiat = payments.reduce(0) { $0 + $1.fiatValue }
-            self.enterAmountViewController?.updatePaymentBalances(payments, totalFiat: self.paymentTotalFiat)
+            self.refreshPaymentBalances(from: aggregated.balances)
         }
     }
 
@@ -1597,21 +1623,38 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         fallbackMultiTasks.removeAll()
     }
 
+    private func refreshPaymentBalances(from balances: [TokenBalance]) {
+        let payments = paymentBalancesFromAllBalances(balances)
+        paymentBalances = payments
+        selectPaymentMethodViewController?.updatePaymentBalances(payments)
+
+        if let selected = selectedPaymentToken,
+           let updated = payments.first(where: { $0.address == selected.address }) {
+            selectedPaymentToken = updated
+            enterAmountViewController?.updateSelectedPaymentToken(updated)
+        }
+    }
+
     private func paymentBalancesFromAllBalances(_ balances: [TokenBalance]) -> [TokenBalance] {
         let nonZero = balances.filter { $0.balanceValue.value > 0 }
         let filtered = nonZero.filter { item in
             let sectionId = TokenCategory.sectionId(for: item.category)
-            return sectionId == TokenCategory.sectionUSD || sectionId == TokenCategory.sectionMoneyMarket
+            return sectionId == TokenCategory.sectionUSD
         }
         return filtered.sorted { lhs, rhs in
-            func rank(_ item: TokenBalance) -> Int {
-                TokenCategory.sectionId(for: item.category) == TokenCategory.sectionMoneyMarket ? 1 : 0
-            }
-            let lr = rank(lhs), rr = rank(rhs)
-            if lr != rr { return lr < rr }
             if lhs.fiatValue != rhs.fiatValue { return lhs.fiatValue > rhs.fiatValue }
             return lhs.symbol.localizedCaseInsensitiveCompare(rhs.symbol) == .orderedAscending
         }
+    }
+
+    private func formatNumber5(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 5
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.5f", value)
     }
 
     func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {

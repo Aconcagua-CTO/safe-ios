@@ -45,7 +45,8 @@ class TokenWhitelistRepositoryImpl: TokenWhitelistRepository {
                         let nonEmptySource = entries.filter { !($0.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
                         let nonEmptyParam = entries.filter { !($0.priceSourceParam ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
                         let nonEmptyWrapLabel = entries.filter { !($0.wrapLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
-                        LogService.shared.debug("[TokenWhitelistRepository] sync received entries=\(entries.count) wrapLabelNonEmpty=\(nonEmptyWrapLabel) priceSourceNonEmpty=\(nonEmptySource) priceSourceParamNonEmpty=\(nonEmptyParam) force=\(force) network=\(network ?? "nil")")
+                        let wrapLabelPriorityNonNull = entries.filter { $0.wrapLabelPriority != nil }.count
+                        LogService.shared.debug("[TokenWhitelistRepository] sync received entries=\(entries.count) wrapLabelNonEmpty=\(nonEmptyWrapLabel) wrapLabelPriorityNonNull=\(wrapLabelPriorityNonNull) priceSourceNonEmpty=\(nonEmptySource) priceSourceParamNonEmpty=\(nonEmptyParam) force=\(force) network=\(network ?? "nil")")
                         let counts = TokenWhitelist.sync(entries: entries)
                         LogService.shared.info("[TokenWhitelist] Synced \(entries.count) tokens (same: \(counts.same), new: \(counts.new), removed: \(counts.removed))")
                         NotificationCenter.default.post(name: .tokenWhitelistUpdated, object: nil)

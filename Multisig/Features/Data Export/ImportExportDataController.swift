@@ -278,9 +278,8 @@ class ImportExportDataController {
                 }
                 
             case .walletConnect:
-                data.wallet = key.wallet?.id
-                data.connectionURL = key.walletConnections?.first?.connectionURL
-                data.connectionChainId = key.walletConnections?.first?.chainId
+                // Legacy WalletConnect-for-keys export is intentionally removed.
+                continue
                 
             case .ledgerNanoX:
                 guard let rawMetadata = key.metadata,
@@ -449,14 +448,7 @@ class ImportExportDataController {
         // keys
         let keys: [SerializedDataFile.SerializedKey] = file.data.keys
         
-        do {
-            if keys.contains(where: { $0.type == KeyType.walletConnect.rawValue }) {
-                registryLoader = AppRegistryLoader()
-                try await registryLoader.loadRegistry()
-            }
-        } catch {
-            logs.append("Could not load wallet connect wallet registry: \(error)")
-        }
+        // Legacy WalletConnect-for-keys import path removed.
         
         
         for key in keys {
@@ -518,28 +510,8 @@ class ImportExportDataController {
                     }
                     
                 case .walletConnect:
-                    if let wallet = key.wallet,
-                        let connectionURL = key.connectionURL,
-                        let connectionChainId = key.connectionChainId,
-                        let cdEntry = CDWCAppRegistryEntry.entry(by: wallet),
-                        let webConnURL = (WebConnectionURL(stringV2: connectionURL) ?? WebConnectionURL(string: connectionURL))
-                    {
-                        let webEntry = WCAppRegistryRepository().entry(from: cdEntry)
-                        let webConn = WebConnectionController.shared.createWalletConnection(from: webConnURL, info: webEntry)
-                        webConn.chainId = Int(connectionChainId)
-                        didAdd = OwnerKeyController.importKey(connection: webConn, wallet: webEntry, name: name)
-                    } else if let wallet = key.wallet,
-                              let cdEntry = CDWCAppRegistryEntry.entry(by: wallet)
-                    {
-                        let webEntry = WCAppRegistryRepository().entry(from: cdEntry)
-                        didAdd = OwnerKeyController.importKey(connection: nil, wallet: webEntry, name: name, address: address)
-                    }
-                    
-                    if !didAdd {
-                        logs.append("Skipped key with name '\(key.name)' and address \(address): " +
-                                    "could not create valid wallet connect connection.")
-                        continue
-                    }
+                    logs.append("Skipped key with name '\(key.name)' and address \(address): WalletConnect owner keys are no longer supported.")
+                    continue
                 case .ledgerNanoX:
                     if let path = key.path, let uuid = key.uuid {
                         didAdd = OwnerKeyController.importKey(

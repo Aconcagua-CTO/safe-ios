@@ -56,6 +56,18 @@ class AssetsViewController: ContainerViewController {
             selector: #selector(updateBalances),
             name: .balanceUpdated,
             object: nil)
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(vaultSyncStarted),
+            name: .vaultSyncStarted,
+            object: nil)
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(vaultSyncCompleted),
+            name: .vaultSyncCompleted,
+            object: nil)
 
         NotificationCenter.default.addObserver(
             self,
@@ -196,6 +208,20 @@ class AssetsViewController: ContainerViewController {
     
     @objc private func balanceLoading() {
         totalBalanceView.loading = true
+    }
+
+    @objc private func vaultSyncStarted() {
+        #if DEBUG
+        LogService.shared.debug("[AssetsViewController] Received vaultSyncStarted notification")
+        #endif
+        totalBalanceView.vaultSyncing = true
+    }
+
+    @objc private func vaultSyncCompleted() {
+        #if DEBUG
+        LogService.shared.debug("[AssetsViewController] Received vaultSyncCompleted notification")
+        #endif
+        totalBalanceView.vaultSyncing = false
     }
     
     @objc private func updateBalances(_ notification: Notification) {

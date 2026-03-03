@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import WalletConnectSwift
 import WalletConnectSign
 
 fileprivate protocol SectionItem {}
@@ -27,7 +26,7 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
         case dapp(String)
 
         enum WalletConnect: SectionItem {
-            case activeSession(Any)
+            case activeSession(WalletConnectSign.Session)
             case noSessions(String)
         }
 
@@ -39,7 +38,7 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
     @IBAction func scan(_ sender: Any) {
         let vc = QRCodeScannerViewController()
         vc.scannedValueValidator = { value in
-            guard (value.starts(with: "wc:") || value.starts(with: "safe-wc:")) else {
+            guard value.starts(with: "wc:") else {
                 return .failure(GSError.InvalidWalletConnectQRCode())
             }
             return .success(value)
@@ -83,16 +82,6 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
             var wcSessionItems: [SectionItem] = []
             do {
                 if let selectedSafe = try? Safe.getSelected() {
-                    wcSessionItems = try WCSession.getAll().compactMap {
-                        guard $0.session != nil,
-                              let session = try? Session.from($0),
-                              session.walletInfo!.accounts.contains(selectedSafe.address!) else {
-                            return nil
-                        }
-
-                        return Section.WalletConnect.activeSession($0)
-                    }
-
                     let walletConnectV2Sessions = WalletConnectManager.shared.getSessions(topics: selectedSafe.walletConnectSessiontopics)
 
                     wcSessionItems.append(contentsOf: walletConnectV2Sessions.compactMap {
@@ -163,38 +152,14 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
             return tableView.basicCell(
                 name: name, indexPath: indexPath, disclosureImage: nil, canSelect: false)
 
-        case Section.WalletConnect.activeSession(let wcSession):
-            if let v1Session = wcSession as? WCSession {
-                switch v1Session.status {
-                case .connecting:
-                    return tableView.detailedCell(
-                        imageUrl: nil,
-                        header: "Connecting...",
-                        description: nil,
-                        indexPath: indexPath,
-                        canSelect: false,
-                        placeholderImage: UIImage(named: "ico-empty-circle"))
-                case .connected:
-                    let session = try! Session.from(v1Session)
-                    return tableView.detailedCell(
-                        imageUrl: session.dAppInfo.peerMeta.icons.isEmpty ? nil : session.dAppInfo.peerMeta.icons[0],
-                        header: session.dAppInfo.peerMeta.name,
-                        description: session.dAppInfo.peerMeta.description,
-                        indexPath: indexPath,
-                        canSelect: false,
-                        placeholderImage: #imageLiteral(resourceName: "ico-empty-circle"))
-                }
-            } else if let v2Session = wcSession as? WalletConnectSign.Session {
-                return tableView.detailedCell(
-                    imageUrl: v2Session.peer.icons.isEmpty ? nil : URL(string: v2Session.peer.icons[0]),
-                    header: v2Session.peer.name,
-                    description: v2Session.peer.description,
-                    indexPath: indexPath,
-                    canSelect: false,
-                    placeholderImage: #imageLiteral(resourceName: "ico-empty-circle"))
-            } else {
-                return UITableViewCell()
-            }
+        case Section.WalletConnect.activeSession(let session):
+            return tableView.detailedCell(
+                imageUrl: session.peer.icons.isEmpty ? nil : URL(string: session.peer.icons[0]),
+                header: session.peer.name,
+                description: session.peer.description,
+                indexPath: indexPath,
+                canSelect: false,
+                placeholderImage: #imageLiteral(resourceName: "ico-empty-circle"))
         case Section.Dapp.dapp(let dapp):
             return tableView.detailedCell(
                 imageUrl: dapp.logo,
@@ -220,11 +185,7 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
         let item = sections[indexPath.section].items[indexPath.row]
 
         if case Section.WalletConnect.activeSession(let session) = item {
-            if let v1Session = session as? WCSession {
-                WalletConnectSafesServerController.shared.disconnect(topic: v1Session.topic!)
-            } else if let v2Session = session as? WalletConnectSign.Session {
-                WalletConnectManager.shared.disconnect(session: v2Session)
-            }
+            WalletConnectManager.shared.disconnect(session: session)
         }
     }
 
@@ -253,25 +214,12 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
         return view
     }
 
-    func tableView(_ tableView: UITableView, viewForFooterInSection _section: Int) -> UIView? {
-        guard case Section.walletConnect(_) = sections[_section].section else {
-            return nil
-        }
-        let view = tableView.dequeueHeaderFooterView(ExternalLinkHeaderFooterView.self)
-        view.set(label: "How to connect a dapp via WalletConnect on Safe{Wallet} Mobile?")
-        view.set(url: App.configuration.help.connectDappOnMobileURL)
-        return view
-    }
-
     func tableView(_ tableView: UITableView, heightForHeaderInSection _section: Int) -> CGFloat {
         return BasicHeaderView.headerHeight
     }
 
     func tableView(_ tableView: UITableView, heightForFooterInSection _section: Int) -> CGFloat {
-        guard case Section.walletConnect(_) = sections[_section].section else {
-            return 0
-        }
-        return UITableView.automaticDimension
+        0
     }
 
     func tableView(_ tableView: UITableView, titleForDeleteConfirmationButtonForRowAt indexPath: IndexPath) -> String? {
@@ -281,32 +229,11 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
 
 extension DappsViewController: QRCodeScannerViewControllerDelegate {
     func scannerViewControllerDidScan(_ url: String) {
-        if url.starts(with: "safe-wc:") {
-            if App.configuration.services.environment.isDevelopment,
-               FirebaseRemoteConfig.shared.boolValue(key: .connectToWebDiscontinued) != true
-            {
-                dismiss(animated: true) {
-                    let route = NavigationRoute.connectToWeb(url)
-                    CompositeNavigationRouter.shared.navigate(to: route)
-                }
-            } else {
-                // Connect-to-Web is development-only; don't allow scanning to route into it in staging/production.
-                App.shared.snackbar.show(message: NSLocalizedString("ui_ctw_dev_build_only_message", comment: "Connect to web dev builds only message"))
-                dismiss(animated: true, completion: nil)
-            }
+        if WalletConnectManager.shared.canConnect(url: url) {
+            WalletConnectManager.shared.pairClient(url: url, trackingEvent: .dappConnectedWithScanButton)
+            dismiss(animated: true, completion: nil)
         } else {
-            if WalletConnectManager.shared.canConnect(url: url) {
-                WalletConnectManager.shared.pairClient(url: url, trackingEvent: .dappConnectedWithScanButton)
-                dismiss(animated: true, completion: nil)
-            } else {
-                do {
-                    try WalletConnectSafesServerController.shared.connect(url: url)
-                    WalletConnectSafesServerController.shared.dappConnectedTrackingEvent = .dappConnectedWithScanButton
-                    dismiss(animated: true, completion: nil)
-                } catch {
-                    App.shared.snackbar.show(message: error.localizedDescription)
-                }
-            }
+            App.shared.snackbar.show(error: GSError.InvalidWalletConnectQRCode())
         }
     }
 

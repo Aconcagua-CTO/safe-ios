@@ -93,15 +93,19 @@ enum MultiVaultTransferAssetsAggregator {
                                                fiatBalance: String(aggregatedFiat),
                                                fiatConversion: String(seed.fiatConversion),
                                                code: fiatCode,
-                                               category: seed.category)
+                                               category: seed.category,
+                                               tokenSymbol: seed.tokenSymbol,
+                                               chainId: seed.chainId)
             
-            let chain = preferred.safe.chain ?? Chain.by(aggregate.chainId)
+            // Keep chain metadata tied to the aggregate key (token+chain), not the preferred safe object.
+            // Safes can share the same address across chains, so relying on preferred.safe.chain may mismatch.
+            let chain = Chain.by(aggregate.chainId) ?? preferred.safe.chain
             let chainName = chain?.name ?? chain?.id ?? aggregate.chainId
             let badgeBackground = chain?.backgroundColor ?? UIColor.primary
             let badgeText = chain?.textColor ?? UIColor.primaryInverted ?? UIColor.label
             
             let selectable = TransferSelectableAsset(token: aggregatedToken,
-                                                     chainId: chain?.id ?? aggregate.chainId,
+                                                     chainId: aggregate.chainId,
                                                      chainName: chainName,
                                                      badgeBackgroundColor: badgeBackground,
                                                      badgeTextColor: badgeText,

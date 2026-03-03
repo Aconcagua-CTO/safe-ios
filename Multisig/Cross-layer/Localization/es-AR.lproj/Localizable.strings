@@ -7,3 +7,6 @@
 "ui_backup_do_now" = "Hacer backup ahora";
 "ui_backup_do_later" = "Hacerlo más tarde";
 "ui_tx_conflict_warning" = "Tenés una transacción y un rechazo. Ejecutar una reemplazará la otra";
+"ui_settings_app_section_title" = "Configuración";
+"ui_settings_about_advanced_title" = "Avanzado";
+"ui_walletconnect_legacy_removed_message" = "La integracion legacy de llaves WalletConnect ya no esta soportada.";

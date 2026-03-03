@@ -9,7 +9,6 @@
 import Foundation
 import CoreData
 import SafeWeb3
-import WalletConnectSwift
 
 // "address" -> name
 fileprivate var cachedNames = [String: String]()
@@ -62,17 +61,7 @@ extension KeyInfo {
     }
 
     var connectedAsDapp: Bool {
-        guard keyType == .walletConnect, let connections = walletConnections else { return false }
-        let result = !connections.isEmpty
-        return result
-    }
-
-    var walletConnections: [CDWCConnection]? {
-        connections?.compactMap { $0 as? CDWCConnection }
-            .filter {
-                $0.localPeer?.role == WebConnectionPeerRole.dapp.rawValue &&
-                        $0.remotePeer?.role == WebConnectionPeerRole.wallet.rawValue
-            }
+        false
     }
 
     struct LedgerKeyMetadata: Codable {
@@ -272,41 +261,6 @@ extension KeyInfo {
     }
 
     @discardableResult
-    static func `import`(connection: WebConnection, wallet: WCAppRegistryEntry?, name: String) throws -> KeyInfo? {
-        guard let address = connection.accounts.first else {
-            return nil
-        }
-
-        let context = App.shared.coreDataStack.viewContext
-
-        let fr = KeyInfo.fetchRequest().by(address: address)
-        let item: KeyInfo
-
-        if (try context.fetch(fr).first) != nil {
-            throw GSError.DuplicateKey()
-        } else {
-            item = KeyInfo(context: context)
-            item.name = name
-        }
-
-        item.address = address
-        item.keyID = "walletconnect:\(address.checksummed)"
-        item.keyType = .walletConnect
-
-        if let cdConnection = CDWCConnection.connection(by: connection.connectionURL.absoluteString) {
-            item.addToConnections(cdConnection)
-        }
-
-        if let wallet = wallet, let cdRegistryEntry = CDWCAppRegistryEntry.entry(by: wallet.id) {
-            item.wallet = cdRegistryEntry
-        }
-
-        item.save()
-
-        return item
-    }
-    
-    @discardableResult
     static func `import`(walletEntry wallet: WCAppRegistryEntry, address: Address, name: String) throws -> KeyInfo? {
         let context = App.shared.coreDataStack.viewContext
 
@@ -491,23 +445,6 @@ extension KeyInfo {
         item.save()
 
         return item
-    }
-
-    @discardableResult
-    static func update(keyInfo: KeyInfo, connection: WebConnection) throws -> KeyInfo? {
-        guard let address = connection.accounts.first else {
-            return nil
-        }
-
-        let context = App.shared.coreDataStack.viewContext
-
-        if let cdConnection = CDWCConnection.connection(by: connection.connectionURL.absoluteString) {
-            keyInfo.addToConnections(cdConnection)
-        }
-
-        keyInfo.save()
-
-        return keyInfo
     }
 
     /// Renames the key with a different name

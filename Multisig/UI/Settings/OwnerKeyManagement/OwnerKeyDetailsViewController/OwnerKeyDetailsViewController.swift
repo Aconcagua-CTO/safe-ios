@@ -7,11 +7,10 @@
 //
 
 import UIKit
-import WalletConnectSwift
 
 fileprivate protocol SectionItem {}
 
-class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserver, PasscodeProtecting {
+class OwnerKeyDetailsViewController: UITableViewController, PasscodeProtecting {
     // if not nil, then back button replaced with 'Done' button
     private var completion: (() -> Void)?
     
@@ -23,8 +22,6 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
 
     private var sections = [SectionItems]()
     private var addKeyController: DelegateKeyController!
-
-    private var connection: WebConnection?
 
     private var backupFlow: ModalBackupFlow!
 
@@ -128,12 +125,6 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
             selector: #selector(pop),
             name: .ownerKeyRemoved,
             object: nil)
-
-        connection = WebConnectionController.shared.walletConnection(keyInfo: keyInfo).first
-
-        if let connection = connection {
-            WebConnectionController.shared.attach(observer: self, to: connection)
-        }
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
@@ -312,11 +303,7 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
     private func keyTypeCell(type: KeyType, indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueCell(KeyTypeTableViewCell.self, for: indexPath)
         cell.set(name: type.name, iconName: type.badgeName)
-        if !(type == .walletConnect && keyInfo.connectedAsDapp) {
-            cell.setDisclosureImage(nil)
-        } else {
-            cell.setDisclosureImage(UIImage(named: "arrow"))
-        }
+        cell.setDisclosureImage(nil)
         cell.selectionStyle = .none
         return cell
     }
@@ -330,19 +317,6 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
         case Section.Name.name:
             let vc = EditOwnerKeyViewController(keyInfo: keyInfo)
             show(vc, sender: self)
-        case Section.Connected.connected:
-            if keyInfo.connectedAsDapp {
-                let alertController = DisconnectionConfirmationController.create(key: keyInfo)
-                
-                if let popoverPresentationController = alertController.popoverPresentationController {
-                    popoverPresentationController.sourceView = tableView
-                    popoverPresentationController.sourceRect = tableView.rectForRow(at: indexPath)
-                }
-                
-                present(alertController, animated: true)
-            } else {
-                self.connect(keyInfo: keyInfo)
-            }
         case Section.PushNotificationConfiguration.enabled:
             if AppConfiguration.FeatureToggles.securityCenter {
                 do {
@@ -378,16 +352,6 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
                         }
                     }
                 }
-            }
-        case Section.OwnerKeyType.type:
-            if keyInfo.keyType == .walletConnect && keyInfo.connectedAsDapp {
-                let detailsVC = WebConnectionDetailsViewController()
-                guard let webConnection = WebConnectionController.shared.walletConnection(keyInfo: keyInfo).first else {
-                    return
-                }
-                detailsVC.connection = webConnection
-                let vc = ViewControllerFactory.modal(viewController: detailsVC)
-                present(vc, animated: true)
             }
         default:
             break
@@ -450,32 +414,6 @@ class OwnerKeyDetailsViewController: UITableViewController, WebConnectionObserve
         return BasicHeaderView.headerHeight
     }
 
-    //TODO remove duplication
-    func connect(keyInfo: KeyInfo) {
-        let wcWallet = keyInfo.wallet.flatMap { WCAppRegistryRepository().entry(from: $0) }
-        let chain = Selection.current().safe?.chain ?? Chain.mainnetChain()
-        let walletConnectionVC = StartWalletConnectionViewController(wallet: wcWallet, chain: chain, keyInfo: keyInfo)
-        walletConnectionVC.onSuccess = { [weak self] connection in
-            guard let self = self else { return }
-            self.connection = connection
-            WebConnectionController.shared.attach(observer: self, to: connection)
-        }
-        let vc = ViewControllerFactory.pageSheet(viewController: walletConnectionVC, halfScreen: wcWallet != nil)
-        present(vc, animated: true)
-    }
-
-    func didUpdate(connection: WebConnection) {
-        self.connection = connection
-        if connection.status == .final {
-            self.connection = nil
-            WebConnectionController.shared.detach(observer: self)
-        }
-        reloadData()
-    }
-
-    deinit {
-        WebConnectionController.shared.detach(observer: self)
-    }
 }
 extension UITableView {
     func backupKeyCell(indexPath: IndexPath, onClick: (() -> ())? = nil) -> BackupKeyTableViewCell {

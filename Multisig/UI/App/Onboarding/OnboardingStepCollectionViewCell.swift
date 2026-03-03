@@ -44,6 +44,8 @@ class OnboardingStepCollectionViewCell: UICollectionViewCell {
                 descriptionLabel.setStyle(.body)
             }
         }
+        imageView.tintColor = .labelPrimary
+        // Vector images will render at full resolution when preserves-vector-representation is set in asset catalog
         imageView.image = step.image
     }
 

@@ -7,6 +7,8 @@
 //
 
 import Foundation
+import FirebaseAuth
+import FirebaseCore
 
 enum LeadProvisioningAction: String {
     case existingUser = "existing_user"
@@ -37,6 +39,7 @@ final class UserProvisioningService {
                 if let manufacturer = Self.parseCardManufacturer(from: data) {
                     AppSettings.leadCardManufacturer = manufacturer
                 }
+                Self.updateFirebaseDisplayNameIfNeeded(from: data)
                 #if DEBUG
                 let preview = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
                 LogService.shared.info("[UserProvisioning] sign-up-federated-auth OK. leadAction=\(leadAction.rawValue) bodyPreview=\(preview)")
@@ -49,6 +52,59 @@ final class UserProvisioningService {
                 completion(.failure(error))
             }
         }
+    }
+
+    private static func updateFirebaseDisplayNameIfNeeded(from data: Data) {
+        guard let candidate = parseDisplayNameCandidate(from: data) else { return }
+        let trimmedCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCandidate.isEmpty else { return }
+
+        guard FirebaseApp.app() != nil else {
+            LogService.shared.debug("[UserProvisioning] displayName not updated: Firebase not configured")
+            return
+        }
+
+        guard let user = Auth.auth().currentUser else {
+            LogService.shared.debug("[UserProvisioning] displayName not updated: no Firebase currentUser")
+            return
+        }
+
+        let existing = (user.displayName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard existing.isEmpty else {
+            LogService.shared.debug("[UserProvisioning] displayName not updated: already set (len=\(existing.count))")
+            return
+        }
+
+        DispatchQueue.main.async {
+            let changeRequest = user.createProfileChangeRequest()
+            changeRequest.displayName = trimmedCandidate
+            changeRequest.commitChanges { error in
+                if let error {
+                    LogService.shared.error("[UserProvisioning] Failed to set Firebase displayName", error: error)
+                    return
+                }
+                LogService.shared.info("[UserProvisioning] Firebase displayName set to '\(trimmedCandidate)'")
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .userProfileUpdated, object: nil)
+                }
+            }
+        }
+    }
+
+    private static func parseDisplayNameCandidate(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+            return nil
+        }
+        if let first = (json["firstName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !first.isEmpty {
+            return first
+        }
+        if let last = (json["lastName"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !last.isEmpty {
+            return last
+        }
+        return nil
     }
 
     private static func parseLeadAction(from data: Data) -> LeadProvisioningAction {

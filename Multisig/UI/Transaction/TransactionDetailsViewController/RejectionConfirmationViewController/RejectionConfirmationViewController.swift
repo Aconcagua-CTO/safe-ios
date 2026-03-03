@@ -82,8 +82,9 @@ class RejectionConfirmationViewController: UIViewController {
             return
         }
 
-        guard let rejectors = transaction.multisigInfo?.rejectorKeys() else {
-            assertionFailure()
+        let rejectors = remainingSignerKeysForRejection()
+        guard !rejectors.isEmpty else {
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_owner_key_available", comment: "No owner key available to sign transaction"))
             return
         }
 
@@ -103,6 +104,19 @@ class RejectionConfirmationViewController: UIViewController {
 
         let navigationController = UINavigationController(rootViewController: vc)
         present(navigationController, animated: true)
+    }
+
+    // tx-details may occasionally return an empty `signers` list; fallback to Safe owners in that case.
+    private func remainingSignerKeysForRejection() -> [KeyInfo] {
+        guard let multisigInfo = transaction.multisigInfo else { return [] }
+
+        let alreadyRejected = Set((multisigInfo.rejectors ?? []).map { $0.value.address })
+        let signersFromTxDetails = multisigInfo.signers.map { $0.value.address }
+        let safeOwnerAddresses = safe.ownersInfo?.map(\.address) ?? []
+        let signersSource = signersFromTxDetails.isEmpty ? safeOwnerAddresses : signersFromTxDetails
+        let remaining = signersSource.filter { !alreadyRejected.contains($0) }
+
+        return (try? KeyInfo.keys(addresses: remaining)) ?? []
     }
 
     @IBAction func learnMoreButtonTouched(_ sender: Any) {
@@ -125,7 +139,8 @@ class RejectionConfirmationViewController: UIViewController {
             }
 
         case .walletConnect:
-            rejectWithWalletConnect(rejectionTransaction, keyInfo: keyInfo)
+            App.shared.snackbar.show(error: GSError.error(description: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message")))
+            endLoading()
 
         case .ledgerNanoX:
             let request = SignRequest(title: NSLocalizedString("ui_tx_reject_title", comment: "Title for rejecting a transaction"),
@@ -196,22 +211,6 @@ class RejectionConfirmationViewController: UIViewController {
             }
             present(flow: keystoneSignFlow)
         }
-    }
-
-    private func rejectWithWalletConnect(_ transaction: Transaction, keyInfo: KeyInfo) {
-        guard presentedViewController == nil else { return }
-
-        let signVC = SignatureRequestToWalletViewController(transaction, keyInfo: keyInfo, chain: safe.chain!)
-        signVC.onSuccess = { [weak self] signature in
-            DispatchQueue.main.async {
-                self?.rejectAndCloseController(signature: signature)
-            }
-        }
-        signVC.onCancel = { [weak self] in
-            self?.endLoading()
-        }
-        let vc = ViewControllerFactory.pageSheet(viewController: signVC, halfScreen: true)
-        present(vc, animated: true)
     }
 
     private func startLoading() {

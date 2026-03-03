@@ -16,9 +16,11 @@ class AddOwnerKeyViewController: UITableViewController {
 
     var importKeyFlow: ImportKeyFlow!
     var generateKeyFlow: GenerateKeyFlow!
-    var walletConnectKeyFlow: WalletConnectKeyFlow!
     var socialKeyFlow: AddSocialKeyFlow!
     private var cardKeyFlow: AddKeyFlow?
+    private var tangemProvisioningCoordinator: TangemCardKeyProvisioningCoordinator?
+    private var userProvisioningService: UserProvisioningService?
+    private var isResolvingCardManufacturer = false
 
     enum Row {
         case social
@@ -184,14 +186,6 @@ class AddOwnerKeyViewController: UITableViewController {
             push(flow: generateKeyFlow)
             return
 
-        case .walletConnect:
-            walletConnectKeyFlow = WalletConnectKeyFlow { [weak self] _ in
-                self?.walletConnectKeyFlow = nil
-                self?.completion()
-            }
-            push(flow: walletConnectKeyFlow)
-            return
-
         case .hardware:
             let vc = ChooseHardwareWalletTableViewController()
             ViewControllerFactory.makeMultiLinesNavigationBar(vc)
@@ -202,17 +196,7 @@ class AddOwnerKeyViewController: UITableViewController {
             show(vc, sender: self)
             
         case .activateCard:
-            // Route by cached lead manufacturer.
-            let manufacturer = (AppSettings.leadCardManufacturer ?? "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-            if manufacturer == "tangem" {
-                startTangemActivationFlow()
-            } else if manufacturer == "burner" {
-                startBurnerActivationFlow()
-            } else {
-                presentCardKeyManufacturerChoice()
-            }
+            startCardKeyActivationFlow()
             
         case .social:
             socialKeyFlow = AddSocialKeyFlow { [weak self] _ in
@@ -220,6 +204,10 @@ class AddOwnerKeyViewController: UITableViewController {
                 self?.completion()
             }
             push(flow: socialKeyFlow)
+            return
+
+        case .walletConnect:
+            App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message"))
             return
         }
     }
@@ -229,18 +217,43 @@ class AddOwnerKeyViewController: UITableViewController {
     }
 
     private func startTangemActivationFlow() {
-        let vc = TangemActivationViewController(service: .shared)
-        vc.onActivationComplete = { [weak self] info in
-            guard let self else { return }
-            // Skip re-scan: we already have cardId + wallet pubkey from activation.
-            let flow = TangemKeyFlow(activatedCardInfo: info, service: TangemService.shared) { [weak self] _ in
+        let coordinator = TangemCardKeyProvisioningCoordinator(
+            presentIntro: { [weak self] introVC in
+                guard let self else { return }
+                self.show(introVC, sender: self)
+            },
+            presentActivation: { [weak self] activationVC in
+                guard let self else { return }
+                self.show(activationVC, sender: self)
+            },
+            presentPostActivationIntro: { [weak self] introVC in
+                guard let self else { return }
+                self.show(introVC, sender: self)
+            },
+            presentImportFlow: { [weak self] flow in
+                guard let self else { return }
+                self.cardKeyFlow = flow
+                self.push(flow: flow)
+            },
+            configureImportFlow: { flow in
+                // Keep a dedicated second scan after activation, matching post-login behavior.
+                flow.skipIntro = true
+                flow.skipWalletSelection = true
+                // Settings activation should finish after importing the owner key.
+                // Skip post-import delegate setup/signing screens to avoid entering a signing flow here.
+                flow.skipPostImportFlow = true
+            },
+            onImportCompletion: { [weak self] _ in
                 self?.cardKeyFlow = nil
+                self?.tangemProvisioningCoordinator = nil
                 self?.completion()
+            },
+            onActivationCancelled: { [weak self] in
+                self?.tangemProvisioningCoordinator = nil
             }
-            self.cardKeyFlow = flow
-            self.push(flow: flow)
-        }
-        show(vc, sender: self)
+        )
+        tangemProvisioningCoordinator = coordinator
+        coordinator.start()
     }
 
     private func startBurnerActivationFlow() {
@@ -270,5 +283,58 @@ class AddOwnerKeyViewController: UITableViewController {
             popover.permittedArrowDirections = []
         }
         present(alert, animated: true)
+    }
+
+    private func startCardKeyActivationFlow() {
+        let cachedManufacturer = normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
+        guard App.shared.authRepository.isAuthenticated() else {
+            routeCardKeyActivation(for: cachedManufacturer)
+            return
+        }
+
+        guard !isResolvingCardManufacturer else { return }
+        isResolvingCardManufacturer = true
+        tableView.isUserInteractionEnabled = false
+        LogService.shared.info("[AddOwnerKey] Resolving lead card manufacturer from backend")
+
+        let service = UserProvisioningService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+        userProvisioningService = service
+        service.ensureUserRecord { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isResolvingCardManufacturer = false
+                self.tableView.isUserInteractionEnabled = true
+                self.userProvisioningService = nil
+
+                switch result {
+                case .success:
+                    let refreshed = self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
+                    LogService.shared.info("[AddOwnerKey] Lead card manufacturer refreshed: \(refreshed)")
+                    self.routeCardKeyActivation(for: refreshed)
+                case .failure(let error):
+                    LogService.shared.error("[AddOwnerKey] Failed to refresh lead card manufacturer", error: error)
+                    self.routeCardKeyActivation(for: cachedManufacturer)
+                }
+            }
+        }
+    }
+
+    private func routeCardKeyActivation(for manufacturer: String) {
+        if manufacturer == "tangem" {
+            startTangemActivationFlow()
+        } else if manufacturer == "burner" {
+            startBurnerActivationFlow()
+        } else {
+            presentCardKeyManufacturerChoice()
+        }
+    }
+
+    private func normalizedLeadManufacturer(_ raw: String?) -> String {
+        (raw ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 }

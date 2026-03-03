@@ -7,16 +7,14 @@
 
 import UIKit
 import SwiftCryptoTokenFormatter
-import Ethereum
-import Solidity
 
-/// Screen 1 (Invertir): enter token amount to invest.
-/// Mirrors `VenderAmountViewController` UI and validation with Invertir copy.
+/// Screen 1 (Invertir): enter fiat amount to invest against USD funding balance.
 final class InvertirAmountViewController: UIViewController {
     var onContinue: ((InvertirDraft) -> Void)?
 
     private let tokenBalance: TokenBalance
     private let fiatCode: String
+    private let availableUsdBalanceFiat: Double
 
     private let scrollView = UIScrollView()
     private let contentView = UIView()
@@ -25,6 +23,8 @@ final class InvertirAmountViewController: UIViewController {
     private let balanceValueLabel = UILabel()
     private let maxButton = UIButton(type: .system)
     private let amountField = TokenAmountField()
+    private let availableUsdTitleLabel = UILabel()
+    private let availableUsdValueLabel = UILabel()
     private let nextButton = UIButton(type: .system)
 
     private var tooltipSource: TooltipSource?
@@ -34,12 +34,13 @@ final class InvertirAmountViewController: UIViewController {
     private let debounceDuration: TimeInterval = 0.250
 
     private var amount: BigDecimal? {
-        amountField.balance.isEmpty ? nil : BigDecimal.create(string: amountField.balance, precision: tokenBalance.decimals)
+        amountField.balance.isEmpty ? nil : BigDecimal.create(string: amountField.balance, precision: 2)
     }
 
-    init(tokenBalance: TokenBalance, fiatCode: String) {
+    init(tokenBalance: TokenBalance, fiatCode: String, availableUsdBalanceFiat: Double) {
         self.tokenBalance = tokenBalance
         self.fiatCode = fiatCode
+        self.availableUsdBalanceFiat = max(0, availableUsdBalanceFiat)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -108,7 +109,7 @@ final class InvertirAmountViewController: UIViewController {
         tooltipSource?.message = tokenBalance.fullBalanceWithSymbol
         tooltipSource?.aboveTarget = false
 
-        maxButton.setText(NSLocalizedString("ui_tx_send_max_action", comment: "Send max action"), .primary)
+        maxButton.setText("Max", .primary)
         maxButton.contentHorizontalAlignment = .right
         maxButton.addTarget(self, action: #selector(maxButtonTouched), for: .touchUpInside)
 
@@ -122,11 +123,19 @@ final class InvertirAmountViewController: UIViewController {
         amountField.setToken(logoURL: tokenBalance.imageURL)
         amountField.delegate = self
 
+        availableUsdTitleLabel.setStyle(.caption1Medium)
+        availableUsdTitleLabel.textColor = .labelSecondary
+        availableUsdTitleLabel.text = "Saldo USD disponible para compras"
+
+        availableUsdValueLabel.setStyle(.title3)
+        availableUsdValueLabel.textColor = .labelPrimary
+        availableUsdValueLabel.text = formatFiat(availableUsdBalanceFiat, code: fiatCode)
+
         // Bottom button
         nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
         nextButton.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
 
-        let stack = UIStackView(arrangedSubviews: [balanceRow, amountField])
+        let stack = UIStackView(arrangedSubviews: [balanceRow, amountField, availableUsdTitleLabel, availableUsdValueLabel])
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
         stack.spacing = 16
@@ -146,25 +155,26 @@ final class InvertirAmountViewController: UIViewController {
     }
 
     @objc private func maxButtonTouched() {
-        // string will format full amount without any rounding
-        let value = Sol.UInt256(big: tokenBalance.balanceValue.value.magnitude)
-        let tokenAmount = Eth.TokenAmount(value: value, decimals: tokenBalance.decimals)
-        amountField.balance = tokenAmount.description
+        amountField.balance = decimalString(from: availableUsdBalanceFiat, maxFractionDigits: 2)
         verifyAmount()
         TooltipSource.hideAll()
     }
 
     @objc private func didTapNext() {
         guard let amount else { return }
-
-        let estimatedFiat = estimateFiat(for: amount)
+        let investAmountFiat = decimalValue(from: amount)
+        let estimatedTokenAmount = estimateTokenAmount(forFiat: investAmountFiat)
 #if DEBUG
-        LogService.shared.debug("[Invertir] buildDraft symbol=\(tokenBalance.symbol) amountTokens=\(decimalValue(from: amount)) unitFiat=\(tokenBalance.fiatConversion) balanceTokens=\(decimalValue(from: tokenBalance.balanceValue)) fiatTotal=\(tokenBalance.fiatValue) estFiat=\(estimatedFiat)")
+        LogService.shared.debug(
+            "[Invertir][TokenDetail] buildDraft symbol=\(tokenBalance.symbol) investFiat=\(investAmountFiat) " +
+            "availableUsd=\(availableUsdBalanceFiat) unitFiat=\(tokenBalance.fiatConversion) estToken=\(estimatedTokenAmount)"
+        )
 #endif
         let draft = InvertirDraft(
             selectedToken: tokenBalance,
-            investAmount: amount,
-            estimatedFiat: estimatedFiat,
+            investAmountFiat: investAmountFiat,
+            estimatedTokenAmount: estimatedTokenAmount,
+            availableUsdBalanceFiat: availableUsdBalanceFiat,
             fiatCode: fiatCode
         )
         onContinue?(draft)
@@ -175,13 +185,14 @@ final class InvertirAmountViewController: UIViewController {
         nextButton.isEnabled = false
 
         guard let amount else { return }
+        let amountFiat = decimalValue(from: amount)
 
         var message: String? = nil
-        if amountField.balance.numberOfDecimals > tokenBalance.decimals {
-            message = "Should be 1 to \(tokenBalance.decimals) decimals"
-        } else if amount.value <= 0 {
+        if amountField.balance.numberOfDecimals > 2 {
+            message = "Should be 1 to 2 decimals"
+        } else if amountFiat <= 0 {
             message = "Amount should be greater than 0"
-        } else if amount.value > tokenBalance.balanceValue.value {
+        } else if amountFiat > availableUsdBalanceFiat + 0.000_000_1 {
             message = "Insufficient funds"
         }
 
@@ -189,19 +200,12 @@ final class InvertirAmountViewController: UIViewController {
         amountField.showError(message: message)
     }
 
-    private func estimateFiat(for amount: BigDecimal) -> Double {
-        // Prefer fiatConversion (per-1-token price) because multi-chain aggregation can include
-        // unpriced balances (fiatBalance == 0) from some backends, which would skew (fiatValue / totalTokens).
+    private func estimateTokenAmount(forFiat fiatAmount: Double) -> Double {
         let unitFiat = tokenBalance.fiatConversion
         if unitFiat > 0 {
-            return unitFiat * decimalValue(from: amount)
+            return fiatAmount / unitFiat
         }
-
-        // Fallback: derive unit price from total holdings (may be inaccurate if some portions lack fiat pricing).
-        let ownedTokens = decimalValue(from: tokenBalance.balanceValue)
-        guard ownedTokens > 0 else { return 0 }
-        let perTokenFiat = tokenBalance.fiatValue / ownedTokens
-        return perTokenFiat * decimalValue(from: amount)
+        return 0
     }
 
     private func decimalValue(from amount: BigDecimal) -> Double {
@@ -210,6 +214,27 @@ final class InvertirAmountViewController: UIViewController {
                                                     thousandSeparator: "")
         guard let dec = Decimal(string: decimalString) else { return 0 }
         return (dec as NSDecimalNumber).doubleValue
+    }
+
+    private func decimalString(from value: Double, maxFractionDigits: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = maxFractionDigits
+        return formatter.string(from: NSNumber(value: value)) ?? "0"
+    }
+
+    private func formatFiat(_ amount: Double, code: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        let formatted = formatter.string(from: NSNumber(value: max(0, amount))) ?? "0.00"
+        return "\(formatted) \(code)"
     }
 }
 

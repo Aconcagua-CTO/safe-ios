@@ -14,6 +14,7 @@ struct TokenWhitelistEntryResponse: Codable {
     let tokenType: String?
     let tokenCategory: String?
     let wrapLabel: String?
+    let wrapLabelPriority: Int?
     let network: String?
     let networkAddress: String?
     let decimals: Int?
@@ -65,7 +66,8 @@ class TokenWhitelistService {
                     let response = try self.decoder.decode(TokenWhitelistListResponse.self, from: data)
                     let nonEmptySource = response.filter { !($0.priceSource ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
                     let nonEmptyParam = response.filter { !($0.priceSourceParam ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
-                    LogService.shared.debug("[TokenWhitelistService] decoded entries=\(response.count) priceSourceNonEmpty=\(nonEmptySource) priceSourceParamNonEmpty=\(nonEmptyParam) network=\(network ?? "nil")")
+                    let nonNullWrapLabelPriority = response.filter { $0.wrapLabelPriority != nil }.count
+                    LogService.shared.debug("[TokenWhitelistService] decoded entries=\(response.count) wrapLabelPriorityNonNull=\(nonNullWrapLabelPriority) priceSourceNonEmpty=\(nonEmptySource) priceSourceParamNonEmpty=\(nonEmptyParam) network=\(network ?? "nil")")
                     if nonEmptySource == 0 {
                         let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-utf8>"
                         LogService.shared.debug("[TokenWhitelistService] warning: all priceSource empty; bodyPreview=\(preview)")

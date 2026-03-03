@@ -347,13 +347,7 @@ extension ChooseOwnerKeyViewController: UITableViewDelegate, UITableViewDataSour
             [unowned self] _, _, completion in
 
             if isConnected {
-                let alertController = DisconnectionConfirmationController.create(key: keyInfo)
-                if let popoverPresentationController = alertController.popoverPresentationController {
-                    popoverPresentationController.sourceView = tableView
-                    popoverPresentationController.sourceRect = tableView.rectForRow(at: indexPath)
-                }
-
-                self.present(alertController, animated: true)
+                App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message"))
             } else {
                 self.connect(keyInfo: keyInfo)
             }
@@ -366,11 +360,7 @@ extension ChooseOwnerKeyViewController: UITableViewDelegate, UITableViewDataSour
     }
 
     func connect(keyInfo: KeyInfo) {
-        let wcWallet = keyInfo.wallet.flatMap { WCAppRegistryRepository().entry(from: $0) }
-        let chain = chainID.flatMap(Chain.by(_:)) ?? Selection.current().safe?.chain ?? Chain.mainnetChain()
-        let walletConnectionVC = StartWalletConnectionViewController(wallet: wcWallet, chain: chain, keyInfo: keyInfo)
-        let vc = ViewControllerFactory.pageSheet(viewController: walletConnectionVC, halfScreen: wcWallet != nil)
-        present(vc, animated: true)
+        App.shared.snackbar.show(message: NSLocalizedString("ui_walletconnect_legacy_removed_message", comment: "Legacy WalletConnect-for-keys feature removed message"))
     }
 
 }

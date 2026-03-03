@@ -12,8 +12,10 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private var completion: (() -> Void)?
 
     private var gateViewController: PostLoginGateViewController?
+    private var gateNavigationController: UINavigationController?
     private var hasAttemptedVaultSync = false
     private var isSyncingVaults = false
+    private let isSignUp: Bool
     private var isPresentingFlow = false
     private var isProvisioningCardKey = false
     private var isShowingPostSignupInstructions = false
@@ -25,6 +27,15 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private var userProvisioningService: UserProvisioningService?
     init(sceneDelegate: SceneDelegate) {
         self.sceneDelegate = sceneDelegate
+        let action = AppSettings.lastLeadProvisioningAction ?? ""
+        isSignUp = action == LeadProvisioningAction.copiedFromLead.rawValue
+        #if DEBUG
+        LogService.shared.debug("[PostLoginGateCoordinator] Loaded lastLeadProvisioningAction='\(action)' isSignUp=\(isSignUp)")
+        #endif
+        AppSettings.lastLeadProvisioningAction = nil
+        #if DEBUG
+        LogService.shared.debug("[PostLoginGateCoordinator] Cleared lastLeadProvisioningAction after coordinator init")
+        #endif
     }
 
     func start(completion: @escaping () -> Void) {
@@ -44,7 +55,8 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             hasVaults: Safe.countExcludingDemo > 0,
             hasMobileKey: hasMobileKey(),
             hasCardKey: hasCardKey(),
-            requiresCardKey: leadManufacturer != "nocard"
+            requiresCardKey: leadManufacturer != "nocard",
+            isSignUp: isSignUp
         )
 
         if shouldShowPostSignupInstructions(for: state) {
@@ -52,7 +64,11 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             return
         }
 
-        switch PostLoginGateEvaluator.nextAction(for: state) {
+        let nextAction = PostLoginGateEvaluator.nextAction(for: state)
+        #if DEBUG
+        LogService.shared.debug("[PostLoginGateCoordinator] Next action=\(String(describing: nextAction)) isSignUp=\(isSignUp)")
+        #endif
+        switch nextAction {
         case .startCardKeyFlow:
             startCardKeyFlow()
         case .syncVaults:
@@ -113,7 +129,15 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             gateViewController = PostLoginGateViewController()
         }
         if let gateViewController {
-            sceneDelegate?.showPostLoginGateWindow(rootViewController: gateViewController)
+            if let gateNavigationController {
+                gateNavigationController.setViewControllers([gateViewController], animated: false)
+            } else {
+                gateNavigationController = UINavigationController(rootViewController: gateViewController)
+            }
+
+            if let gateNavigationController {
+                sceneDelegate?.showPostLoginGateWindow(rootViewController: gateNavigationController)
+            }
         }
     }
 
@@ -151,6 +175,12 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private func startMobileKeyFlow() {
         guard !isPresentingFlow else { return }
         guard let gateViewController else { return }
+        if gateViewController.navigationController == nil {
+            ensureGateVisible()
+        }
+        guard gateViewController.navigationController != nil else {
+            return
+        }
 
         isPresentingFlow = true
         let flow = GenerateKeyFlow { [weak self] success in
@@ -161,7 +191,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             self.evaluateAndProceed()
         }
         generateKeyFlow = flow
-        gateViewController.present(flow: flow, dismissableOnSwipe: true)
+        gateViewController.push(flow: flow)
     }
 
     private func startCardKeyFlow() {
@@ -425,6 +455,8 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func finish() {
+        gateNavigationController = nil
+        gateViewController = nil
         sceneDelegate?.dismissPostLoginGateWindow()
         completion?()
     }

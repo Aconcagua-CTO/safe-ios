@@ -92,7 +92,9 @@ enum WrapLabelBalancesAggregator {
                 fiatBalance: String(agg.fiatTotal),
                 fiatConversion: String(seed.fiatConversion),
                 code: AppSettings.selectedFiatCode,
-                category: seed.category
+                category: seed.category,
+                tokenSymbol: seed.tokenSymbol,
+                chainId: seed.chainId
             )
             return token
         }

@@ -33,7 +33,7 @@ class OnboardingViewController: UIViewController {
                 text: NSLocalizedString("ui_onboarding_1_body", comment: "Onboarding screen 1 body"),
                 highlightedText: nil
             ),
-            image: UIImage(named: "ico-onboarding-1")!,
+            image: UIImage(named: "ico-safe-bar-logo")!,
             trackingEvent: .screenOnboarding1
         ),
         OnboardingStep(
@@ -45,7 +45,7 @@ class OnboardingViewController: UIViewController {
                 text: NSLocalizedString("ui_onboarding_2_body", comment: "Onboarding screen 2 body"),
                 highlightedText: nil
             ),
-            image: UIImage(named: "ico-onboarding-2")!,
+            image: UIImage(named: "tab-icon-invertir")!,
             trackingEvent: .screenOnboarding2
         ),
         OnboardingStep(
@@ -57,7 +57,7 @@ class OnboardingViewController: UIViewController {
                 text: NSLocalizedString("ui_onboarding_3_body", comment: "Onboarding screen 3 body"),
                 highlightedText: nil
             ),
-            image: UIImage(named: "ico-onboarding-3")!,
+            image: UIImage(named: "ico-app-settings-fiat")!.withRenderingMode(.alwaysTemplate),
             trackingEvent: .screenOnboarding3
         )
     ]

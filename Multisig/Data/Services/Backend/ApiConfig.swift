@@ -87,6 +87,13 @@ struct ApiConfig {
         return url
     }()
 
+    static let delegatesApiURL: URL = {
+        guard let url = URL(string: "\(firebaseBaseURL)delegates/") else {
+            fatalError("Invalid delegates API URL")
+        }
+        return url
+    }()
+
     /// Safe Client Gateway reverse-proxy base URL (Option A).
     /// This is served by the vaults backend (`vaultsPolygon`) and keeps Safe API keys server-side.
     /// Final URLs look like:

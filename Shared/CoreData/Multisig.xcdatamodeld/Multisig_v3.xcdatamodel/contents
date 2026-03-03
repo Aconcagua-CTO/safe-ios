@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23D56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AddressBookEntry" representedClassName="AddressBookEntry" syncable="YES" codeGenerationType="class">
+        <attribute name="additionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="address" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain"/>
+    </entity>
+    <entity name="AppSettings" representedClassName="AppSettings" syncable="YES" codeGenerationType="class">
+        <attribute name="appReviewEventCount" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="copyAddressWithChainPrefix" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="dismissedImportKeyBanner" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="displayMode" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="fiatCode" optional="YES" attributeType="String" defaultValueString="USD"/>
+        <attribute name="importedOwnerKey" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="importKeyOnBoardingShown" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="lastBuildVersion" optional="YES" attributeType="String"/>
+        <attribute name="lastIgnoredUpdateVersion" optional="YES" attributeType="String"/>
+        <attribute name="lastMarketingVersion" optional="YES" attributeType="String"/>
+        <attribute name="onboardingCompleted" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="passcodeBannerDismissed" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="passcodeOptions" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="passcodeWasSetAtLeastOnce" optional="YES" attributeType="Boolean" defaultValueString="NO"/>
+        <attribute name="prependingChainPrefixToAddresses" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="securityCenterVersion" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="securityLockEnabled" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="securityLockMethod" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="termsAccepted" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="toggle_securityCenter" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="trackingEnabled" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="walletAppRegistryMigrationCompleted" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="AppUser" representedClassName="AppUser" syncable="YES" codeGenerationType="class">
+        <attribute name="accessBlockedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="failedAuthAttempts" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="sessionRenewedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="CDEthTransaction" representedClassName="CDEthTransaction" syncable="YES" codeGenerationType="class">
+        <attribute name="chainId" optional="YES" attributeType="String"/>
+        <attribute name="dateExecutedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dateSubmittedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dateUpdatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="ethTxHash" optional="YES" attributeType="String"/>
+        <attribute name="safeAddress" optional="YES" attributeType="String"/>
+        <attribute name="safeTxHash" optional="YES" attributeType="String"/>
+        <attribute name="status" optional="YES" attributeType="String"/>
+        <attribute name="taskId" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="CDWCAppRegistryEntry" representedClassName="CDWCAppRegistryEntry" syncable="YES" codeGenerationType="class">
+        <attribute name="appStoreLink" optional="YES" attributeType="URI"/>
+        <attribute name="chains" optional="YES" attributeType="String"/>
+        <attribute name="desc" optional="YES" attributeType="String"/>
+        <attribute name="homepage" optional="YES" attributeType="URI"/>
+        <attribute name="id" optional="YES" attributeType="String"/>
+        <attribute name="imageId" optional="YES" attributeType="String"/>
+        <attribute name="imageLargeURL" optional="YES" attributeType="URI"/>
+        <attribute name="imageMediumURL" optional="YES" attributeType="URI"/>
+        <attribute name="imageSmallURL" optional="YES" attributeType="URI"/>
+        <attribute name="linkMobileNative" optional="YES" attributeType="URI"/>
+        <attribute name="linkMobileUniversal" optional="YES" attributeType="URI"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="rank" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="role" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="shortName" optional="YES" attributeType="String"/>
+        <attribute name="versions" optional="YES" attributeType="String"/>
+        <relationship name="keys" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="KeyInfo" inverseName="wallet" inverseEntity="KeyInfo"/>
+    </entity>
+    <entity name="CDWCPeerInfo" representedClassName="CDWCPeerInfo" syncable="YES" codeGenerationType="class">
+        <attribute name="deeplinkScheme" optional="YES" attributeType="String"/>
+        <attribute name="icons" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="peerDescription" optional="YES" attributeType="String"/>
+        <attribute name="peerId" optional="YES" attributeType="String"/>
+        <attribute name="peerType" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="role" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="url" optional="YES" attributeType="URI"/>
+    </entity>
+    <entity name="Chain" representedClassName="Chain" syncable="YES" codeGenerationType="class">
+        <attribute name="blockExplorerUrlAddress" optional="YES" attributeType="String"/>
+        <attribute name="blockExplorerUrlTxHash" optional="YES" attributeType="String"/>
+        <attribute name="ensRegistryAddress" optional="YES" attributeType="String"/>
+        <attribute name="featuresCommaSeparated" optional="YES" attributeType="String"/>
+        <attribute name="gatewayUrl" optional="YES" attributeType="URI"/>
+        <attribute name="id" attributeType="String"/>
+        <attribute name="l2" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="rpcUrl" attributeType="URI"/>
+        <attribute name="rpcUrlAuthentication" attributeType="String" defaultValueString="API_KEY_PATH"/>
+        <attribute name="shortName" optional="YES" attributeType="String"/>
+        <relationship name="gasPriceSource" optional="YES" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="ChainGasPriceSource" inverseName="chain" inverseEntity="ChainGasPriceSource"/>
+        <relationship name="nativeCurrency" maxCount="1" deletionRule="Cascade" destinationEntity="ChainToken" inverseName="chain" inverseEntity="ChainToken"/>
+        <relationship name="safe" toMany="YES" deletionRule="Cascade" destinationEntity="Safe" inverseName="chain" inverseEntity="Safe"/>
+        <relationship name="theme" maxCount="1" deletionRule="Cascade" destinationEntity="ChainTheme" inverseName="chain" inverseEntity="Chain"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    <entity name="ChainGasPriceSource" representedClassName="ChainGasPriceSource" syncable="YES" codeGenerationType="class">
+        <attribute name="gasParameter" optional="YES" attributeType="String"/>
+        <attribute name="gweiFactor" optional="YES" attributeType="String"/>
+        <attribute name="sourceType" optional="YES" attributeType="String"/>
+        <attribute name="uri" optional="YES" attributeType="String"/>
+        <attribute name="weiValue" optional="YES" attributeType="String"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="gasPriceSource" inverseEntity="Chain"/>
+    </entity>
+    <entity name="ChainTheme" representedClassName="ChainTheme" syncable="YES" codeGenerationType="class">
+        <attribute name="backgroundColor" attributeType="String"/>
+        <attribute name="textColor" attributeType="String"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="theme" inverseEntity="Chain"/>
+    </entity>
+    <entity name="ChainToken" representedClassName="ChainToken" syncable="YES" codeGenerationType="class">
+        <attribute name="decimals" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="logoUrl" attributeType="URI"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="symbol" attributeType="String"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="nativeCurrency" inverseEntity="Chain"/>
+    </entity>
+    <entity name="KeyInfo" representedClassName="KeyInfo" syncable="YES" codeGenerationType="class">
+        <attribute name="addressString" attributeType="String"/>
+        <attribute name="backedup" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="delegateAddressString" optional="YES" attributeType="String"/>
+        <attribute name="keyID" optional="YES" attributeType="String"/>
+        <attribute name="metadata" optional="YES" attributeType="Binary"/>
+        <attribute name="name" attributeType="String"/>
+        <attribute name="type" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="wallet" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDWCAppRegistryEntry" inverseName="keys" inverseEntity="CDWCAppRegistryEntry"/>
+    </entity>
+    <entity name="Safe" representedClassName="Safe" syncable="YES">
+        <attribute name="additionDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="address" optional="YES" attributeType="String"/>
+        <attribute name="contractVersion" optional="YES" attributeType="String" defaultValueString="0.0.0"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="sessionTopics" optional="YES" attributeType="String"/>
+        <attribute name="status" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="chain" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Chain" inverseName="safe" inverseEntity="Safe"/>
+        <relationship name="selection" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Selection" inverseName="safe" inverseEntity="Selection"/>
+    </entity>
+    <entity name="SafeCreationCall" representedClassName="SafeCreationCall" syncable="YES" codeGenerationType="class">
+        <attribute name="chainId" attributeType="String"/>
+        <attribute name="deployerAddress" optional="YES" attributeType="String"/>
+        <attribute name="fallbackHandlerAddress" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="owners" optional="YES" attributeType="String"/>
+        <attribute name="proxyFactoryAddress" optional="YES" attributeType="String"/>
+        <attribute name="safeAddress" attributeType="String"/>
+        <attribute name="saltNonce" optional="YES" attributeType="String"/>
+        <attribute name="singletonAddress" optional="YES" attributeType="String"/>
+        <attribute name="threshold" optional="YES" attributeType="String"/>
+        <attribute name="transactionData" optional="YES" attributeType="Binary"/>
+        <attribute name="transactionHash" optional="YES" attributeType="String"/>
+        <attribute name="version" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="Selection" representedClassName="Selection" syncable="YES" codeGenerationType="class">
+        <relationship name="safe" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Safe" inverseName="selection" inverseEntity="Safe"/>
+    </entity>
+    <entity name="TokenWhitelist" representedClassName="TokenWhitelist" syncable="YES" codeGenerationType="none">
+        <attribute name="id" attributeType="String"/>
+        <attribute name="tokenSymbol" optional="YES" attributeType="String"/>
+        <attribute name="tokenName" optional="YES" attributeType="String"/>
+        <attribute name="tokenType" optional="YES" attributeType="String"/>
+        <attribute name="tokenCategory" optional="YES" attributeType="String"/>
+        <attribute name="wrapLabel" optional="YES" attributeType="String"/>
+        <attribute name="wrapLabelPriority" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <attribute name="network" optional="YES" attributeType="String"/>
+        <attribute name="networkAddress" optional="YES" attributeType="String"/>
+        <attribute name="decimals" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <attribute name="chainId" optional="YES" attributeType="String"/>
+        <attribute name="enabled" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="stable" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="rebasing" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="native" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="erc20" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="image" optional="YES" attributeType="String"/>
+        <attribute name="descriptionText" optional="YES" attributeType="String"/>
+        <attribute name="priceSource" optional="YES" attributeType="String"/>
+        <attribute name="priceSourceParam" optional="YES" attributeType="String"/>
+        <attribute name="yieldSource" optional="YES" attributeType="String"/>
+        <attribute name="aaveMarketPoolAddress" optional="YES" attributeType="String"/>
+        <attribute name="aaveUnderlyingTokenAddress" optional="YES" attributeType="String"/>
+        <attribute name="aaveMarketName" optional="YES" attributeType="String"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+</model>

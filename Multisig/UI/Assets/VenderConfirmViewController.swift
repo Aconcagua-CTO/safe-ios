@@ -19,8 +19,6 @@ final class VenderConfirmViewController: UIViewController {
     private let contentView = UIView()
     private let stack = UIStackView()
 
-    private let titleLabel = UILabel()
-
     private let assetTitleLabel = UILabel()
     private let assetValueLabel = UILabel()
 
@@ -89,16 +87,13 @@ final class VenderConfirmViewController: UIViewController {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -24)
         ])
 
-        titleLabel.setStyle(.title3)
-        titleLabel.text = "Revisá tu venta"
-
         for label in [assetTitleLabel, amountTitleLabel, estFiatTitleLabel] {
             label.setStyle(.caption1Medium)
             label.textColor = .labelSecondary
         }
         assetTitleLabel.text = "Vas a vender"
         amountTitleLabel.text = "Cantidad"
-        estFiatTitleLabel.text = "Valor estimado"
+        estFiatTitleLabel.text = "Monto estimado"
 
         for label in [assetValueLabel, amountValueLabel, estFiatValueLabel] {
             label.setStyle(.title3)
@@ -108,9 +103,6 @@ final class VenderConfirmViewController: UIViewController {
 
         sellButton.setText(NSLocalizedString("ui_vender_sell_action", comment: "Vender sell action"), .filled)
         sellButton.addTarget(self, action: #selector(didTapSell), for: .touchUpInside)
-
-        stack.addArrangedSubview(titleLabel)
-        stack.addArrangedSubview(spacer(18))
 
         stack.addArrangedSubview(assetTitleLabel)
         stack.addArrangedSubview(assetValueLabel)
@@ -132,8 +124,9 @@ final class VenderConfirmViewController: UIViewController {
     }
 
     private func configureValues() {
-        assetValueLabel.text = draft.selectedToken.symbol
-        amountValueLabel.text = "\(formatNumber5(decimalValue(from: draft.sellAmount))) \(draft.selectedToken.symbol)"
+        let symbolUpper = draft.selectedToken.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        assetValueLabel.text = symbolUpper
+        amountValueLabel.text = "\(formatNumber5(decimalValue(from: draft.sellAmount))) \(symbolUpper)"
         estFiatValueLabel.text = formatFiat(draft.estimatedFiat, code: draft.fiatCode)
     }
 

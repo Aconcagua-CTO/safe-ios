@@ -9,6 +9,10 @@
 import UIKit
 extension UIViewController {
     var isDarkMode: Bool {
-        traitCollection.userInterfaceStyle == .light
+        let forcedMode = App.shared.theme.displayMode
+        if forcedMode != .unspecified {
+            return forcedMode == .light
+        }
+        return traitCollection.userInterfaceStyle == .light
     }
 }

@@ -62,11 +62,16 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
     func set(conflictType: SCGModels.ConflictType) {
         conflictTypeView.isHidden = conflictType == .none
         conflictTypeButtonBarView.isHidden = conflictType == .end
-        nonceLabel.isHidden = conflictType != .none
+        if conflictType != .none {
+            nonceLabel.isHidden = true
+        } else {
+            nonceLabel.isHidden = (nonceLabel.text ?? "").isEmpty
+        }
     }
 
     func set(nonce: String) {
-        nonceLabel.text = "\(nonce)"
+        nonceLabel.text = nonce
+        nonceLabel.isHidden = nonce.isEmpty
     }
 
     func set(date: String) {
@@ -85,8 +90,8 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
         confirmationsCountImageView.tintColor = color
     }
 
-    func set(status: SCGModels.TxStatus, isReplaced: Bool = false) {
-        let statusText = isReplaced ? "Replaced" : status.title
+    func set(status: SCGModels.TxStatus, isReplaced: Bool = false, overrideStatusText: String? = nil) {
+        let statusText = overrideStatusText ?? (isReplaced ? "Replaced" : transactionListStatusTitle(for: status))
         statusLabel.text = statusText
         appendixLabel.text = statusText
 
@@ -102,6 +107,13 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
         applyStrikethrough(titleLabel, enabled: isReplaced)
         applyStrikethrough(infoLabel, enabled: isReplaced)
         applyStrikethrough(nonceLabel, enabled: isReplaced)
+    }
+
+    private func transactionListStatusTitle(for status: SCGModels.TxStatus) -> String {
+        if status == .awaitingExecution {
+            return "En ejecución"
+        }
+        return status.title
     }
 
     func set(highlight: Bool) {

@@ -14,6 +14,7 @@ class AboutGnosisSafeTableViewController: UITableViewController {
     var legal = App.configuration.legal
     
     enum Item {
+        case advanced(String)
         case terms(String)
         case privacyPolicy(String)
         case licenses(String)
@@ -24,7 +25,8 @@ class AboutGnosisSafeTableViewController: UITableViewController {
         .terms(NSLocalizedString("ui_settings_about_terms_title", comment: "About item title for terms of use")),
         .privacyPolicy(NSLocalizedString("ui_settings_about_privacy_title", comment: "About item title for privacy policy")),
         .licenses(NSLocalizedString("ui_settings_about_licenses_title", comment: "About item title for licenses")),
-        .rateTheApp(NSLocalizedString("ui_settings_about_rate_app_title", comment: "About item title for rate the app"))
+        .rateTheApp(NSLocalizedString("ui_settings_about_rate_app_title", comment: "About item title for rate the app")),
+        .advanced(NSLocalizedString("ui_settings_about_advanced_title", comment: "About item title for advanced"))
     ]
         
     override func viewDidLoad() {
@@ -50,6 +52,8 @@ class AboutGnosisSafeTableViewController: UITableViewController {
         let item = items[indexPath.row]
         
         switch item {
+        case Item.advanced(let name):
+            return tableView.basicCell(name: name, indexPath: indexPath)
         case Item.terms(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
         case Item.privacyPolicy(let name):
@@ -65,6 +69,8 @@ class AboutGnosisSafeTableViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         let item = items[indexPath.row]
         switch item {
+        case Item.advanced:
+            showAdvanced()
         case Item.terms:
             showTerms()
     
@@ -98,6 +104,54 @@ class AboutGnosisSafeTableViewController: UITableViewController {
         let url = App.configuration.contact.appStoreReviewURL
         UIApplication.shared.open(url, options: [:], completionHandler: nil)
         Tracker.trackEvent(.settingsRateApp)
+    }
+
+    fileprivate func showAdvanced() {
+        show(AboutAdvancedSettingsViewController(), sender: self)
+    }
+}
+
+class AboutAdvancedSettingsViewController: UITableViewController {
+
+    enum Item {
+        case walletConnect(String)
+    }
+
+    private var items: [Item] = [
+        .walletConnect(NSLocalizedString("ui_settings_wallet_connect_title", comment: "Settings list title for WalletConnect"))
+    ]
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        navigationItem.title = NSLocalizedString("ui_settings_about_advanced_title", comment: "About item title for advanced")
+        tableView.registerCell(BasicCell.self)
+        tableView.backgroundColor = .backgroundPrimary
+    }
+
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        1
+    }
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        items.count
+    }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let item = items[indexPath.row]
+        switch item {
+        case .walletConnect(let name):
+            return tableView.basicCell(name: name, icon: "tab-icon-dapps", iconTintColor: .icon, indexPath: indexPath)
+        }
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        let item = items[indexPath.row]
+        switch item {
+        case .walletConnect:
+            show(DappsViewController(namedClass: nil), sender: self)
+        }
     }
 }
 

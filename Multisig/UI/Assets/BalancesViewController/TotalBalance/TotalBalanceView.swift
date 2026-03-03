@@ -17,6 +17,7 @@ class TotalBalanceView: UINibView {
     @IBOutlet weak var buyButton: UIButton?
     @IBOutlet weak var tokenBanner: SafeTokenBanner!
     @IBOutlet weak var relayInfoBanner: RelayInfoBanner!
+    private let vaultSyncLoaderView = VaultIconFadeView(iconSize: 24)
 
     var onSendClicked: (() -> Void)?
     var onReceivedClicked: (() -> Void)?
@@ -30,11 +31,16 @@ class TotalBalanceView: UINibView {
     
     var loading: Bool = false {
         didSet {
-            if (loading) {
-                amountLabel.showSkeleton()
-            } else {
-                amountLabel.hideSkeleton()
-            }
+            updateLoadingPresentation()
+        }
+    }
+
+    var vaultSyncing: Bool = false {
+        didSet {
+            #if DEBUG
+            LogService.shared.debug("[TotalBalanceView] vaultSyncing=\(vaultSyncing)")
+            #endif
+            updateLoadingPresentation()
         }
     }
     
@@ -67,6 +73,8 @@ class TotalBalanceView: UINibView {
         receiveButton.tintColor = UIColor.primaryInverted
         receiveButton.isEnabled = true
         buyButton?.isHidden = true
+        setupVaultSyncLoaderView()
+        updateLoadingPresentation()
     }
 
     /// Generates an upward arrow by rotating the existing downward arrow asset 180 degrees.
@@ -92,5 +100,42 @@ class TotalBalanceView: UINibView {
 
     @IBAction func buyButtonClicked(_ sender: Any) {
         onBuyClicked?()
+    }
+
+    private func setupVaultSyncLoaderView() {
+        guard let containerView = amountLabel.superview else { return }
+        vaultSyncLoaderView.translatesAutoresizingMaskIntoConstraints = false
+        vaultSyncLoaderView.isHidden = true
+        containerView.addSubview(vaultSyncLoaderView)
+        NSLayoutConstraint.activate([
+            vaultSyncLoaderView.centerXAnchor.constraint(equalTo: amountLabel.centerXAnchor),
+            vaultSyncLoaderView.centerYAnchor.constraint(equalTo: amountLabel.centerYAnchor),
+            vaultSyncLoaderView.widthAnchor.constraint(equalTo: amountLabel.widthAnchor),
+            vaultSyncLoaderView.heightAnchor.constraint(equalTo: amountLabel.heightAnchor),
+        ])
+    }
+
+    private func updateLoadingPresentation() {
+        if vaultSyncing {
+            amountLabel.hideSkeleton()
+            vaultSyncLoaderView.isHidden = false
+            vaultSyncLoaderView.startAnimating()
+            #if DEBUG
+            LogService.shared.debug("[TotalBalanceView] Showing vault icon fade loader")
+            #endif
+            return
+        }
+
+        vaultSyncLoaderView.stopAnimating()
+        vaultSyncLoaderView.isHidden = true
+
+        if loading {
+            amountLabel.showSkeleton()
+            #if DEBUG
+            LogService.shared.debug("[TotalBalanceView] Showing default skeleton loader")
+            #endif
+        } else {
+            amountLabel.hideSkeleton()
+        }
     }
 }

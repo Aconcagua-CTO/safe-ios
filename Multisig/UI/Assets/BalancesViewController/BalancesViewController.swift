@@ -52,6 +52,7 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
 
     private let moneyMarketYieldService = MoneyMarketYieldService()
     private let savingsYieldService = SavingsYieldService()
+    private let ondoUSDYPageClient = OndoUSDYPageClient()
     private let marketCapPricesService = MarketCapPricesService(
         authRepository: App.shared.authRepository,
         logger: LogService.shared
@@ -79,6 +80,8 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
         let maxPercent: Double
         let networkCount: Int
     }
+
+    private static let usdySymbolKey = "usdy"
 
     /// When true, we already tried a one-time forced whitelist sync to backfill newly added fields (e.g. wrapLabel).
 
@@ -285,9 +288,47 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
 
     // MARK: - Money market yield helpers
 
+    private func needsOndoUSDYFallback(moneyMarketItems: [TokenBalance]) -> Bool {
+        moneyMarketItems.contains {
+            $0.symbol.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == Self.usdySymbolKey
+        }
+    }
+
+    private func mergeOndoUSDYApyIfNeeded(generation: Int,
+                                          shouldFetchUSDY: Bool,
+                                          displayBySymbol: [String: MoneyMarketApyDisplay],
+                                          completion: @escaping ([String: MoneyMarketApyDisplay]) -> Void) {
+        guard shouldFetchUSDY, displayBySymbol[Self.usdySymbolKey] == nil else {
+            completion(displayBySymbol)
+            return
+        }
+
+        _ = ondoUSDYPageClient.fetchSnapshot { [weak self] result in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                guard generation == self.moneyMarketYieldGeneration else { return }
+                var merged = displayBySymbol
+                switch result {
+                case .success(let snapshot):
+                    let apy = snapshot.currentApyPercent
+                    merged[Self.usdySymbolKey] = MoneyMarketApyDisplay(minPercent: apy,
+                                                                       maxPercent: apy,
+                                                                       networkCount: 1)
+                case .failure(let error):
+                    #if DEBUG
+                    LogService.shared.error("[Balances][MoneyMarket][APY] Ondo USDY fetch failed", error: error)
+                    #endif
+                    break
+                }
+                completion(merged)
+            }
+        }
+    }
+
     private func refreshMoneyMarketYieldsIfNeeded(displayItems: [TokenBalance]) {
         // Identify money market items by the same normalization used for section mapping.
         let moneyMarketItems = displayItems.filter { mapCategoryToSectionId($0) == "moneymarket" }
+        let shouldFetchOndoUSDY = needsOndoUSDYFallback(moneyMarketItems: moneyMarketItems)
 
         #if DEBUG
         if moneyMarketItems.isEmpty {
@@ -401,10 +442,13 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
                 #if DEBUG
                 LogService.shared.error("[Balances][MoneyMarket][APY] Fetch failed; clearing badge map")
                 #endif
-                // Keep UI usable; don't show a stale badge.
-                if !self.moneyMarketApyByTokenAddress.isEmpty || !self.moneyMarketApyDisplayBySymbolKey.isEmpty {
+                // Keep UI usable; don't show a stale badge. Still allow USDY fallback via Ondo.
+                self.mergeOndoUSDYApyIfNeeded(generation: generation,
+                                              shouldFetchUSDY: shouldFetchOndoUSDY,
+                                              displayBySymbol: [:]) { mergedDisplay in
+                    guard generation == self.moneyMarketYieldGeneration else { return }
                     self.moneyMarketApyByTokenAddress = [:]
-                    self.moneyMarketApyDisplayBySymbolKey = [:]
+                    self.moneyMarketApyDisplayBySymbolKey = mergedDisplay
                     self.reloadMoneyMarketRows()
                 }
             case .success(let map):
@@ -419,8 +463,6 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
                     LogService.shared.debug("[Balances][MoneyMarket][APY] Fetch ok; returned=\(map.count) (all requested present)")
                 }
                 #endif
-                self.moneyMarketApyByTokenAddress = map
-
                 // Compute per-symbol APY display (single vs range) based on how many networks are contributing.
                 var displayBySymbol: [String: MoneyMarketApyDisplay] = [:]
                 displayBySymbol.reserveCapacity(symbolMembers.count)
@@ -432,8 +474,14 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
                                                                       maxPercent: maxVal,
                                                                       networkCount: networkCount)
                 }
-                self.moneyMarketApyDisplayBySymbolKey = displayBySymbol
-                self.reloadMoneyMarketRows()
+                self.mergeOndoUSDYApyIfNeeded(generation: generation,
+                                              shouldFetchUSDY: shouldFetchOndoUSDY,
+                                              displayBySymbol: displayBySymbol) { mergedDisplay in
+                    guard generation == self.moneyMarketYieldGeneration else { return }
+                    self.moneyMarketApyByTokenAddress = map
+                    self.moneyMarketApyDisplayBySymbolKey = mergedDisplay
+                    self.reloadMoneyMarketRows()
+                }
             }
         }
     }
@@ -480,6 +528,7 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
         }
 
         let wantedUnderlyings = Array(Set(symbolKeyToUnderlyingUpper.values)).filter { !$0.isEmpty }
+        let shouldFetchOndoUSDY = symbolKeyToUnderlyingUpper[Self.usdySymbolKey] != nil
         guard !wantedUnderlyings.isEmpty else { return }
 
         moneyMarketYieldGeneration += 1
@@ -498,9 +547,12 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
                 #if DEBUG
                 LogService.shared.error("[Balances][MoneyMarket][APY] Ethereum-underlying fetch failed; clearing badge map", error: error)
                 #endif
-                if !self.moneyMarketApyByTokenAddress.isEmpty || !self.moneyMarketApyDisplayBySymbolKey.isEmpty {
+                self.mergeOndoUSDYApyIfNeeded(generation: generation,
+                                              shouldFetchUSDY: shouldFetchOndoUSDY,
+                                              displayBySymbol: [:]) { mergedDisplay in
+                    guard generation == self.moneyMarketYieldGeneration else { return }
                     self.moneyMarketApyByTokenAddress = [:]
-                    self.moneyMarketApyDisplayBySymbolKey = [:]
+                    self.moneyMarketApyDisplayBySymbolKey = mergedDisplay
                     self.reloadMoneyMarketRows()
                 }
             case .success(let underlyingMap):
@@ -515,9 +567,14 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
                 #if DEBUG
                 LogService.shared.debug("[Balances][MoneyMarket][APY] Ethereum-underlying fetch ok; mappedSymbols=\(displayBySymbol.count) underlyingReturned=\(underlyingMap.count)")
                 #endif
-                self.moneyMarketApyByTokenAddress = [:]
-                self.moneyMarketApyDisplayBySymbolKey = displayBySymbol
-                self.reloadMoneyMarketRows()
+                self.mergeOndoUSDYApyIfNeeded(generation: generation,
+                                              shouldFetchUSDY: shouldFetchOndoUSDY,
+                                              displayBySymbol: displayBySymbol) { mergedDisplay in
+                    guard generation == self.moneyMarketYieldGeneration else { return }
+                    self.moneyMarketApyByTokenAddress = [:]
+                    self.moneyMarketApyDisplayBySymbolKey = mergedDisplay
+                    self.reloadMoneyMarketRows()
+                }
             }
         }
     }
@@ -736,7 +793,7 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
             return
         }
 
-        guard let safes = try? Safe.getAll() else { return }
+        guard let safes = try? Safe.getActiveGroup() else { return }
         let deployedSafes = safes.filter { $0.safeStatus == .deployed }
         if deployedSafes.isEmpty {
             #if DEBUG
@@ -759,17 +816,21 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
             return .init(chainId: chainId, safe: address)
         }
 
-        let addressToObjectId: [String: NSManagedObjectID] = deployedSafes.reduce(into: [:]) { acc, safe in
-            if let address = safe.address?.lowercased() {
-                acc[address] = safe.objectID
+        let safeKeyToObjectId: [String: NSManagedObjectID] = deployedSafes.reduce(into: [:]) { acc, safe in
+            guard let address = safe.address?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                  let chainId = safe.chain?.id?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !address.isEmpty,
+                  !chainId.isEmpty else {
+                return
             }
+            let key = "\(chainId)|\(address)"
+            acc[key] = safe.objectID
         }
 
-        let userId = App.shared.authRepository.getCurrentUser()?.uid
         let request = MultiVaultBalancesRequest(
             fiat: "USD",
-            userId: userId,
-            safes: userId == nil ? safeEntries : nil,
+            userId: nil,
+            safes: safeEntries,
             maxConcurrent: 3
         )
         currentDataTask = App.shared.clientGatewayService.asyncExecute(request: request) { [weak self] result in
@@ -799,7 +860,10 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
 
                     let updatedResults: [(safeObjectID: NSManagedObjectID, chainId: String, summary: SafeBalanceSummary)] =
                         perSafe.compactMap { entry in
-                            guard let safeObjectID = addressToObjectId[entry.safe.lowercased()] else { return nil }
+                            let chainId = entry.chainId.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let address = entry.safe.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                            let key = "\(chainId)|\(address)"
+                            guard let safeObjectID = safeKeyToObjectId[key] else { return nil }
                             return (safeObjectID: safeObjectID, chainId: entry.chainId, summary: entry.summary)
                         }
 
@@ -810,47 +874,25 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
                             fiatCode: AppSettings.selectedFiatCode
                         )
                     }
-                    let displaySummary = response.display ?? response.aggregated.map {
-                        SafeBalanceDisplay(fiatTotal: $0.fiatTotal, items: $0.items)
-                    }
-                    if let displaySummary {
-                        let displayItems = displaySummary.items.map {
-                            TokenBalance($0, code: AppSettings.selectedFiatCode, chainId: "")
-                        }
-                        let totalFiat = TokenBalance.displayCurrency(from: displaySummary.fiatTotal,
-                                                                    code: AppSettings.selectedFiatCode)
-                        let rawItems = updatedInputs.flatMap { input in
-                            input.summary.items.map { TokenBalance($0, code: AppSettings.selectedFiatCode, chainId: input.chainId) }
-                        }
-                        #if DEBUG
-                        let symbols = displayItems.map { "\($0.symbol)=\($0.balance)" }.joined(separator: ", ")
-                        LogService.shared.debug("[Multivault] Display list \(displayItems.count) token(s). Symbols: [\(symbols)] totalFiat=\(totalFiat)")
-                        #endif
-                        self.apply(rawItems: rawItems,
-                                   displayItems: displayItems,
-                                   totalFiat: totalFiat,
-                                   transferSelectableAssets: transferSelectableAssets)
-                    } else {
-                        let aggregated = MultiVaultBalancesAggregator.aggregate(
-                            updatedInputs,
-                            fiatCode: AppSettings.selectedFiatCode
-                        )
-                        #if DEBUG
-                        let symbols = aggregated.balances.map { "\($0.symbol)=\($0.balance)" }.joined(separator: ", ")
-                        LogService.shared.debug("[Multivault] Aggregated \(aggregated.balances.count) token(s) across \(updatedInputs.count) safe(s). Symbols: [\(symbols)] totalFiat=\(aggregated.totalFiat)")
-                        #endif
-                        self.apply(rawItems: aggregated.rawBalances,
-                                   displayItems: aggregated.balances,
-                                   totalFiat: aggregated.totalFiat,
-                                   transferSelectableAssets: transferSelectableAssets)
-                    }
+                    let aggregated = MultiVaultBalancesAggregator.aggregate(
+                        updatedInputs,
+                        fiatCode: AppSettings.selectedFiatCode
+                    )
+                    #if DEBUG
+                    let symbols = aggregated.balances.map { "\($0.symbol)=\($0.balance)" }.joined(separator: ", ")
+                    LogService.shared.debug("[Multivault] Display list \(aggregated.balances.count) token(s). Symbols: [\(symbols)] totalFiat=\(aggregated.totalFiat)")
+                    #endif
+                    self.apply(rawItems: aggregated.rawBalances,
+                               displayItems: aggregated.balances,
+                               totalFiat: aggregated.totalFiat,
+                               transferSelectableAssets: transferSelectableAssets)
                 }
             }
         }
     }
 
     private func loadMultiVaultBalancesLegacy() {
-        guard let safes = try? Safe.getAll() else { return }
+        guard let safes = try? Safe.getActiveGroup() else { return }
         let deployedSafes = safes.filter { $0.safeStatus == .deployed }
         if deployedSafes.isEmpty {
             #if DEBUG
@@ -1096,13 +1138,14 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
             guard indexPath.row < section.items.count else { return UITableViewCell() }
             let item = section.items[indexPath.row]
             let cell = tableView.dequeueCell(BalanceTableViewCell.self, for: indexPath)
-            cell.setMainText(item.symbol)
+            cell.setMainText(item.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
             if hideFiatAndAmount {
                 cell.setDetailText("")
                 cell.setSubDetailText("")
             } else {
                 cell.setDetailText(item.fiatBalance)           // highlight fiat value (2 decimals from formatter)
-                cell.setSubDetailText(item.balanceFormatted5)  // secondary: token amount (up to 5 decimals)
+                let sym = item.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                cell.setSubDetailText("\(item.balanceFormatted5) \(sym)")  // secondary: token amount + symbol (up to 5 decimals)
             }
             configureBadge(for: cell, item: item, section: section)
             // Token rows drill into TokenDetail, so keep them selectable and show a chevron.
@@ -1241,10 +1284,6 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
         guard case .balances(section: let balanceSection) = sections[section] else {
             return nil
         }
-        // Do not render a header for the usd section.
-        if balanceSection.id == "usd" {
-            return nil
-        }
         let view = tableView.dequeueHeaderFooterView(BasicHeaderView.self)
         view.setName(balanceSection.title)
         return view
@@ -1252,9 +1291,7 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
 
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         guard case .balances(section: let balanceSection) = sections[section] else { return 0 }
-        if balanceSection.id == "usd" {
-            return 0
-        }
+        // Always show headers for balance sections (including USD).
         return BasicHeaderView.headerHeight
     }
 
@@ -1274,22 +1311,16 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
     /// Section order for balances lists. Subclasses may override to customize ordering.
     var balanceSectionOrder: [(id: String, title: String)] {
         var order: [(id: String, title: String)] = [
-            // Keep usd first; its header stays hidden (see `viewForHeaderInSection`).
-            (id: TokenCategory.sectionUSD, title: ""),
+            (id: TokenCategory.sectionUSD, title: "USD"),
             (id: TokenCategory.sectionMoneyMarket, title: "Money market"),
-            (id: TokenCategory.sectionAcciones, title: "Acciones"),
-            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
-            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
-            (id: TokenCategory.sectionOro, title: "Oro"),
             (id: TokenCategory.sectionCripto, title: "Cripto"),
+            (id: TokenCategory.sectionOro, title: "Oro"),
+            (id: TokenCategory.sectionEtfIndices, title: "ETF de indices"),
+            (id: TokenCategory.sectionAcciones, title: "Acciones"),
+            (id: TokenCategory.sectionEtfOtros, title: "ETF otros"),
             (id: TokenCategory.sectionRootstock, title: "Rootstock"),
-            (id: TokenCategory.sectionOtros, title: "Otros")
+            (id: TokenCategory.sectionBlackToken, title: "blackToken")
         ]
-
-        if App.configuration.services.environment.isDevelopment {
-            // Only show blackToken in development builds (Debug + Release).
-            order.append((id: TokenCategory.sectionBlackToken, title: "blackToken"))
-        }
 
         return order
     }
@@ -1302,7 +1333,12 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
             grouped[sectionId, default: []].append(item)
         }
 
-        return balanceSectionOrder.compactMap { entry in
+        let shouldShowBlackTokenSection = App.configuration.services.environment.isDevelopment
+        let effectiveSectionOrder = balanceSectionOrder.filter { entry in
+            shouldShowBlackTokenSection || entry.id != TokenCategory.sectionBlackToken
+        }
+
+        return effectiveSectionOrder.compactMap { entry in
             guard let balances = grouped[entry.id], !balances.isEmpty else { return nil }
             let sortedBalances = balances.sorted { lhs, rhs in
                 if lhs.fiatValue == rhs.fiatValue {
@@ -1337,6 +1373,7 @@ extension BalancesViewController: TokenDetailBalancesProvider {
         TokenBalanceBreakdownBuilder.savingsRows(
             inputs: latestBalanceInputs,
             tokenSymbol: token.symbol,
+            tokenCategory: token.category,
             fiatCode: AppSettings.selectedFiatCode
         )
     }
@@ -1479,7 +1516,8 @@ enum MultiVaultBalancesAggregator {
                 let wrap = (item.wrapLabel ?? "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 let displaySymbol = wrap.isEmpty ? token.symbol : wrap
-                let key = displaySymbol.lowercased()
+                let sectionId = TokenCategory.sectionId(for: item.tokenCategory)
+                let key = "\(sectionId):\(displaySymbol.lowercased())"
                 let fiatValue = Double(item.fiatBalance) ?? 0
                 totalFiat += fiatValue
 
@@ -1544,7 +1582,9 @@ enum MultiVaultBalancesAggregator {
         }
         #endif
         
-        let balances: [TokenBalance] = aggregates.values.map { aggregate in
+        let balances: [TokenBalance] = aggregates.values
+            .filter { $0.rawBalance > 0 }
+            .map { aggregate in
             let seed = aggregate.seed
             let aggregatedFiat = aggregate.fiatTotal
             let aggregatedBalance = UInt256String(aggregate.rawBalance)
@@ -1560,7 +1600,9 @@ enum MultiVaultBalancesAggregator {
                                      fiatBalance: String(aggregatedFiat),
                                      fiatConversion: String(seed.fiatConversion),
                                      code: fiatCode,
-                                     category: seed.category)
+                                     category: seed.category,
+                                     tokenSymbol: seed.tokenSymbol,
+                                     chainId: seed.chainId)
             return token
         }
         

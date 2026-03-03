@@ -284,9 +284,11 @@ final class GroupedSwitchSafesViewController: UITableViewController {
 
     var notificationCenter = NotificationCenter.default
 
-    private var groupedEntries: [GroupedVaultEntry] = []
+    private var ownEntries: [GroupedVaultEntry] = []
+    private var delegateEntries: [GroupedVaultEntry] = []
     private let refreshSection = 0
-    private let listSection = 1
+    private let ownSection = 1
+    private let delegateSection = 2
     private var isManualVaultRefreshInProgress = false
 
     override func viewDidLoad() {
@@ -302,6 +304,8 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         }
         tableView.register(AddSafeTableViewCell.nib(), forCellReuseIdentifier: "AddSafe")
         tableView.register(SafeEntryTableViewCell.nib(), forCellReuseIdentifier: "SafeEntry")
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 66
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
@@ -321,8 +325,9 @@ final class GroupedSwitchSafesViewController: UITableViewController {
     }
 
     @objc private func reloadData() {
-        groupedEntries = buildGroupedEntries()
-        VaultLogger.debug("Reloaded grouped safes: \(groupedEntries.count) entry(ies)")
+        ownEntries = buildGroupedEntries(from: (try? Safe.getOwnVaults()) ?? [])
+        delegateEntries = buildGroupedEntries(from: (try? Safe.getDelegateVaults()) ?? [])
+        VaultLogger.debug("Reloaded grouped safes: own=\(ownEntries.count), delegate=\(delegateEntries.count)")
         tableView.reloadData()
     }
 
@@ -339,14 +344,20 @@ final class GroupedSwitchSafesViewController: UITableViewController {
 
     override func numberOfSections(in tableView: UITableView) -> Int {
         // Always include the manual refresh section at the top
-        listSection + 1
+        delegateEntries.isEmpty ? 2 : 3
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if section == refreshSection {
             return 1
         }
-        return groupedEntries.count
+        if section == ownSection {
+            return ownEntries.count
+        }
+        if section == delegateSection {
+            return delegateEntries.count
+        }
+        return 0
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -357,15 +368,18 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         }
 
         let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
-        let entry = groupedEntries[indexPath.row]
+        guard let entry = entryForListSection(at: indexPath) else {
+            return cell
+        }
         let safe = entry.primarySafe
         cell.setName(safe.displayName)
         cell.setProgress(enabled: false)
+        let isDelegateSection = indexPath.section == delegateSection
 
         switch safe.safeStatus {
         case .deployed:
             cell.setAddress(entry.address)
-            cell.setDetail(text: detailText(for: entry), style: .bodyTertiary)
+            cell.setDetail(text: detailText(for: entry, isDelegateSection: isDelegateSection), style: .bodyTertiary)
 
         case .deploying, .indexing:
             cell.setAddress(entry.address, grayscale: true)
@@ -386,6 +400,10 @@ final class GroupedSwitchSafesViewController: UITableViewController {
     // MARK: - UITableViewDelegate
 
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        indexPath.section == refreshSection ? 54 : UITableView.automaticDimension
+    }
+
+    override func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
         indexPath.section == refreshSection ? 54 : 66
     }
 
@@ -393,28 +411,49 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         tableView.deselectRow(at: indexPath, animated: true)
         if indexPath.section == refreshSection {
             refreshVaultList()
-        } else {
-            let entry = groupedEntries[indexPath.row]
+        } else if let entry = entryForListSection(at: indexPath) {
+            AppSettings.activeVaultGroupAddress = entry.address.checksummed
             entry.primarySafe.select()
             didTapCloseButton()
         }
     }
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        nil
+        guard section != refreshSection else { return nil }
+        guard section == ownSection || section == delegateSection else { return nil }
+
+        let title = section == ownSection ? "Mis Bovedas" : "Bovedas Delegadas"
+
+        let container = UIView()
+        container.backgroundColor = .clear
+
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .footnote).pointSize, weight: .semibold)
+        label.textColor = .labelSecondary
+        label.text = title
+        container.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -4)
+        ])
+
+        return container
     }
 
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        0
+        section == refreshSection ? 0 : 28
     }
 
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        indexPath.section != refreshSection
+        indexPath.section == ownSection
     }
 
     override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        guard indexPath.section != refreshSection else { return nil }
-        let entry = groupedEntries[indexPath.row]
+        guard indexPath.section == ownSection, let entry = entryForListSection(at: indexPath) else { return nil }
 
         let deleteAction = UIContextualAction(style: .destructive,
                                               title: NSLocalizedString("ui_safe_remove_action", comment: "Remove safe action")) { [weak self] _, _, completion in
@@ -532,9 +571,7 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         cell.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
     }
 
-    private func buildGroupedEntries() -> [GroupedVaultEntry] {
-        guard let safes = try? Safe.getAll() else { return [] }
-
+    private func buildGroupedEntries(from safes: [Safe]) -> [GroupedVaultEntry] {
         let grouped = Dictionary(grouping: safes) { safe in
             safe.address?.lowercased() ?? ""
         }
@@ -558,7 +595,12 @@ final class GroupedSwitchSafesViewController: UITableViewController {
                 return shortName
             }
 
-            let isSelected = safesWithChain.contains(where: { $0.isSelected })
+            let isSelected: Bool = {
+                guard let activeAddress = AppSettings.activeVaultGroupAddress?.lowercased(), !activeAddress.isEmpty else {
+                    return safesWithChain.contains(where: { $0.isSelected })
+                }
+                return addressKey == activeAddress
+            }()
 
             entries.append(GroupedVaultEntry(
                 address: address,
@@ -582,13 +624,32 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         }
     }
 
-    private func detailText(for entry: GroupedVaultEntry) -> String {
+    private func detailText(for entry: GroupedVaultEntry, isDelegateSection: Bool) -> String {
         let addressText = entry.address.ellipsized()
         let networks = entry.networkShortNames.joined(separator: ", ")
-        if networks.isEmpty {
-            return addressText
+        let ownerText = isDelegateSection ? (entry.primarySafe.ownerName ?? entry.primarySafe.displayName) : nil
+
+        var detailLines: [String] = [addressText]
+        if let ownerText, !ownerText.isEmpty {
+            detailLines.append(ownerText)
         }
-        return "\(addressText)\n\(networks)"
+        if !networks.isEmpty {
+            detailLines.append(networks)
+        }
+        return detailLines.joined(separator: "\n")
+    }
+
+    private func entryForListSection(at indexPath: IndexPath) -> GroupedVaultEntry? {
+        switch indexPath.section {
+        case ownSection:
+            guard ownEntries.indices.contains(indexPath.row) else { return nil }
+            return ownEntries[indexPath.row]
+        case delegateSection:
+            guard delegateEntries.indices.contains(indexPath.row) else { return nil }
+            return delegateEntries[indexPath.row]
+        default:
+            return nil
+        }
     }
 
     private func chainIdValue(for safe: Safe) -> UInt64 {
