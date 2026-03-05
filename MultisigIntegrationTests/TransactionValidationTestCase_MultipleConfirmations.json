@@ -35,7 +35,6 @@
           "EIP1271",
           "EIP1559",
           "ERC721",
-          "MOONPAY_MOBILE",
           "NATIVE_WALLETCONNECT",
           "PUSH_NOTIFICATIONS",
           "RISK_MITIGATION",

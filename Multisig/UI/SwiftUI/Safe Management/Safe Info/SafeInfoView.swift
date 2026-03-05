@@ -77,8 +77,6 @@ struct SafeInfoContentView: View {
                 .padding(.top, 6)
             }
 
-            LoadableENSNameText(safe: safe, showsLoading: false)
-
             Text("Redes disponibles")
                 .font(.subheadline)
                 .foregroundColor(.labelSecondary)

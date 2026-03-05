@@ -3,7 +3,7 @@
 //  Multisig
 //
 //  Created on [Date]
-//  Copyright © [Year] Gnosis Ltd. All rights reserved.
+//  Copyright © 2024 Gnosis Ltd. All rights reserved.
 //
 
 import Foundation

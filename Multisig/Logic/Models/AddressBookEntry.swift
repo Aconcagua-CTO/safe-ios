@@ -72,6 +72,17 @@ extension AddressBookEntry {
         }
     }
 
+    static let supportedChainIDs: [String] = [
+        Chain.ChainID.ethereumMainnet,
+        Chain.ChainID.base,
+        Chain.ChainID.polygon,
+        Chain.ChainID.bsc,
+        Chain.ChainID.arbitrum,
+        Chain.ChainID.plasma,
+        Chain.ChainID.gnosis,
+        Chain.ChainID.rootstock,
+    ]
+
     static func addOrUpdate(_ address: String, chain: Chain, name: String) {
         if Self.exists(address, chainId: chain.id!) {
             Self.update(address, chainId: chain.id!, name: name)
@@ -80,8 +91,66 @@ extension AddressBookEntry {
         }
     }
 
+    static func addOrUpdateAllSupportedChains(_ address: String, name: String) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        let context = App.shared.coreDataStack.viewContext
+        for chainId in supportedChainIDs {
+            guard let chain = Chain.by(chainId) else { continue }
+            if let entry = by(address: address, chainId: chainId) {
+                entry.name = name
+            } else {
+                let entry = AddressBookEntry(context: context)
+                entry.address = address
+                entry.name = name
+                entry.chain = chain
+            }
+        }
+        App.shared.coreDataStack.saveContext()
+        updateCachedNames()
+        NotificationCenter.default.post(name: .addressbookChanged, object: nil)
+    }
+
+    static func updateAllChains(_ address: String, name: String) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        for chainId in supportedChainIDs {
+            guard let entry = by(address: address, chainId: chainId) else { continue }
+            entry.name = name
+        }
+        App.shared.coreDataStack.saveContext()
+        updateCachedNames()
+        NotificationCenter.default.post(name: .addressbookChanged, object: nil)
+    }
+
+    static func removeFromAllChains(_ address: String) {
+        let context = App.shared.coreDataStack.viewContext
+        for chainId in supportedChainIDs {
+            guard let entry = by(address: address, chainId: chainId) else { continue }
+            context.delete(entry)
+        }
+        App.shared.coreDataStack.saveContext()
+        updateCachedNames()
+        NotificationCenter.default.post(name: .addressbookChanged, object: nil)
+    }
+
+    static func existsOnAnySupportedChain(_ address: String) -> Bool {
+        supportedChainIDs.contains { by(address: address, chainId: $0) != nil }
+    }
+
     static func exists(_ address: String, chainId: String) -> Bool {
         by(address: address, chainId: chainId) != nil
+    }
+
+    static func uniqueEntries() -> [AddressBookEntry] {
+        guard let entries = try? getAll() else { return [] }
+        var seen = Set<String>()
+        var unique = [AddressBookEntry]()
+        for entry in entries.sorted(by: { ($0.name ?? "") < ($1.name ?? "") }) {
+            let addr = entry.displayAddress.lowercased()
+            if seen.insert(addr).inserted {
+                unique.append(entry)
+            }
+        }
+        return unique
     }
 
     static func update(_ address: String, chainId: String, name: String) {
@@ -173,13 +242,15 @@ extension AddressBookEntry {
 
 extension AddressBookEntry {
     static func exportToCSV() -> String? {
-        guard AddressBookEntry.count > 0 else { return nil }
-        return (["address,name,chainId"] + AddressBookEntry.all.map { $0.csv }).joined(separator: "\n")
+        let unique = uniqueEntries()
+        guard !unique.isEmpty else { return nil }
+        return (["address,name,chainId"] + unique.map { $0.csv }).joined(separator: "\n")
     }
 
     static func importFrom(csv: String) -> (numberOfAdded: Int, numberOfUpdated: Int) {
         var numberOfAdded: Int = 0
         var numberOfUpdated: Int = 0
+        var processedAddresses = Set<String>()
         let entites = csv.split(whereSeparator: \.isNewline).dropFirst()
         entites.forEach { entry in
             var values: [String] = []
@@ -192,13 +263,14 @@ extension AddressBookEntry {
             }
 
             guard values.count == 3,
-                  let _ = Address(values[0]),
-                  let chain = Chain.by(values[2]) else { return }
-            if let entry = AddressBookEntry.by(address: values[0], chainId: values[2]) {
-                entry.update(name: values[1])
+                  let _ = Address(values[0]) else { return }
+            let addr = values[0]
+            guard processedAddresses.insert(addr.lowercased()).inserted else { return }
+            let wasExisting = existsOnAnySupportedChain(addr)
+            addOrUpdateAllSupportedChains(addr, name: values[1])
+            if wasExisting {
                 numberOfUpdated += 1
             } else {
-                AddressBookEntry.create(address: values[0], name: values[1], chain: chain)
                 numberOfAdded += 1
             }
         }

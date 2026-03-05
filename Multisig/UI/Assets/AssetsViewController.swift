@@ -117,16 +117,6 @@ class AssetsViewController: ContainerViewController {
             Tracker.trackEvent(.assetTransferSendClicked)
         }
 
-        totalBalanceView.onBuyClicked = { [weak self] in
-            guard let safe = try? Safe.getSelected() else {
-                return
-            }
-            Tracker.trackEvent(.userBuy)
-            let vc = ViewControllerFactory.selectTopUpAddress(safe: safe)
-
-            self?.present(vc, animated: true)
-        }
-
         totalBalanceView.tokenBanner.onClaim = { [unowned self] in
             guard let safe = try? Safe.getSelected() else {
                 return
@@ -266,7 +256,6 @@ class AssetsViewController: ContainerViewController {
     private func updateSafeOptions() {
         totalBalanceView.tokenBanner.isHidden = !shouldShowSafeTokenBanner
         totalBalanceView.relayInfoBanner.isHidden = !shouldShowRelayBanner
-        totalBalanceView.buyEnabled = safe?.chain?.isSupported(feature: .moonpay) ?? false
     }
     
     @objc private func selectionChanged(notification: Notification) {

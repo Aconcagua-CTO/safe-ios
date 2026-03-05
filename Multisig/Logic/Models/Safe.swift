@@ -26,8 +26,6 @@ extension Safe {
 
     var browserURL: URL { chain!.browserURL(address: displayAddress) }
 
-    var displayENSName: String { ensName ?? "" }
-
     var safeStatus: SafeStatus {
         get { SafeStatus(rawValue: status) ?? .deployed }
         set { status = newValue.rawValue }

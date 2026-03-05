@@ -25,6 +25,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     
     private var exportFlow: ExportDataFlow!
     private var importFlow: ImportDataFlow!
+    private var deleteAccountService: UsersService?
 
     enum Section {
         case app(String)
@@ -46,6 +47,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             case planes(String)
             case logout(String)
             case logoutAndReset(String)
+            case deleteAccount(String)
         }
         
         enum Support: SectionItem {
@@ -132,6 +134,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
             if App.configuration.services.environment.isDevelopment {
                 appSection.items.append(Section.App.logoutAndReset(NSLocalizedString("ui_settings_sign_out_reset_title", comment: "Settings list title for sign out and reset")))
             }
+            appSection.items.append(Section.App.deleteAccount(NSLocalizedString("ui_settings_delete_account_title", comment: "Settings list title for delete account")))
         }
         
         let supportSection: (section: AppSettingsViewController.Section, items: [SectionItem]) = (section: .support(NSLocalizedString("ui_settings_support_feedback_title", comment: "Settings section title for support & feedback")), items: [])
@@ -285,7 +288,12 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
 
         case Section.App.logoutAndReset(let name):
             return tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
-            
+
+        case Section.App.deleteAccount(let name):
+            let cell = tableView.basicCell(name: name, icon: "ico-app-settings-lock", indexPath: indexPath)
+            cell.titleLabel.textColor = .error
+            return cell
+
         case Section.Support.chatWithUs(let name):
             if IntercomConfig.unreadConversationCount() > 0 {
                 return tableView.basicCell(name: name,
@@ -375,7 +383,10 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
 
         case Section.App.logoutAndReset:
             handleLogoutAndReset()
-            
+
+        case Section.App.deleteAccount:
+            handleDeleteAccount()
+
         case Section.Support.chatWithUs:
             Tracker.trackEvent(.userOpenIntercom)
             openWhatsAppSupportChat()
@@ -657,6 +668,74 @@ extension AppSettingsViewController: NavigationRouter {
                     AuthLogger.error("Logout+reset failed (no data cleared)", error: error)
                     SnackbarViewController.show(
                         "Failed to sign out: \(error.localizedDescription)",
+                        duration: 4.0
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Delete Account
+
+    private func handleDeleteAccount() {
+        AuthLogger.info("User initiated account deletion from settings")
+
+        let alert = UIAlertController(
+            title: NSLocalizedString("ui_delete_account_title", comment: "Delete account alert title"),
+            message: NSLocalizedString("ui_delete_account_message", comment: "Delete account alert message"),
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
+        alert.addAction(UIAlertAction(title: NSLocalizedString("ui_delete_account_confirm", comment: "Delete account confirm button"), style: .destructive) { [weak self] _ in
+            self?.performDeleteAccount()
+        })
+
+        present(alert, animated: true)
+    }
+
+    private func performDeleteAccount() {
+        guard let uid = App.shared.authRepository.getCurrentUser()?.uid else {
+            AuthLogger.error("Cannot delete account: no authenticated user")
+            return
+        }
+
+        AuthLogger.info("Performing account deletion for user: \(uid)")
+
+        // Retain the service until the async call completes.
+        let service = UsersService(authRepository: App.shared.authRepository)
+        self.deleteAccountService = service
+
+        service.deleteUser(userId: uid) { [weak self] result in
+            guard let self = self else { return }
+            self.deleteAccountService = nil
+
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    AuthLogger.success("Backend account deletion successful, cleaning up local state")
+
+                    App.shared.authRepository.signOut { [weak self] _ in
+                        DispatchQueue.main.async {
+                            AppSettings.termsAccepted = false
+                            AppSettings.onboardingCompleted = false
+                            AppSettings.companyId = nil
+                            AppSettings.pendingOwnerKeysRegistration = false
+                            AppSettings.importedOwnerKey = false
+
+                            if let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate {
+                                sceneDelegate.onAppUpdateCompletion()
+                            }
+
+                            try? Safe.removeAll()
+                            try? OwnerKeyController.deleteAllKeys(showingMessage: false)
+                        }
+                    }
+
+                case .failure(let error):
+                    AuthLogger.error("Account deletion failed", error: error)
+                    SnackbarViewController.show(
+                        "Failed to delete account: \(error.localizedDescription)",
                         duration: 4.0
                     )
                 }

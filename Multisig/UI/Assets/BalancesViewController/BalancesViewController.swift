@@ -200,24 +200,9 @@ class BalancesViewController: LoadableViewController, UITableViewDelegate, UITab
         LogService.shared.debug("[Multivault] reloadData start. flag=\(AppSettings.multiVaultBalancesEnabled)")
         #endif
         
-        if let safe = try? Safe.getSelected(), safe.chain?.isSupported(feature: .moonpay) ?? false {
-            emptyView.setTitle(NSLocalizedString("ui_balances_empty_title", comment: "Balances empty title"))
-            emptyView.setDescription(NSLocalizedString("ui_balances_empty_description", comment: "Balances empty description"))
-            emptyView.setAction(text: NSLocalizedString("ui_buy_crypto_title", comment: "Buy crypto title"), action: { [weak self] in
-                guard let safe = try? Safe.getSelected() else {
-                    return
-                }
-
-                Tracker.trackEvent(.userBuyCrypto)
-                let vc = ViewControllerFactory.selectTopUpAddress(safe: safe)
-
-                self?.present(vc, animated: true)
-            })
-        } else {
-            emptyView.setTitle(NSLocalizedString("ui_balances_empty_alt_title", comment: "Balances empty alternate title"))
-            emptyView.setDescription(nil)
-            emptyView.setAction(text: nil) { }
-        }
+        emptyView.setTitle(NSLocalizedString("ui_balances_empty_alt_title", comment: "Balances empty alternate title"))
+        emptyView.setDescription(nil)
+        emptyView.setAction(text: nil) { }
         
         loadTokenItems()
     }

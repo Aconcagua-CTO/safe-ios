@@ -50,12 +50,16 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         }
 
         let leadManufacturer = Self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
+        let mobileKeyCount = KeyInfo.count(.deviceImported) + KeyInfo.count(.deviceGenerated)
+        let requiredMobileKeyCount = leadManufacturer == "mobile" ? 2 : 1
+
         let state = PostLoginGateState(
             hasSyncedVaults: hasAttemptedVaultSync,
             hasVaults: Safe.countExcludingDemo > 0,
-            hasMobileKey: hasMobileKey(),
+            mobileKeyCount: mobileKeyCount,
+            requiredMobileKeyCount: requiredMobileKeyCount,
             hasCardKey: hasCardKey(),
-            requiresCardKey: leadManufacturer != "nocard",
+            requiresCardKey: ["tangem", "burner"].contains(leadManufacturer),
             isSignUp: isSignUp
         )
 
@@ -434,10 +438,6 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         gateViewController?.showError(message: NSLocalizedString(messageKey, comment: "")) { [weak self] in
             self?.startCardKeyFlow()
         }
-    }
-
-    private func hasMobileKey() -> Bool {
-        KeyInfo.count(.deviceImported) + KeyInfo.count(.deviceGenerated) > 0
     }
 
     private func hasCardKey() -> Bool {

@@ -66,7 +66,6 @@ enum TrackingEvent: String, Trackable {
     case safeSwitch                                 = "screen_safe_switch"
     case safeAddAddress                             = "screen_safe_add_address"
     case safeAddName                                = "screen_safe_add_name"
-    case safeAddEns                                 = "screen_safe_add_ens"
     case safeAddUd                                  = "screen_safe_add_ud"
     case networkSelect                              = "screen_chain_list"
     case tryDemo                                    = "user_try_demo"
@@ -461,14 +460,6 @@ enum TrackingEvent: String, Trackable {
     case userCreatingCompleteContinue              = "user_creating_complete_continue"
     case userLearnMore                             = "user_learn_more"
     case userAddOwner                              = "user_add_owner"
-
-    // Onramping
-
-    case userBuy                                   = "user_buying"
-    case userBuyCrypto                             = "user_buying_crypto"
-    case userTopUpEOA                              = "user_top_EOA"
-    case userTopUpSafeAccount                      = "user_top_safe_account"
-    case screenSelectTopUpAddress                  = "screen_select_top_up_address"
 
     // MFA
 

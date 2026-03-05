@@ -10,7 +10,6 @@ import Foundation
 import UnstoppableDomainsResolution
 
 class BlockchainDomainManager {
-    private(set) var ens: ENS?
     private(set) var unstoppableDomainResolution: Resolution?
 
     private static let networkNames = ["1": "mainnet",
@@ -18,11 +17,7 @@ class BlockchainDomainManager {
                                        "4": "rinkeby",
                                        "5": "goerli"]
 
-    init(rpcURL: URL, chainId: String, ensRegistryAddress: AddressString?) {
-        if let ensRegistryAddress = ensRegistryAddress {
-            ens = ENS(registryAddress: ensRegistryAddress.address, rpcURL: rpcURL)
-        }
-
+    init(rpcURL: URL, chainId: String) {
         guard let networkName = Self.networkNames[chainId] else { return }
         do {
             self.unstoppableDomainResolution = try Resolution(
@@ -72,14 +67,6 @@ class BlockchainDomainManager {
         }
 
         return try Address(from: address)
-    }
-    
-    func resolveEnsDomain(domain: String) throws -> Address {
-        try ens!.address(for: domain)
-    }
-
-    func ensName(for address: Address) -> String? {
-        ens!.name(for: address)
     }
     
     func throwCorrectUdError(_ error: ResolutionError, _ domain: String) -> DetailedLocalizedError {

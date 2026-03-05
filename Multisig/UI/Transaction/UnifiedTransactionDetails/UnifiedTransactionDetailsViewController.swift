@@ -158,7 +158,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         tableView.registerCell(DetailExpandableTextCell.self)
         tableView.registerCell(DetailConfirmationCell.self)
         tableView.registerCell(NetworkInfoTableViewCell.self)
-        tableView.registerCell(UnifiedAddressRowCell.self)
+        tableView.registerCell(DetailAccountCell.self)
 
         configureActionButtons()
 
@@ -1103,29 +1103,29 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             cell.setCopyText(nil)
             return cell
         case .actionFrom(let index):
-            let cell = tableView.dequeueCell(UnifiedAddressRowCell.self, for: indexPath)
+            let cell = tableView.dequeueCell(DetailAccountCell.self, for: indexPath)
             let address = actions[index].fromAddress
             let (label, imageUri) = NamingPolicy.name(for: address, info: nil, chainId: safe.chain!.id!)
             let title = NSLocalizedString("ui_tx_from_title", comment: "From title")
-            cell.set(title: title,
-                     address: address,
-                     label: label,
-                     imageUri: imageUri,
-                     browseURL: nil,
-                     prefix: safe.chain?.shortName)
+            cell.setAccount(address: address,
+                            label: label,
+                            title: title,
+                            imageUri: imageUri,
+                            browseURL: safe.chain?.browserURL(address: address.checksummed),
+                            prefix: safe.chain?.shortName)
             return cell
         case .actionTo(let index):
-            let cell = tableView.dequeueCell(UnifiedAddressRowCell.self, for: indexPath)
+            let cell = tableView.dequeueCell(DetailAccountCell.self, for: indexPath)
             let address = actions[index].toAddress
             let info = tx.txData?.addressInfoIndex?.values[AddressString(address)]?.addressInfo
             let (label, imageUri) = NamingPolicy.name(for: address, info: info, chainId: safe.chain!.id!)
             let title = NSLocalizedString("ui_tx_to_plain_title", comment: "To title")
-            cell.set(title: title,
-                     address: address,
-                     label: label,
-                     imageUri: imageUri,
-                     browseURL: nil,
-                     prefix: safe.chain?.shortName)
+            cell.setAccount(address: address,
+                            label: label,
+                            title: title,
+                            imageUri: imageUri,
+                            browseURL: safe.chain?.browserURL(address: address.checksummed),
+                            prefix: safe.chain?.shortName)
             return cell
         case .network:
             let cell = tableView.dequeueCell(NetworkInfoTableViewCell.self, for: indexPath)
@@ -1188,6 +1188,66 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             return true
         }
         return false
+    }
+
+    // MARK: - Address Book (use the transaction's chain, not the globally selected safe)
+
+    override func addToContacts(_ view: AddressInfoView) {
+        guard let contact = view.address,
+              let txChain = safe.chain,
+              let cgChain = SCGModels.Chain.create(from: txChain) else { return }
+
+        let createAddressBookEntryVC = CreateAddressBookEntryViewController()
+        createAddressBookEntryVC.inputAddress = contact
+        createAddressBookEntryVC.chain = cgChain
+        createAddressBookEntryVC.canEditAddress = false
+
+        var inputName: String?
+
+        enum EntryType { case safe, keyInfo, addressBook }
+        var entryType: EntryType
+
+        if let s = Safe.by(address: contact.checksummed, chainId: cgChain.id) {
+            inputName = s.name
+            entryType = .safe
+        } else if let keyInfo = (try? KeyInfo.keys(addresses: [contact]))?.first {
+            inputName = keyInfo.name
+            entryType = .keyInfo
+        } else if let existing = AddressBookEntry.uniqueEntries().first(where: { $0.displayAddress.lowercased() == contact.checksummed.lowercased() }) {
+            inputName = existing.name
+            entryType = .addressBook
+        } else {
+            inputName = nil
+            entryType = .addressBook
+        }
+
+        if let name = inputName {
+            createAddressBookEntryVC.inputName = name
+            createAddressBookEntryVC.screenTitle = "Edit entry"
+            createAddressBookEntryVC.actionName = "Save"
+        }
+
+        createAddressBookEntryVC.completion = { [unowned createAddressBookEntryVC] (address, name) in
+            createAddressBookEntryVC.dismiss(animated: true) {
+                switch entryType {
+                case .safe:
+                    if let s = Safe.by(address: address.checksummed, chainId: createAddressBookEntryVC.chain.id) {
+                        s.update(name: name)
+                    }
+                case .keyInfo:
+                    if let keyInfo = try? KeyInfo.keys(addresses: [address]).first {
+                        OwnerKeyController.edit(keyInfo: keyInfo, name: name)
+                    }
+                case .addressBook:
+                    fallthrough
+                default:
+                    AddressBookEntry.addOrUpdateAllSupportedChains(address.checksummed, name: name)
+                }
+            }
+        }
+        let nav = ViewControllerFactory.modalWithRibbon(viewController: createAddressBookEntryVC,
+                                                        storedChain: txChain)
+        present(nav, animated: true)
     }
 }
 

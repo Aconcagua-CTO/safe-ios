@@ -55,8 +55,7 @@ _RELAY_URL_PROD               = https:/$()/safe-client.safe.global/
 // Gelato Service
 GELATO_SERVICE_URL            = https:/$()/relay.gelato.digital
 
-// Moonpay Service
-MOONPAY_SERVICE_URL           = https:/$()/api.moonpay.com
+
 
 // App Groups
 _APP_GROUP_ID_PROD     = group.com.manuelrm.bovedapp.prod.mainnet
@@ -145,8 +144,8 @@ ONRAMPING_INFO_URL = https:/$()/help.safe.global/en/articles/...
 
 // Legal URLs
 TERMS_URL       = https:/$()/app.safe.global/terms
-PRIVACY_URL     = https:/$()/app.safe.global/privacy
-LICENSES_URL    = https:/$()/app.safe.global/licenses
+PRIVACY_URL     = https:/$()/boveda.ai/privacy.html
+LICENSES_URL    = https:/$()/boveda.ai/licenses.html
 
 // Contact Information
 DISCORD_URL             = https:/$()/chat.safe.global/

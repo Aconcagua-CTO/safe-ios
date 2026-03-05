@@ -6,7 +6,7 @@
   Copyright © 2020 Gnosis Ltd. All rights reserved.
 */
 "camera_title" = "Camera is not accessable.";
-"camera_message" = "Safe need to access camera.";
+"camera_message" = "Boveda needs to access camera.";
 "cancel" = "Cancel";
 "settings" = "Settings";
 "scanner_not_supported_title" = "Scanning not supported";
@@ -66,6 +66,10 @@
 "ui_settings_sign_out_title" = "Sign Out";
 "ui_settings_sign_out_reset_title" = "Sign Out & Reset";
 "ui_sign_out_confirm_message" = "Are you sure you want to sign out?";
+"ui_settings_delete_account_title" = "Delete Account";
+"ui_delete_account_title" = "Delete Account";
+"ui_delete_account_message" = "This will permanently delete your account and all associated data. This action cannot be undone.";
+"ui_delete_account_confirm" = "Delete Account";
 "ui_settings_support_feedback_title" = "Support & Feedback";
 "ui_settings_advanced_title" = "Experimental";
 "ui_settings_export_data_title" = "Export data";
@@ -121,8 +125,6 @@
 "ui_tangem_unable_to_scan_title" = "Unable to Scan";
 "ui_tangem_scan_message_header" = "Safe Wallet";
 "ui_tangem_scan_message_body" = "Hold your Tangem card near the top of your iPhone to connect.";
-"view_delegate_scan_title" = "Listo para escanear";
-"view_delegate_security_delay_title" = "Escaneando";
 "ui_tangem_error_nfc_unavailable" = "NFC is not available on this device. Tangem cards require NFC to communicate.";
 "ui_tangem_error_user_cancelled" = "The operation was cancelled. Tap Try Again to rescan your Tangem card.";
 "ui_tangem_error_missing_wallet" = "This Tangem card does not contain an Ethereum-compatible wallet. Create a wallet in the Tangem app and try again.";
@@ -322,9 +324,7 @@
 "ui_tx_amount_title" = "Amount";
 "ui_assets_search_tokens_placeholder" = "Search tokens";
 "ui_balances_empty_title" = "Add some crypto to get started";
-"ui_balances_empty_description" = "Buy crypto directly with your credit card or a bank account";
 "ui_balances_empty_alt_title" = "Balances will appear here";
-"ui_buy_crypto_title" = "Buy crypto";
 "ui_collectibles_empty_title" = "Collectibles will appear here";
 "ui_collectible_details_title" = "Collectible Details";
 "ui_balances_failed_load_error" = "Failed to load balances";
@@ -372,7 +372,6 @@
 "ui_kraken_ohlc_invalid_url" = "Kraken OHLC: invalid URL";
 "ui_kraken_ohlc_empty_response" = "Kraken OHLC: empty response";
 "ui_kraken_ohlc_error_format" = "Kraken OHLC error: %@";
-"ui_ramper_no_currencies_error" = "No currencies supported on the selected chain";
 "ui_signature_failed_format" = "Failed to sign: %@";
 "ui_walletconnect_response_error_format" = "Respond Error: %@";
 "ui_walletconnect_disconnect_error" = "Disconnecting Session error";
@@ -579,7 +578,6 @@
 "ui_token_details_coming_soon" = "Token details coming soon.";
 "ui_camera_unavailable_title" = "Camera unavailable";
 "ui_camera_unavailable_body" = "The camera is unavailable in Split View or in Slide Over mode. Please open the app to full screen.";
-"ui_top_up_not_supported" = "Top Up Not Supported";
 "ui_owner_key_removed_message" = "Owner key removed from this app";
 "ui_owner_key_updated_message" = "Owner key updated";
 "ui_owner_keys_removed_message" = "All owner keys removed from this app";
@@ -691,8 +689,6 @@
 "ui_safe_choose_name_description" = "Choose a name for the Safe Account. The name is only stored locally and will not be shared with us or any third parties";
 "ui_safe_enter_name_placeholder" = "Enter name";
 "ui_safe_enter_address_placeholder" = "Enter Safe address";
-"ui_safe_enter_ens_title" = "Enter ENS Name";
-"ui_safe_enter_ens_placeholder" = "Enter ENS name";
 "ui_safe_enter_unstoppable_title" = "Enter Unstoppable Name";
 "ui_safe_enter_unstoppable_placeholder" = "Enter Unstoppable name";
 "ui_invertir_select_asset_title" = "What do you want to buy?";

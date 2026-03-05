@@ -134,7 +134,7 @@ class HTTPClient {
         
         if request.httpMethod != "GET" {
             urlRequest.httpBody = request.body
-            if let str = String(data: urlRequest.httpBody!, encoding: .utf8) {
+            if let body = urlRequest.httpBody, let str = String(data: body, encoding: .utf8) {
                 logger?.debug(str)
             }
         }

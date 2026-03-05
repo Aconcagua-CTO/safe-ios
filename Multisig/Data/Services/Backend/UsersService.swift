@@ -16,6 +16,18 @@ struct BackendUserProfile: Codable {
     let enterpriseRols: [EnterpriseRol]?
 }
 
+/// HTTP request for deleting a user account via Aconcagua-API `DELETE /users/:userId`.
+struct DeleteUserRequest: HTTPRequest {
+    let userId: String
+
+    var httpMethod: String { "DELETE" }
+    var urlPath: String { "\(userId)" }
+    var query: String? { nil }
+    var body: Data? { nil }
+    var url: URL? { nil }
+    var headers: [String: String] { [:] }
+}
+
 /// HTTP request for fetching a user profile by userId from Aconcagua-API users endpoint.
 /// Base URL should be configured as `.../users/`.
 struct GetUserProfileRequest: HTTPRequest {
@@ -41,6 +53,18 @@ final class UsersService {
         )
         self.decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
+    }
+
+    func deleteUser(userId: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        let request = DeleteUserRequest(userId: userId)
+        _ = client.asyncExecute(request: request) { result in
+            switch result {
+            case .success:
+                completion(.success(()))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
     }
 
     func getUserProfile(userId: String, completion: @escaping (Result<BackendUserProfile?, Error>) -> Void) {

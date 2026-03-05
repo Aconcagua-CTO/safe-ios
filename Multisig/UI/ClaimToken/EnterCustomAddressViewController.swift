@@ -91,25 +91,7 @@ class EnterCustomAddressViewController: UIViewController {
         }))
 
         let blockchainDomainManager = BlockchainDomainManager(rpcURL: chain.authenticatedRpcUrl,
-                                                              chainId: chain.id,
-                                                              ensRegistryAddress: chain.ensRegistryAddress)
-        if blockchainDomainManager.ens != nil {
-            alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_safe_enter_ens_title", comment: "Enter ENS name title"),
-                                            style: .default,
-                                            handler: { [weak self] _ in
-                guard let self = self else { return }
-                let ensNameVC = EnterENSNameViewController(manager: blockchainDomainManager, chain: self.chain)
-                ensNameVC.trackingParameters = self.trackingParameters
-                ensNameVC.onConfirm = { [weak self] in
-                    guard let `self` = self else { return }
-                    self.navigationController?.popViewController(animated: true)
-                    self.didEnterText(ensNameVC.address?.checksummed)
-                }
-                let ensNameWrapperVC = RibbonViewController(rootViewController: ensNameVC)
-                ensNameWrapperVC.chain = self.chain
-                self.show(ensNameWrapperVC, sender: nil)
-            }))
-        }
+                                                              chainId: chain.id)
 
         if blockchainDomainManager.unstoppableDomainResolution != nil {
             alertVC.addAction(UIAlertAction(title: NSLocalizedString("ui_safe_enter_unstoppable_title", comment: "Enter unstoppable name title"),

@@ -191,15 +191,6 @@
         }
       },
       {
-        "package": "MoonPaySdk",
-        "repositoryURL": "https://github.com/moonpay/mobile-sdk-ios.git",
-        "state": {
-          "branch": "main",
-          "revision": "e069c5cfa9e7065a1c6f2a98f5c196b1de79cd43",
-          "version": null
-        }
-      },
-      {
         "package": "nanopb",
         "repositoryURL": "https://github.com/firebase/nanopb.git",
         "state": {

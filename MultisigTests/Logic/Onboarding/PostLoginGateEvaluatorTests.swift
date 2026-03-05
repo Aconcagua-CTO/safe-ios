@@ -13,7 +13,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
         let state = PostLoginGateState(
             hasSyncedVaults: false,
             hasVaults: false,
-            hasMobileKey: false,
+            mobileKeyCount: 0,
+            requiredMobileKeyCount: 1,
             hasCardKey: false,
             requiresCardKey: false,
             isSignUp: false
@@ -26,7 +27,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
         let state = PostLoginGateState(
             hasSyncedVaults: false,
             hasVaults: false,
-            hasMobileKey: false,
+            mobileKeyCount: 0,
+            requiredMobileKeyCount: 1,
             hasCardKey: false,
             requiresCardKey: false,
             isSignUp: true
@@ -39,7 +41,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
         let state = PostLoginGateState(
             hasSyncedVaults: false,
             hasVaults: false,
-            hasMobileKey: true,
+            mobileKeyCount: 1,
+            requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
             isSignUp: false
@@ -52,7 +55,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
         let state = PostLoginGateState(
             hasSyncedVaults: false,
             hasVaults: false,
-            hasMobileKey: true,
+            mobileKeyCount: 1,
+            requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
             isSignUp: true
@@ -65,7 +69,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
         let state = PostLoginGateState(
             hasSyncedVaults: true,
             hasVaults: false,
-            hasMobileKey: true,
+            mobileKeyCount: 1,
+            requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
             isSignUp: false
@@ -78,12 +83,41 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
         let state = PostLoginGateState(
             hasSyncedVaults: true,
             hasVaults: true,
-            hasMobileKey: true,
+            mobileKeyCount: 1,
+            requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
             isSignUp: false
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
+    }
+
+    func test_startMobileKeyFlowWhenMobileManufacturerNeedsSecondKey() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            mobileKeyCount: 1,
+            requiredMobileKeyCount: 2,
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: true
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .startMobileKeyFlow)
+    }
+
+    func test_proceedAfterSecondMobileKeyForMobileManufacturer() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            mobileKeyCount: 2,
+            requiredMobileKeyCount: 2,
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: true
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showPendingVaultActivation)
     }
 }

@@ -57,6 +57,8 @@ class CreateAddressBookEntryViewController: UIViewController {
         textField.setPlaceholder(NSLocalizedString("ui_address_book_entry_placeholder", comment: "Address book entry placeholder"))
         textField.textField.delegate = self
         textField.textField.becomeFirstResponder()
+
+        validateInput()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -124,15 +126,10 @@ class CreateAddressBookEntryViewController: UIViewController {
             // (1) validate that the text is address
             let address = try Address.addressWithPrefix(text: text)
 
-            guard (address.prefix ?? chain.shortName) == chain.shortName else {
-                addressField.setError(GSError.AddressMismatchNetwork())
-                return
-            }
+            addressField.setAddress(address, prefix: address.prefix ?? chain.shortName)
 
-            addressField.setAddress(address, prefix: chain.shortName)
-
-            // (2) and that there's no such entry already
-            let exists = AddressBookEntry.exists(address.checksummed, chainId: chain.id)
+            // (2) and that there's no such entry already (check all supported chains)
+            let exists = AddressBookEntry.existsOnAnySupportedChain(address.checksummed)
             if exists { throw GSError.AddressBookEntryAlreadyExists() }
             validateInput()
         } catch {

@@ -51,20 +51,6 @@ enum ViewControllerFactory {
         return nav
     }
 
-    static func selectTopUpAddress(safe: Safe) -> UIViewController {
-        let vc = SelectTopUpAddressViewController()
-
-        Self.addCloseButton(vc)
-        vc.safe = safe
-        vc.onSelect = { [weak vc] address in
-            vc?.dismiss(animated: true, completion: {
-                App.shared.snackbar.show(message: NSLocalizedString("ui_top_up_not_supported", comment: "Top up not supported message"))
-            })
-        }
-
-        return UINavigationController(rootViewController: vc)
-    }
-
     static func transactionDetailsViewController(transactionId: String) -> UIViewController {
         let vc = UnifiedTransactionDetailsViewController(transactionID: transactionId)
         return modalWithRibbon(viewController: vc)

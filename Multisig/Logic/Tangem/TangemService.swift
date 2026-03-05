@@ -139,48 +139,8 @@ class CardSigner: TangemSigner {
                 print("▶️ TangemService ▶️ Starting Tangem SDK session")
                 print("🔗 SDK linkedTerminal config: \(String(describing: sdk.config.linkedTerminal))")
                 print("🎯 Using session filter: cardId(\(cardId))")
-                let scanTitle = NSLocalizedString("view_delegate_scan_title", comment: "")
-                print("💬 [NFC title] view_delegate_scan_title = \"\(scanTitle)\" (length=\(scanTitle.count))")
                 print("🔄 Task type: MultipleSignTask")
                 print("📤 Sending to SDK...")
-
-                // #region agent log
-                #if MULTISIG_DEV_LOGS
-                do {
-                    let preferredLang = Locale.preferredLanguages.first ?? "n/a"
-                    let mainPath = Bundle.main.bundlePath
-                    let sdkBundle = Bundle(identifier: "org.cocoapods.TangemSdk") ?? Bundle(for: type(of: self.sdk))
-                    let payload: [String: Any] = [
-                        "sessionId": "481528",
-                        "location": "TangemService.swift:startSession",
-                        "message": "NFC session starting",
-                        "data": [
-                            "preferredLanguage": preferredLang,
-                            "mainBundlePath": mainPath,
-                            "sdkBundlePath": sdkBundle.bundlePath,
-                            "app_scan_title": Bundle.main.localizedString(forKey: "view_delegate_scan_title", value: nil, table: nil),
-                            "sdk_scan_title": sdkBundle.localizedString(forKey: "view_delegate_scan_title", value: nil, table: nil)
-                        ],
-                        "timestamp": Int(Date().timeIntervalSince1970 * 1000),
-                        "hypothesisId": "H_bundle"
-                    ]
-                    let data = try JSONSerialization.data(withJSONObject: payload)
-                    if let line = String(data: data, encoding: .utf8) {
-                        let logPath = "/Users/manuelrm/Documents/GitHub/CTO/.cursor/debug-481528.log"
-                        if !FileManager.default.fileExists(atPath: logPath) {
-                            FileManager.default.createFile(atPath: logPath, contents: nil)
-                        }
-                        if let handle = FileHandle(forWritingAtPath: logPath) {
-                            handle.seekToEndOfFile()
-                            handle.write((line + "\n").data(using: .utf8)!)
-                            handle.closeFile()
-                        }
-                    }
-                } catch {}
-                #endif
-                // #endregion
-
-                // Use session filter like official app
                 sdk.startSession(with: task, filter: sessionFilter, initialMessage: initialMessage) { result in
                     print("🔙 TangemService ▶️ SDK session callback received")
                     print("📥 TangemService ▶️ SDK session completed")

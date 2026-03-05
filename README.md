@@ -61,3 +61,13 @@ Now you are ready to build the project.
 # Documentation
 
 Documentation is in the [docs](docs/doc.md) folder.
+
+# License
+
+This project is licensed under the **GNU General Public License v3.0** (GPL-3.0). See the [LICENSE](LICENSE) file for the full text.
+
+This application is based on [Safe{Wallet} iOS](https://github.com/safe-global/safe-ios) by Gnosis Ltd, and integrates the [Tangem SDK](https://github.com/tangem/tangem-sdk-ios) built from the last MIT-licensed commit (see [docs/TANGEM-SDK-PROVENANCE.md](docs/TANGEM-SDK-PROVENANCE.md)).
+
+Source code: https://github.com/AconcaguaLab/safe-ios (replace with your actual repository URL)
+
+Third-party licenses: https://boveda.ai/licenses

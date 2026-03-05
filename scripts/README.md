@@ -1,5 +1,23 @@
 # Tangem SDK Patch Scripts
 
+## Build from MIT source (recommended for license compliance)
+
+To ensure the embedded Tangem SDK uses **only** the MIT-licensed version (before the July 2025 license change), build the XCFramework from the local snapshot at commit `80419771`:
+
+```bash
+./scripts/build-tangem-sdk-from-mit.sh
+```
+
+By default the script uses `../tangem-sdk-ios-mit`. To use another path:
+
+```bash
+TANGEM_MIT_SOURCE=/path/to/tangem-sdk-ios-mit ./scripts/build-tangem-sdk-from-mit.sh
+```
+
+- **Provenance and license:** [../docs/TANGEM-SDK-PROVENANCE.md](../docs/TANGEM-SDK-PROVENANCE.md)
+
+---
+
 ## Quick Reference
 
 ### 1. Analyze Binary (First Time)
@@ -88,6 +106,7 @@ Rolls back to unpatched SDK from backup.
 
 ## Documentation
 
+- **SDK provenance (MIT):** `../docs/TANGEM-SDK-PROVENANCE.md` – commit, license, how to rebuild
 - **Quick Start:** `../docs/TANGEM-PATCH-QUICKSTART.md`
 - **Technical Plan:** `../docs/tangem-sdk-binary-patch-plan.md`
 - **Integration Summary:** `../docs/TANGEM-INTEGRATION-SUMMARY.md`
@@ -98,6 +117,7 @@ Rolls back to unpatched SDK from backup.
 
 | Script | Purpose |
 |--------|---------|
+| `build-tangem-sdk-from-mit.sh` | Build XCFramework from MIT snapshot (commit 80419771); replace in project |
 | `analyze-tangem-binary.sh` | Analysis helper - find string offsets |
 | `patch-tangem-sdk.sh` | Apply binary patch to remove firmware check |
 | `restore-tangem-sdk.sh` | Restore original SDK from backup |

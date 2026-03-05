@@ -87,6 +87,10 @@
 "ui_settings_sign_out_title" = "Cerrar sesión";
 "ui_settings_sign_out_reset_title" = "Cerrar sesión y reiniciar";
 "ui_sign_out_confirm_message" = "¿Seguro que querés cerrar sesión?";
+"ui_settings_delete_account_title" = "Eliminar cuenta";
+"ui_delete_account_title" = "Eliminar cuenta";
+"ui_delete_account_message" = "Esto eliminará permanentemente tu cuenta y todos los datos asociados. Esta acción no se puede deshacer.";
+"ui_delete_account_confirm" = "Eliminar cuenta";
 "pending_vault_activation_message" = "Ingresá activos para empezar";
 "pending_vault_activation_loading_message" = "Estamos activando tus bóvedas, pronto podrás operar";
 "post_login_card_key_loading" = "Activando tu BÓVEDA Card Key";
@@ -167,8 +171,6 @@
 "ui_tangem_unable_to_scan_title" = "No se pudo escanear";
 "ui_tangem_scan_message_header" = "Listo para escanear";
 "ui_tangem_scan_message_body" = "Apoyá tu BOVEDA Card Key en la parte de atrás de tu iPhone";
-"view_delegate_scan_title" = "Listo para escanear";
-"view_delegate_security_delay_title" = "Escaneando";
 "ui_tangem_error_nfc_unavailable" = "NFC no está disponible en este dispositivo. Las tarjetas Tangem requieren NFC para comunicarse.";
 "ui_tangem_error_user_cancelled" = "La operación se canceló. Tocá Reintentar para volver a escanear tu tarjeta Tangem.";
 "ui_tangem_error_missing_wallet" = "Esta tarjeta Tangem no tiene una billetera compatible con Ethereum. Creá una billetera en la app de Tangem y probá de nuevo.";
@@ -374,9 +376,7 @@
 "ui_tx_amount_title" = "Monto";
 "ui_assets_search_tokens_placeholder" = "Buscar tokens";
 "ui_balances_empty_title" = "Agregá criptos para empezar";
-"ui_balances_empty_description" = "Comprá cripto con tarjeta o transferencia bancaria";
 "ui_balances_empty_alt_title" = "Los balances van a aparecer acá";
-"ui_buy_crypto_title" = "Comprar cripto";
 "ui_collectibles_empty_title" = "Los coleccionables van a aparecer acá";
 "ui_collectible_details_title" = "Detalles del coleccionable";
 "ui_balances_failed_load_error" = "No se pudieron cargar los balances";
@@ -424,7 +424,6 @@
 "ui_kraken_ohlc_invalid_url" = "Kraken OHLC: URL inválida";
 "ui_kraken_ohlc_empty_response" = "Kraken OHLC: respuesta vacía";
 "ui_kraken_ohlc_error_format" = "Kraken OHLC error: %@";
-"ui_ramper_no_currencies_error" = "No hay monedas compatibles en la cadena seleccionada";
 "ui_signature_failed_format" = "Falló la firma: %@";
 "ui_walletconnect_response_error_format" = "Error de respuesta: %@";
 "ui_walletconnect_disconnect_error" = "Error al desconectar la sesión";
@@ -631,7 +630,6 @@
 "ui_token_details_coming_soon" = "Próximamente detalles del activo";
 "ui_camera_unavailable_title" = "Cámara no disponible";
 "ui_camera_unavailable_body" = "La cámara no está disponible en Split View o Slide Over. Abrí la app en pantalla completa.";
-"ui_top_up_not_supported" = "Top up no compatible";
 "ui_owner_key_removed_message" = "Se eliminó la llave de owner de esta app";
 "ui_owner_key_updated_message" = "Se actualizó la llave de owner";
 "ui_owner_keys_removed_message" = "Se eliminaron todas las llaves de owner de esta app";
@@ -743,8 +741,6 @@
 "ui_safe_choose_name_description" = "Elegí un nombre para la bóveda. El nombre se guarda solo localmente y no se comparte con nosotros ni con terceros.";
 "ui_safe_enter_name_placeholder" = "Ingresá un nombre";
 "ui_safe_enter_address_placeholder" = "Ingresá la dirección de la bóveda";
-"ui_safe_enter_ens_title" = "Ingresar nombre ENS";
-"ui_safe_enter_ens_placeholder" = "Ingresá el nombre ENS";
 "ui_safe_enter_unstoppable_title" = "Ingresar nombre Unstoppable";
 "ui_safe_enter_unstoppable_placeholder" = "Ingresá el nombre Unstoppable";
 "ui_invertir_select_asset_title" = "¿Qué querés comprar?";

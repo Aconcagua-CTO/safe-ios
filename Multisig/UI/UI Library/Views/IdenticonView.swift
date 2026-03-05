@@ -39,25 +39,11 @@ class IdenticonView: UINibView {
         let identiconStart = Date()
         VaultLogger.debug("[IDENTICON] Setting identicon for address \(address.hexadecimal.prefix(10))... with imageURL: \(imageURL?.absoluteString ?? "nil")")
 
-        let hasOwnerCount = (reqConfirmations != nil && owners != nil)
-        let shouldShow =
-            imageURL != nil ||
-            placeholderImage != nil ||
-            badgeName != nil ||
-            hasOwnerCount
+        let effectivePlaceholder = placeholderImage ?? "ico-address-placeholder"
 
-        // If nothing meaningful is provided, hide the entire view so stack views collapse it.
-        isHidden = !shouldShow
-        guard shouldShow else {
-            VaultLogger.debug("[IDENTICON] Hiding identicon (no imageURL/placeholder/badge/ownerCount) for \(address.hexadecimal.prefix(10))...")
-            identiconImageView.image = nil
-            badgeImageView.image = nil
-            badgeFrameView.isHidden = true
-            ownerCountFrameView.isHidden = true
-            return
-        }
+        isHidden = false
 
-        identiconImageView.setCircleImage(url: imageURL, placeholderName: placeholderImage, address: address)
+        identiconImageView.setCircleImage(url: imageURL, placeholderName: effectivePlaceholder, address: address)
 
         let identiconTime = Date().timeIntervalSince(identiconStart)
         VaultLogger.debug("[IDENTICON] setCircleImage() completed in \(String(format: "%.3f", identiconTime))ms")

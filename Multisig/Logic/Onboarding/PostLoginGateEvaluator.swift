@@ -10,7 +10,8 @@ import Foundation
 struct PostLoginGateState {
     let hasSyncedVaults: Bool
     let hasVaults: Bool
-    let hasMobileKey: Bool
+    let mobileKeyCount: Int
+    let requiredMobileKeyCount: Int
     let hasCardKey: Bool
     let requiresCardKey: Bool
     let isSignUp: Bool
@@ -29,19 +30,17 @@ enum PostLoginGateEvaluator {
         #if DEBUG
         LogService.shared.debug(
             "[PostLoginGateEvaluator] state synced=\(state.hasSyncedVaults) vaults=\(state.hasVaults) " +
-            "mobileKey=\(state.hasMobileKey) cardKey=\(state.hasCardKey) " +
+            "mobileKeys=\(state.mobileKeyCount)/\(state.requiredMobileKeyCount) cardKey=\(state.hasCardKey) " +
             "requiresCardKey=\(state.requiresCardKey) isSignUp=\(state.isSignUp)"
         )
         #endif
-        // For non-sign-up logins we skip post-login key/vault sync gates and hand off
-        // to Assets tab, where vault sync is shown with the custom loader.
         if !state.isSignUp && !state.hasSyncedVaults {
             return .showMain
         }
         if state.requiresCardKey && !state.hasCardKey {
             return .startCardKeyFlow
         }
-        if !state.hasMobileKey {
+        if state.mobileKeyCount < state.requiredMobileKeyCount {
             return .startMobileKeyFlow
         }
         if !state.hasSyncedVaults {

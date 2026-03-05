@@ -3,6 +3,11 @@ set -e
 
 # Tangem SDK Source Build Script
 # Builds a patched TangemSdk.xcframework with HD wallet terminal linking enabled
+#
+# WARNING: This script clones from GitHub and checks out a tag/branch; the upstream
+# repo changed to a proprietary license on 9 July 2025. For license compliance
+# (MIT only), use scripts/build-tangem-sdk-from-mit.sh with the local folder
+# tangem-sdk-ios-mit at commit 80419771. See docs/TANGEM-SDK-PROVENANCE.md.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 REPO_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"

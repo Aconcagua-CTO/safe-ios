@@ -44,9 +44,8 @@
                                             <rect key="frame" x="0.0" y="0.0" width="52" height="52"/>
                                             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                             <constraints>
-                                                <!-- Allow fitting-size layout passes without breaking spacing -->
-                                                <constraint firstAttribute="height" constant="52" priority="250" id="Wb0-zh-q3M"/>
-                                                <constraint firstAttribute="width" constant="52" priority="250" id="hXo-NT-Du3"/>
+                                                <constraint firstAttribute="height" constant="36" priority="999" id="Wb0-zh-q3M"/>
+                                                <constraint firstAttribute="width" constant="36" priority="999" id="hXo-NT-Du3"/>
                                             </constraints>
                                         </view>
                                         <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="4" translatesAutoresizingMaskIntoConstraints="NO" id="rGe-la-jmo" userLabel="Address Stack View">
@@ -67,8 +66,7 @@
                                             </subviews>
                                             <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                             <constraints>
-                                                <!-- Allow compact table cells; avoid constraint breakage/flicker -->
-                                                <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="46" priority="250" id="KNf-TB-gYg"/>
+                                                <constraint firstAttribute="height" relation="greaterThanOrEqual" constant="36" priority="750" id="KNf-TB-gYg"/>
                                             </constraints>
                                         </stackView>
                                     </subviews>
@@ -77,8 +75,7 @@
                                 <button opaque="NO" contentMode="scaleToFill" horizontalCompressionResistancePriority="751" contentHorizontalAlignment="right" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="6lD-yN-uXE" userLabel="Blockchain Explorer Button">
                                     <rect key="frame" x="305" y="0.0" width="44" height="52"/>
                                     <constraints>
-                                        <!-- Allow fitting-size layout passes to compress without breaking other constraints -->
-                                        <constraint firstAttribute="width" constant="44" priority="250" id="peA-gz-lMq"/>
+                                        <constraint firstAttribute="width" constant="44" priority="750" id="peA-gz-lMq"/>
                                     </constraints>
                                     <state key="normal" image="ico-browse-address"/>
                                     <connections>

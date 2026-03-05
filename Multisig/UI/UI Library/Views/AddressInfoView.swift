@@ -48,19 +48,9 @@ class AddressInfoView: UINibView {
         setTitle(nil)
 
         setIconSize(Self.defaultIconSize)
-        // Make icon constraints flexible to avoid layout conflicts
-        iconWidthConstraint.priority = .defaultHigh
-        iconHeightConstraint.priority = .defaultHigh
 
-        // Allow horizontal compression during fitting-size passes.
-        identiconView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        identiconView.setContentHuggingPriority(.defaultLow, for: .horizontal)
         textLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         addressLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        // Make the view more flexible for layout
-        setContentHuggingPriority(.defaultHigh, for: .vertical)
-        setContentCompressionResistancePriority(.defaultLow, for: .vertical)
 
         addToContactsGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(addToContacts))
         copyButton.addGestureRecognizer(addToContactsGestureRecognizer)
@@ -78,9 +68,8 @@ class AddressInfoView: UINibView {
     func setIconSize(_ value: CGFloat) {
         iconWidthConstraint.constant = value
         iconHeightConstraint.constant = value
-        // Reduce priority to allow breaking during layout conflicts
-        iconWidthConstraint.priority = .defaultHigh
-        iconHeightConstraint.priority = .defaultHigh
+        iconWidthConstraint.priority = UILayoutPriority(999)
+        iconHeightConstraint.priority = UILayoutPriority(999)
         setNeedsUpdateConstraints()
     }
     
@@ -265,8 +254,8 @@ extension UIViewController {
             } else if let keyInfo = (try? KeyInfo.keys(addresses: [contact]))?.first {
                 inputName = keyInfo.name
                 entryType = .keyInfo
-            } else if let entry = AddressBookEntry.by(address: contact.checksummed, chainId: cgChain.id) {
-                inputName = entry.name
+            } else if let existing = AddressBookEntry.uniqueEntries().first(where: { $0.displayAddress.lowercased() == contact.checksummed.lowercased() }) {
+                inputName = existing.name
                 entryType = .addressBook
             } else {
                 inputName = nil
@@ -294,9 +283,7 @@ extension UIViewController {
                     case .addressBook:
                         fallthrough
                     default:
-                        if let cdChain = Chain.by(createAddressBookEntryVC.chain.id) {
-                            AddressBookEntry.addOrUpdate(address.checksummed, chain: cdChain, name: name)
-                        }
+                        AddressBookEntry.addOrUpdateAllSupportedChains(address.checksummed, name: name)
                     }
                 }
             }
@@ -308,8 +295,7 @@ extension UIViewController {
 }
 
 extension SCGModels.Chain {
-    static func createFromCurrentChain() -> SCGModels.Chain? {
-        let cdChain = (try? Safe.getSelected()?.chain) ?? Chain.mainnetChain()
+    static func create(from cdChain: Chain) -> SCGModels.Chain? {
         guard let prefixName = cdChain.shortName, let cdChainId = cdChain.id else {
             return nil
         }
@@ -325,5 +311,10 @@ extension SCGModels.Chain {
             l2: true,
             features: [],
             gasPrice: [])
+    }
+
+    static func createFromCurrentChain() -> SCGModels.Chain? {
+        let cdChain = (try? Safe.getSelected()?.chain) ?? Chain.mainnetChain()
+        return create(from: cdChain)
     }
 }

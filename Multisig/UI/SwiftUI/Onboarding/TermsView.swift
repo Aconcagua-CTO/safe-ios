@@ -27,7 +27,7 @@ struct TermsView: View {
     private let bottomPadding: CGFloat = Spacing.large
     let interItemSpacing: CGFloat = Spacing.small
 
-    private let termsAndConditionsURL = URL(string: "https://boveda.ai/policy")!
+    private let termsAndConditionsURL = URL(string: "https://boveda.ai/licenses.html")!
 
     var body: some View {
         VStack(spacing: interItemSpacing) {

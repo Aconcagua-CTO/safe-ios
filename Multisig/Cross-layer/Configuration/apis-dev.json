@@ -1,21 +1,17 @@
 {
     "_version": "plain-v1",
     "config": {
-        "INFURA_API_KEY": "f27ac654cd6e4692bf53aee1fe3c7b85",
+        "INFURA_API_KEY": "",
         
         "INTERCOM_APP_ID": "",
         "INTERCOM_API_KEY": "",
         
-        "WALLETCONNECT_PROJECT_ID": "e56c853d80002b104056f6076540a396",
+        "WALLETCONNECT_PROJECT_ID": "",
         
         "WEB3AUTH_GOOGLE_CLIENT_ID": "",
         "WEB3AUTH_REDIRECT_SCHEME": "",
         
         "WEB3AUTH_GOOGLE_VERIFIER_AGGREGATE": "",
-        "WEB3AUTH_GOOGLE_VERIFIER_SUB": "",
-        
-        "MOONPAY_API_KEY": "",
-        "MOONPAY_SECRET_KEY": ""
+        "WEB3AUTH_GOOGLE_VERIFIER_SUB": ""
     }
 }
-

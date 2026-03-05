@@ -1,4 +1,5 @@
 Config.xcconfig
+config.bundle/apis-dev.enc.json
 config.bundle/apis-prod.enc.json
 config.bundle/apis-staging.enc.json
 apis-staging.json

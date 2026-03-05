@@ -172,6 +172,10 @@ final class BurnerKeyFlow: AddKeyFlow {
         }
     }
     
+    override func keyAdded() {
+        stop(success: true)
+    }
+
     override func doImport() -> Bool {
         guard let params = burnerParameters,
               let name = params.name else {

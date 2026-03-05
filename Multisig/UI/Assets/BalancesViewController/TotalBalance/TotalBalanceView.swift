@@ -14,15 +14,12 @@ class TotalBalanceView: UINibView {
     @IBOutlet weak var amountLabel: UILabel!
     @IBOutlet weak var sendButton: UIButton!
     @IBOutlet weak var receiveButton: UIButton!
-    @IBOutlet weak var buyButton: UIButton?
     @IBOutlet weak var tokenBanner: SafeTokenBanner!
     @IBOutlet weak var relayInfoBanner: RelayInfoBanner!
     private let vaultSyncLoaderView = VaultIconFadeView(iconSize: 24)
 
     var onSendClicked: (() -> Void)?
     var onReceivedClicked: (() -> Void)?
-    var onBuyClicked: (() -> Void)?
-
     var amount: String? {
         didSet {
             amountLabel.text = amount
@@ -50,12 +47,6 @@ class TotalBalanceView: UINibView {
         }
     }
 
-    var buyEnabled: Bool = false {
-        didSet {
-            buyButton?.isHidden = true
-        }
-    }
-    
     override func awakeFromNib() {
         super.awakeFromNib()
         // Configure ribbon to show "Balance"
@@ -72,7 +63,6 @@ class TotalBalanceView: UINibView {
         receiveButton.setImage(rotatedUpArrow(), for: .normal)
         receiveButton.tintColor = UIColor.primaryInverted
         receiveButton.isEnabled = true
-        buyButton?.isHidden = true
         setupVaultSyncLoaderView()
         updateLoadingPresentation()
     }
@@ -96,10 +86,6 @@ class TotalBalanceView: UINibView {
     
     @IBAction func receiveButtonClicked(_ sender: Any) {
         onReceivedClicked?()
-    }
-
-    @IBAction func buyButtonClicked(_ sender: Any) {
-        onBuyClicked?()
     }
 
     private func setupVaultSyncLoaderView() {

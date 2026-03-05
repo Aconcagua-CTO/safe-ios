@@ -37,13 +37,10 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     private var safeOwners: [AddressInfo] = []
     private var socialOwnerOnly = false
 
-    private var ensLoader: ENSNameLoader?
-
     enum Section {
         case name(String)
         case security(String)
         case safeVersion(String)
-        case ensName(String)
         case advanced
 
         enum Name: SectionItem {
@@ -56,10 +53,6 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
 
         enum ContractVersion: SectionItem {
             case versionInfo(AddressInfo, ImplementationVersionState, String)
-        }
-
-        enum EnsName: SectionItem {
-            case ensName
         }
 
         enum Advanced: SectionItem {
@@ -173,7 +166,6 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                         if let safe = self.safe {
                             safe.update(from: safeInfo)
                             self.reloadSafeOwners()
-                            self.ensLoader = ENSNameLoader(safe: safe, delegate: self)
                         }
                     }
                 }
@@ -228,9 +220,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                  items: [Section.Security.security(NSLocalizedString("ui_safe_account_security_title", comment: "Account security title"),
                                                    safe.security)]),
                 (section: .safeVersion("Safe Account base contract version"),
-                 items: [Section.ContractVersion.versionInfo(implementationInfo, implementationVersionState, version)]),
-
-                (section: .ensName("ENS name"), items: [Section.EnsName.ensName])
+                 items: [Section.ContractVersion.versionInfo(implementationInfo, implementationVersionState, version)])
             ]
         }
 
@@ -295,14 +285,6 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
                                    version: version,
                                    indexPath: indexPath,
                                    prefix: safe.chain!.shortName)
-
-        case Section.EnsName.ensName:
-            guard let safe = safe else { return UITableViewCell() }
-            if ensLoader == nil || ensLoader!.isLoading {
-                return loadingCell(name: nil, indexPath: indexPath)
-            } else {
-                return loadingCell(name: safe.ensName ?? "Reverse record not set", indexPath: indexPath)
-            }
 
         case Section.Advanced.advanced(let name):
             guard safe != nil else { return UITableViewCell() }
@@ -441,9 +423,6 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
         case Section.ContractVersion.versionInfo:
             return UITableView.automaticDimension
 
-        case Section.EnsName.ensName:
-            return LoadingValueCell.rowHeight
-
         case Section.Advanced.removeSafe:
             return RemoveCell.rowHeight
 
@@ -539,10 +518,6 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             view = tableView.dequeueHeaderFooterView(BasicHeaderView.self)
             (view as! BasicHeaderView).setName(name)
 
-        case Section.ensName(let name):
-            view = tableView.dequeueHeaderFooterView(BasicHeaderView.self)
-            (view as! BasicHeaderView).setName(name)
-
         case Section.advanced:
             break
         }
@@ -570,7 +545,6 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     private func showVaultListFallback() {
         safe = nil
         safeOwners = []
-        ensLoader = nil
         sections = [
             (section: .advanced, items: [Section.Advanced.vaultList(Self.vaultListTitle)])
         ]
@@ -606,12 +580,6 @@ extension SafeSettingsViewController: NavigationRouter {
         let advancedSafeSettingsViewController = AdvancedSafeSettingsViewController()
         let ribbon = RibbonViewController(rootViewController: advancedSafeSettingsViewController)
         show(ribbon, sender: self)
-    }
-}
-
-extension SafeSettingsViewController: ENSNameLoaderDelegate {
-    func ensNameLoaderDidLoadName(_ loader: ENSNameLoader) {
-        tableView.reloadData()
     }
 }
 

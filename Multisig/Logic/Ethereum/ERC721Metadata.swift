@@ -8,7 +8,7 @@
 
 import Foundation
 
-class ERC721: ERC165 {
+class ERC721: Contract {
 
     enum Selectors {
         static let safeTransferFrom = "safeTransferFrom(address,address,uint256)"

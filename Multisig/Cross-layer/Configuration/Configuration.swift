@@ -27,9 +27,6 @@ struct AppConfiguration {
         @ConfigurationKey("GELATO_SERVICE_URL")
         var gelatoRelayURL: URL
 
-        @ConfigurationKey("MOONPAY_SERVICE_URL")
-        var moonpayServiceURL: URL
-
         @ConfigurationKey("GNOSIS_SAFE_WEB_URL")
         var webAppURL: URL
         
@@ -103,8 +100,6 @@ struct AppConfiguration {
             case WEB3AUTH_REDIRECT_SCHEME
             case WEB3AUTH_GOOGLE_VERIFIER_AGGREGATE
             case WEB3AUTH_GOOGLE_VERIFIER_SUB
-            case MOONPAY_API_KEY
-            case MOONPAY_SECRET_KEY
         }
         
         subscript(_ key: Keys) -> String {

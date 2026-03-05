@@ -10,10 +10,10 @@ import UIKit
 import MobileCoreServices
 
 class AddressBookListTableViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
-    private var chainEntries: Chain.ChainEntries = []
+    private var entries: [AddressBookEntry] = []
     private var menuButton: UIBarButtonItem!
     override var isEmpty: Bool {
-        chainEntries.isEmpty
+        entries.isEmpty
     }
 
     var filterByChain: Chain?
@@ -33,7 +33,6 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         tableView.dataSource = self
 
         tableView.registerCell(DetailAccountCell.self)
-        tableView.registerHeaderFooterView(NetworkIndicatorHeaderView.self)
 
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 48
@@ -117,61 +116,53 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
     }
 
     private func didTapAddButton() {
-        let selectNetworkVC = SelectNetworkViewController()
-        selectNetworkVC.screenTitle = "New Entry"
-        selectNetworkVC.descriptionText = "Select network on which you want to add entry:"
-        selectNetworkVC.useLocalChains = true
-        selectNetworkVC.completion = { [unowned self] chain  in
-            let vc = CreateAddressBookEntryViewController()
-            vc.chain = chain
-            let ribbon = RibbonViewController(rootViewController: vc)
-            ribbon.chain = vc.chain
-            vc.completion = { (address, name)  in
-                AddressBookEntry.create(address: address.checksummed, name: name, chainInfo: chain)
-                navigationController?.popToViewController(self, animated: true)
-                App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_added_message", comment: "Address book added message"))
-            }
-            self.show(ribbon, sender: self)
+        guard let defaultChain = SCGModels.Chain.createFromCurrentChain() else { return }
+        let vc = CreateAddressBookEntryViewController()
+        vc.chain = defaultChain
+        let ribbon = RibbonViewController(rootViewController: vc)
+        ribbon.chain = vc.chain
+        vc.completion = { [unowned self] (address, name) in
+            AddressBookEntry.addOrUpdateAllSupportedChains(address.checksummed, name: name)
+            navigationController?.popToViewController(self, animated: true)
+            App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_added_message", comment: "Address book added message"))
         }
-
-        show(selectNetworkVC, sender: self)
+        show(ribbon, sender: self)
     }
     
     @objc override func reloadData() {
+        var unique = AddressBookEntry.uniqueEntries()
         if let filterByChain = filterByChain {
-            chainEntries = Chain.chainEntries().filter { entry in
-                entry.chain == filterByChain
-            }
-        } else {
-            chainEntries = Chain.chainEntries()
+            unique = unique.filter { $0.chain == filterByChain }
         }
+        entries = unique
         tableView.reloadData()
         onSuccess()
     }
 
     func numberOfSections(in tableView: UITableView) -> Int {
-        chainEntries.count
+        1
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        chainEntries[section].entries.count
+        entries.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueCell(DetailAccountCell.self)
-        let entry = chainEntries[indexPath.section].entries[indexPath.row]
+        let entry = entries[indexPath.row]
+        let displayChain = (try? Safe.getSelected()?.chain) ?? entry.chain!
 
         cell.setAccount(address: entry.addressValue,
                         label: entry.name,
                         copyEnabled: false,
-                        browseURL: entry.chain!.browserURL(address: entry.displayAddress),
-                        prefix: entry.chain!.shortName)
+                        browseURL: displayChain.browserURL(address: entry.displayAddress),
+                        prefix: displayChain.shortName)
         return cell
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        let entry = chainEntries[indexPath.section].entries[indexPath.row]
+        let entry = entries[indexPath.row]
         if isPickerModeEnabled {
             onSelect(entry.addressValue)
         } else {
@@ -181,7 +172,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
 
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard !isPickerModeEnabled else { return nil }
-        let entry = chainEntries[indexPath.section].entries[indexPath.row]
+        let entry = entries[indexPath.row]
 
         var actions = [UIContextualAction]()
         let editAction = UIContextualAction(style: .normal,
@@ -201,20 +192,9 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         return UISwipeActionsConfiguration(actions: actions)
     }
 
-    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let view = tableView.dequeueHeaderFooterView(NetworkIndicatorHeaderView.self)
-        let chain = chainEntries[section].chain
-        view.text = chain.name
-        view.dotColor = chain.backgroundColor
-        return view
-    }
-
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        NetworkIndicatorHeaderView.height
-    }
-
     private func showEdit(entry: AddressBookEntry) {
         let defaultName = entry.name
+        let entryAddress = entry.displayAddress
 
         let enterNameVC = EnterAddressNameViewController()
         enterNameVC.actionTitle = "Save"
@@ -224,10 +204,9 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         enterNameVC.placeholder = "Enter name"
         enterNameVC.name = defaultName
         enterNameVC.address = entry.addressValue
-        enterNameVC.prefix = entry.chain!.shortName
-        enterNameVC.completion = { [unowned self, unowned entry, unowned notificationCenter] name in
-            AddressBookEntry.update(entry.displayAddress, chainId: entry.chain!.id!, name: name)
-            notificationCenter.post(name: .addressbookChanged, object: self, userInfo: nil)
+        enterNameVC.prefix = (try? Safe.getSelected()?.chain)?.shortName
+        enterNameVC.completion = { [unowned self] name in
+            AddressBookEntry.updateAllChains(entryAddress, name: name)
             navigationController?.popViewController(animated: true)
             App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_updated_message", comment: "Address book updated message"))
         }
@@ -238,13 +217,14 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
     }
 
     private func remove(_ entry: AddressBookEntry, sourceIndexPath: IndexPath) {
+        let entryAddress = entry.displayAddress
         let alertController = UIAlertController(
             title: nil,
             message: "Removing the entry key only removes it from this app.",
             preferredStyle: .multiplatformActionSheet)
 
         let remove = UIAlertAction(title: "Remove", style: .destructive) { _ in
-            AddressBookEntry.remove(entry: entry)
+            AddressBookEntry.removeFromAllChains(entryAddress)
             App.shared.snackbar.show(message: NSLocalizedString("ui_address_book_removed_message", comment: "Address book removed message"))
         }
         let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
