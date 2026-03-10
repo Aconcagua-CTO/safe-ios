@@ -8,6 +8,8 @@ import Foundation
 struct TransactionNameEntryResponse: Codable {
     let gatewayName: String
     let friendlyName: String
+    let contractAddress: String
+    let chainId: String?
 }
 
 typealias TransactionNamesListResponse = [TransactionNameEntryResponse]

@@ -34,5 +34,21 @@ final class PrimaryCardService {
             }
         }
     }
+
+    /// Returns true if the backend has at least one active card/key record for this user.
+    func fetchHasRegisteredKeys(completion: @escaping (Result<Bool, Error>) -> Void) {
+        fetchMyPrimaryCard { result in
+            switch result {
+            case .success:
+                completion(.success(true))
+            case .failure(let error):
+                if let detailedError = error as? DetailedLocalizedError, detailedError.code == 404 {
+                    completion(.success(false))
+                } else {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
 }
 

@@ -17,7 +17,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 1,
             hasCardKey: false,
             requiresCardKey: false,
-            isSignUp: false
+            isSignUp: false,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
@@ -31,7 +32,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 1,
             hasCardKey: false,
             requiresCardKey: false,
-            isSignUp: true
+            isSignUp: true,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .startMobileKeyFlow)
@@ -45,7 +47,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
-            isSignUp: false
+            isSignUp: false,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
@@ -59,7 +62,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
-            isSignUp: true
+            isSignUp: true,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showPendingVaultActivation)
@@ -73,7 +77,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
-            isSignUp: false
+            isSignUp: false,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showPendingVaultActivation)
@@ -87,7 +92,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 1,
             hasCardKey: true,
             requiresCardKey: false,
-            isSignUp: false
+            isSignUp: false,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
@@ -101,7 +107,8 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 2,
             hasCardKey: false,
             requiresCardKey: false,
-            isSignUp: true
+            isSignUp: true,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .startMobileKeyFlow)
@@ -115,9 +122,70 @@ final class PostLoginGateEvaluatorTests: XCTestCase {
             requiredMobileKeyCount: 2,
             hasCardKey: false,
             requiresCardKey: false,
-            isSignUp: true
+            isSignUp: true,
+            hasRegisteredKeys: true
         )
 
         XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showPendingVaultActivation)
+    }
+
+    func test_startCardKeyFlowForReturningLoginWithoutAnyKeysOrVaults() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            mobileKeyCount: 0,
+            requiredMobileKeyCount: 1,
+            hasCardKey: false,
+            requiresCardKey: true,
+            isSignUp: false,
+            hasRegisteredKeys: false
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .startCardKeyFlow)
+    }
+
+    func test_startMobileKeyFlowForReturningLoginWithoutAnyKeysOrVaultsWhenCardNotRequired() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            mobileKeyCount: 0,
+            requiredMobileKeyCount: 1,
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: false,
+            hasRegisteredKeys: false
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .startMobileKeyFlow)
+    }
+
+    func test_showMainForReturningLoginWithoutLocalKeysWhenBackendKeysExist() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            mobileKeyCount: 0,
+            requiredMobileKeyCount: 1,
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: false,
+            hasRegisteredKeys: true
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
+    }
+
+    func test_showMainForReturningLoginWhenLocalKeysExistEvenWithoutBackendKeys() {
+        let state = PostLoginGateState(
+            hasSyncedVaults: false,
+            hasVaults: false,
+            mobileKeyCount: 1,
+            requiredMobileKeyCount: 1,
+            hasCardKey: false,
+            requiresCardKey: false,
+            isSignUp: false,
+            hasRegisteredKeys: false
+        )
+
+        XCTAssertEqual(PostLoginGateEvaluator.nextAction(for: state), .showMain)
     }
 }

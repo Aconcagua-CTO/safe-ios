@@ -53,13 +53,11 @@ final class LocalKeyRecoverViewController: UIViewController {
     }
 
     @objc private func openWhatsApp() {
-        // Reuse same wa.me number/message used in WhatsAppLinkView (SafeInfoView.swift)
-        let phoneNumber = "5491134120450"
-        let message = "Consulta desde boveda.ai"
-        let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
-
-        guard let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") else { return }
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        PublicConfigService.shared.getWhatsAppSupportConfig { phoneNumber, message in
+            let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
+            guard let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") else { return }
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
     }
 }
 

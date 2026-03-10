@@ -1198,7 +1198,7 @@ final class TransactionBatchBuilder {
 
         let encoded = encode(legs: legs)
 
-        guard let deployment = try? SafeDeployments.Safe.Deployment.find(contract: .MultiSendCallOnly, version: .v1_3_0),
+        guard let deployment = try? SafeDeployments.Safe.Deployment.find(contract: .MultiSendCallOnly, version: .v1_4_1),
               let solAddress = deployment.address(for: chainId) else {
             TransactionFeeLogger.error("Unable to locate MultiSendCallOnly deployment for chain \(chainId).")
             return nil

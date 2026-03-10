@@ -442,13 +442,11 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     }
 
     private func openWhatsAppSupportChat() {
-        // Keep consistent with the "Ingresar" WhatsApp support link (ContactRequiredViewController).
-        let phoneNumber = "5491134120450"
-        let message = "Consulta desde boveda.ai"
-        let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
-
-        guard let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") else { return }
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        PublicConfigService.shared.getWhatsAppSupportConfig { phoneNumber, message in
+            let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
+            guard let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") else { return }
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
     }
 
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
@@ -716,19 +714,28 @@ extension AppSettingsViewController: NavigationRouter {
                     AuthLogger.success("Backend account deletion successful, cleaning up local state")
 
                     App.shared.authRepository.signOut { [weak self] _ in
+                        guard let self = self else { return }
                         DispatchQueue.main.async {
+                            // Reset user-session state tied to the deleted account.
                             AppSettings.termsAccepted = false
                             AppSettings.onboardingCompleted = false
                             AppSettings.companyId = nil
+                            AppSettings.enterpriseRolsData = nil
+                            AppSettings.leadCardManufacturer = nil
+                            AppSettings.lastLeadProvisioningAction = nil
                             AppSettings.pendingOwnerKeysRegistration = false
                             AppSettings.importedOwnerKey = false
+                            AppSettings.pendingPostSignupInstructions = false
+                            AppSettings.didShowPostSignupInstructions = false
+                            AppSettings.activeVaultGroupAddress = nil
 
-                            if let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate {
-                                sceneDelegate.onAppUpdateCompletion()
-                            }
-
+                            // Remove all local vaults and owner keys before routing out.
                             try? Safe.removeAll()
                             try? OwnerKeyController.deleteAllKeys(showingMessage: false)
+
+                            if let sceneDelegate = self.view.window?.windowScene?.delegate as? SceneDelegate {
+                                sceneDelegate.onAppUpdateCompletion()
+                            }
                         }
                     }
 

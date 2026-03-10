@@ -66,7 +66,7 @@ cp -R "$TANGEM_MIT_SOURCE" "$SOURCE_COPY"
 echo "Done."
 echo ""
 
-# Step 2: Apply terminal-linking patch in the copy
+# Step 2: Apply patches in the copied source
 SIGN_COMMAND_PATH="$SOURCE_COPY/TangemSdk/TangemSdk/Operations/Sign/SignCommand.swift"
 if grep -q "card.firmwareVersion < .hdWalletAvailable" "$SIGN_COMMAND_PATH"; then
     echo "Applying terminal linking patch (remove firmware version check)..."
@@ -74,6 +74,32 @@ if grep -q "card.firmwareVersion < .hdWalletAvailable" "$SIGN_COMMAND_PATH"; the
     echo "Patch applied."
 else
     echo "Patch already applied or different structure; continuing."
+fi
+
+FIRMWARE_VERSION_PATH="$SOURCE_COPY/TangemSdk/TangemSdk/Common/Card/FirmwareVersion.swift"
+if ! grep -q "isDefaultPinsOptional" "$FIRMWARE_VERSION_PATH"; then
+    echo "Applying default PIN optional firmware constant patch..."
+    perl -i -0pe 's/static let isAccessCodeStatusAvailable = FirmwareVersion\(major: 4, minor: 33\)\n/static let isAccessCodeStatusAvailable = FirmwareVersion(major: 4, minor: 33)\n    \/\/\/ Determines when default PINs are optional in commands\n    static let isDefaultPinsOptional = FirmwareVersion(major: 4, minor: 34)\n/gs' "$FIRMWARE_VERSION_PATH"
+    echo "Patch applied."
+else
+    echo "Firmware constant patch already applied or different structure; continuing."
+fi
+
+TLV_BUILDER_PATH="$SOURCE_COPY/TangemSdk/TangemSdk/Common/TLV/TlvBuilder.swift"
+if ! grep -q "func appendPinIfNeeded" "$TLV_BUILDER_PATH"; then
+    echo "Applying TlvBuilder appendPinIfNeeded patch..."
+    perl -i -0pe 's/@discardableResult\n    public func append<T>\(_ tag: TlvTag, value: T\?\) throws -> TlvBuilder \{\n        tlvs\.append\(try encoder\.encode\(tag, value: value\)\)\n        return self\n    \}/@discardableResult\n    public func append<T>(_ tag: TlvTag, value: T?) throws -> TlvBuilder {\n        tlvs.append(try encoder.encode(tag, value: value))\n        return self\n    }\n\n    @discardableResult\n    func appendPinIfNeeded(_ tag: TlvTag, value: UserCode, card: Card?) throws -> TlvBuilder {\n        switch tag {\n        case .pin, .pin2:\n            break\n        default:\n            throw TangemSdkError.encodingFailed(\"Wrong tag passed. Expected .pin or .pin2, got \\\\(tag)\")\n        }\n\n        if let card, card.firmwareVersion >= .isDefaultPinsOptional,\n           value.value == value.type.defaultValue.sha256() {\n            return self\n        }\n\n        tlvs.append(try encoder.encode(tag, value: value.value))\n        return self\n    }/gs' "$TLV_BUILDER_PATH"
+    echo "Patch applied."
+else
+    echo "TlvBuilder patch already applied or different structure; continuing."
+fi
+
+if grep -q "\\.append(\\.pin, value: environment.accessCode.value)" "$SIGN_COMMAND_PATH"; then
+    echo "Applying SignCommand appendPinIfNeeded patch..."
+    perl -i -0pe 's/\.append\(\.pin, value: environment\.accessCode\.value\)\n            \.append\(\.pin2, value: environment\.passcode\.value\)/.appendPinIfNeeded(.pin, value: environment.accessCode, card: environment.card)\n            .appendPinIfNeeded(.pin2, value: environment.passcode, card: environment.card)/gs' "$SIGN_COMMAND_PATH"
+    echo "Patch applied."
+else
+    echo "SignCommand patch already applied or different structure; continuing."
 fi
 echo ""
 

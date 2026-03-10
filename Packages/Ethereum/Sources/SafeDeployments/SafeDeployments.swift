@@ -49,6 +49,7 @@ extension Safe {
         case v1_1_1 = "v1.1.1"
         case v1_2_0 = "v1.2.0"
         case v1_3_0 = "v1.3.0"
+        case v1_4_1 = "v1.4.1"
 
         public var identifier: String {
             rawValue.replacingOccurrences(of: ".", with: "_")

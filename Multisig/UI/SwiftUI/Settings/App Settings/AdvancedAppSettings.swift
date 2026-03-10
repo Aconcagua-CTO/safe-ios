@@ -42,6 +42,9 @@ struct AdvancedAppSettings: View {
 
             // MARK: - Tangem Card Options
             TangemCardOptionsSection()
+
+            // MARK: - Tangem0 Backup Activation
+            Tangem0BackupActivationSection()
             
             // MARK: - Burner Card Options
             BurnerCardOptionsSection()
@@ -228,6 +231,104 @@ fileprivate extension Binding {
     }
 }
 
+// MARK: - Tangem0 Backup Activation Section
+
+struct Tangem0BackupActivationSection: View {
+    var body: some View {
+        Section(header: SectionHeader("TANGEM0")) {
+            Button(action: {
+                TangemLogger.info("🟦 TANGEM0 OPTIONS: User tapped Activate Tangem0 (single)")
+                presentTangem0SingleActivation()
+            }) {
+                Text("Activate Tangem0 (single)").body()
+            }
+            
+            Button(action: {
+                TangemLogger.info("🟦 TANGEM0 OPTIONS: User tapped Activate Tangem0 (Backup)")
+                presentTangem0BackupActivation()
+            }) {
+                Text("Activate Tangem0 (Backup)").body()
+            }
+        }
+    }
+
+    private func presentTangem0SingleActivation() {
+        DispatchQueue.main.async {
+            guard let topViewController = self.topViewController() else {
+                TangemLogger.error("🟦 TANGEM0 OPTIONS: ❌ Unable to locate active window for single activation")
+                return
+            }
+
+            // A fixed, non-default access code is required to flip TAG_PinIsDefault to false on the
+            // card firmware. With TAG_PinIsDefault=true the card enforces SmartSecurityDelay (15s)
+            // on every signing session. Setting any non-default code eliminates the delay permanently.
+            // Tangem0Service uses the same code when opening NFC sessions.
+            let activationVC = TangemActivationViewController(accessCode: Tangem0Service.fixedAccessCode)
+            let navVC = UINavigationController(rootViewController: activationVC)
+
+            activationVC.onActivationComplete = { info in
+                // Card is now activated with a non-default access code; import as Tangem0 key using SignRaw
+                let flow = TangemKeyFlow(
+                    activatedCardInfo: info,
+                    service: Tangem0Service.shared,
+                    keyType: .tangem0
+                ) { _ in
+                    navVC.dismiss(animated: true)
+                }
+                flow.skipIntro = true
+                flow.push(from: activationVC)
+            }
+
+            topViewController.present(navVC, animated: true)
+        }
+    }
+
+    private func presentTangem0BackupActivation() {
+        DispatchQueue.main.async {
+            guard let topViewController = self.topViewController() else {
+                TangemLogger.error("🟦 TANGEM0 OPTIONS: ❌ Unable to locate active window for backup activation")
+                return
+            }
+
+            let viewController = Tangem0BackupActivationViewController()
+            let navController = UINavigationController(rootViewController: viewController)
+            topViewController.present(navController, animated: true)
+        }
+    }
+
+    private func topViewController() -> UIViewController? {
+        let foregroundScenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }
+
+        if let top = foregroundScenes
+            .flatMap({ $0.windows })
+            .first(where: { $0.isKeyWindow })?
+            .rootViewController {
+            return findTopViewController(from: top)
+        }
+
+        let anySceneRoot = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.windows.first?.rootViewController }
+            .first
+
+        return anySceneRoot.flatMap { findTopViewController(from: $0) }
+    }
+
+    private func findTopViewController(from root: UIViewController) -> UIViewController? {
+        if let presented = root.presentedViewController {
+            return findTopViewController(from: presented)
+        }
+        if let nav = root as? UINavigationController {
+            return nav.topViewController ?? nav
+        }
+        if let tab = root as? UITabBarController {
+            return tab.selectedViewController
+        }
+        return root
+    }
+}
+
 // MARK: - Tangem Card Options Section
 
 struct TangemCardOptionsSection: View {
@@ -359,27 +460,45 @@ struct TangemCardOptionsSection: View {
 
 struct BurnerCardOptionsSection: View {
     @Environment(\.presentationMode) var presentationMode
-    @State private var isConfiguringNDEF = false
+    @State private var isBusy = false
     @State private var showError: String?
     @State private var showSuccess = false
     @State private var successMessage = ""
+    @State private var showCardInfo = false
+    @State private var cardInfoText = ""
+    @State private var showGenKeySlotPicker = false
     
     var body: some View {
         Section(header: SectionHeader(NSLocalizedString("ui_burner_card_section_header", comment: "Section header for Burner card advanced options"))) {
             Button(action: {
-                BurnerLogger.info("📝 BURNER OPTIONS: User tapped Disable Burner URL (TXT NDEF) from Advanced Settings")
-                setNdefUseTextRecord(true)
+                BurnerLogger.info("📖 BURNER OPTIONS: User tapped Read Card from Advanced Settings")
+                readCard()
             }) {
                 HStack {
-                    Text(NSLocalizedString("ui_burner_disable_url_txt_ndef", comment: "Button to disable Burner URL handling by switching to TXT NDEF")).body()
-                    if isConfiguringNDEF {
+                    Text(NSLocalizedString("ui_burner_read_card", comment: "Read Burner card button")).body()
+                    if isBusy {
                         Spacer()
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
+                        ProgressView().progressViewStyle(CircularProgressViewStyle())
                     }
                 }
             }
-            .disabled(isConfiguringNDEF)
+            .disabled(isBusy)
+            
+            Button(action: {
+                BurnerLogger.info("🔑 BURNER OPTIONS: User tapped Generate Key from Advanced Settings")
+                showGenKeySlotPicker = true
+            }) {
+                Text(NSLocalizedString("ui_burner_generate_key", comment: "Generate key on Burner card button")).body()
+            }
+            .disabled(isBusy)
+            
+            Button(action: {
+                BurnerLogger.info("📝 BURNER OPTIONS: User tapped Disable Burner URL (TXT NDEF) from Advanced Settings")
+                setNdefUseTextRecord(true)
+            }) {
+                Text(NSLocalizedString("ui_burner_disable_url_txt_ndef", comment: "Button to disable Burner URL handling by switching to TXT NDEF")).body()
+            }
+            .disabled(isBusy)
             
             Button(action: {
                 BurnerLogger.info("📝 BURNER OPTIONS: User tapped Enable Burner URL (URI NDEF) from Advanced Settings")
@@ -387,12 +506,17 @@ struct BurnerCardOptionsSection: View {
             }) {
                 Text(NSLocalizedString("ui_burner_enable_url_uri_ndef", comment: "Button to enable Burner URL handling by switching to URI NDEF")).body()
             }
-            .disabled(isConfiguringNDEF)
+            .disabled(isBusy)
         }
         .alert(NSLocalizedString("ui_success", comment: "Generic success title"), isPresented: $showSuccess) {
             Button(NSLocalizedString("ok", comment: "OK"), role: .cancel) { }
         } message: {
             Text(successMessage)
+        }
+        .alert(NSLocalizedString("ui_burner_card_info_title", comment: "Burner card info title"), isPresented: $showCardInfo) {
+            Button(NSLocalizedString("ok", comment: "OK"), role: .cancel) { }
+        } message: {
+            Text(cardInfoText)
         }
         .alert(NSLocalizedString("ui_error", comment: "Generic error title"), isPresented: .constant(showError != nil)) {
             Button(NSLocalizedString("ok", comment: "OK"), role: .cancel) {
@@ -403,11 +527,99 @@ struct BurnerCardOptionsSection: View {
                 Text(error)
             }
         }
+        .confirmationDialog(
+            NSLocalizedString("ui_burner_generate_key_pick_slot", comment: "Pick a slot for key generation"),
+            isPresented: $showGenKeySlotPicker,
+            titleVisibility: .visible
+        ) {
+            Button("Slot 3") { generateKey(slot: 3) }
+            Button("Slot 4") { generateKey(slot: 4) }
+            Button("Slot 5") { generateKey(slot: 5) }
+            Button(NSLocalizedString("button_close", comment: "Close button title"), role: .cancel) { }
+        }
     }
     
+    // MARK: - Read Card
+    
+    private func readCard() {
+        guard !isBusy else { return }
+        isBusy = true
+        
+        Task {
+            do {
+                let info = try await BurnerService.shared.readCardInfo()
+                
+                await MainActor.run {
+                    isBusy = false
+                    cardInfoText = formatCardInfo(info)
+                    showCardInfo = true
+                }
+            } catch {
+                await MainActor.run {
+                    isBusy = false
+                    showError = (error as? BurnerService.BurnerServiceError)?.errorDescription ?? error.localizedDescription
+                    BurnerLogger.error("📖 BURNER OPTIONS: ❌ Failed to read card info", error: error)
+                }
+            }
+        }
+    }
+    
+    private func formatCardInfo(_ info: BurnerService.BurnerCardInfo) -> String {
+        var lines: [String] = []
+        lines.append("Card ID: \(info.cardId)")
+        lines.append("Firmware: \(info.firmwareVersion ?? "unknown")")
+        if let addon = info.addonVersion {
+            lines.append("Addons: \(addon)")
+        }
+        lines.append("")
+        for slot in info.slots {
+            let status: String
+            if slot.isInitialized {
+                let addr = slot.ethereumAddress?.checksummed ?? "unknown"
+                let pwd = slot.hasPassword ? " [pwd]" : ""
+                status = "\(addr)\(pwd)"
+            } else {
+                status = "empty"
+            }
+            lines.append("Slot \(slot.slot): \(status)")
+        }
+        return lines.joined(separator: "\n")
+    }
+    
+    // MARK: - Generate Key
+    
+    private func generateKey(slot: Int) {
+        guard !isBusy else { return }
+        isBusy = true
+        
+        Task {
+            do {
+                let result = try await BurnerService.shared.generateKey(slot: slot)
+                
+                await MainActor.run {
+                    isBusy = false
+                    successMessage = String(
+                        format: NSLocalizedString("ui_burner_key_generated_format", comment: "Key generated success message"),
+                        slot, result.ethereumAddress.checksummed
+                    )
+                    showSuccess = true
+                    BurnerLogger.info("🔑 BURNER OPTIONS: ✅ Key generated in slot \(slot), address=\(result.ethereumAddress.checksummed)")
+                }
+            } catch {
+                await MainActor.run {
+                    isBusy = false
+                    showError = (error as? BurnerService.BurnerServiceError)?.errorDescription ?? error.localizedDescription
+                    BurnerLogger.error("🔑 BURNER OPTIONS: ❌ Failed to generate key in slot \(slot)", error: error)
+                }
+            }
+        }
+    }
+    
+    // MARK: - NDEF Config
+    
     private func setNdefUseTextRecord(_ enabled: Bool) {
-        guard !isConfiguringNDEF else { return }
-        isConfiguringNDEF = true
+        guard !isBusy else { return }
+        isBusy = true
         
         Task {
             do {
@@ -419,7 +631,7 @@ struct BurnerCardOptionsSection: View {
                 )
                 
                 await MainActor.run {
-                    isConfiguringNDEF = false
+                    isBusy = false
                     successMessage = enabled
                         ? NSLocalizedString("ui_burner_done_txt_ndef", comment: "Success message after switching Burner to TXT NDEF")
                         : NSLocalizedString("ui_burner_done_uri_ndef", comment: "Success message after switching Burner to URI NDEF")
@@ -428,7 +640,7 @@ struct BurnerCardOptionsSection: View {
                 }
             } catch {
                 await MainActor.run {
-                    isConfiguringNDEF = false
+                    isBusy = false
                     let errorMessage = (error as? BurnerService.BurnerServiceError)?.errorDescription ?? error.localizedDescription
                     showError = errorMessage
                     BurnerLogger.error("📝 BURNER OPTIONS: ❌ Failed to update Burner NDEF flags", error: error)

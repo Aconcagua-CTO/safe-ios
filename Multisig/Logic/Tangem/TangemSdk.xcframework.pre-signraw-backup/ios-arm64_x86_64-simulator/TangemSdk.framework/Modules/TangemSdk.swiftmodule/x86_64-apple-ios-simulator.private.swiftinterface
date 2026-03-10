@@ -1,0 +1,2838 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 6.2.3 effective-5.10 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)
+// swift-module-flags: -target x86_64-apple-ios15.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -module-name TangemSdk
+// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.3
+import AVFoundation
+import Bls_Signature
+import Combine
+import CommonCrypto
+import CoreHaptics
+import CoreNFC
+import CryptoKit
+import DeveloperToolsSupport
+import Foundation
+import LocalAuthentication
+import Security
+import Swift
+import SwiftUI
+import TangemSdk_secp256k1
+import UIKit
+import _Concurrency
+import _CoreNFC_UIKit
+import _StringProcessing
+import _SwiftConcurrencyShims
+final public class DeleteFileCommand {
+  public init(fileIndex: Swift.Int)
+  public typealias Response = SuccessResponse
+  @objc deinit
+}
+public struct CommandApdu : Swift.Equatable {
+  public init(_ instruction: Instruction, tlv: Foundation.Data)
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(cla: Byte = 0x00, ins: Byte, p1: Byte = 0x0, p2: Byte = 0x0, le: Swift.Int? = nil, tlv: Foundation.Data)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func encrypt(encryptionMode: EncryptionMode, encryptionKey: Foundation.Data?) throws -> CommandApdu
+  #endif
+  public func serialize() -> Foundation.Data
+  public static func == (a: CommandApdu, b: CommandApdu) -> Swift.Bool
+}
+extension CommandApdu : Swift.CustomStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+}
+public class DeriveWalletPublicKeysTask : CardSessionRunnable {
+  public init(walletPublicKey: Foundation.Data, derivationPaths: [DerivationPath])
+  @objc deinit
+  public func run(in session: CardSession, completion: @escaping CompletionResult<DerivedKeys>)
+  public typealias Response = DerivedKeys
+}
+public enum EncryptionMode : Swift.String {
+  case none
+  case fast
+  case strong
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public struct Secp256k1Signature {
+  public init(with data: Foundation.Data) throws
+  public func normalize() throws -> Foundation.Data
+  public func serializeDer() throws -> Foundation.Data
+  public func verify(with publicKey: Foundation.Data, message: Foundation.Data) throws -> Swift.Bool
+  public func verify(with publicKey: Foundation.Data, hash: Foundation.Data) throws -> Swift.Bool
+  public func unmarshal(with publicKey: Foundation.Data, hash: Foundation.Data) throws -> Secp256k1Signature.Extended
+}
+extension Secp256k1Signature {
+  public struct Extended {
+    public let r: Foundation.Data
+    public let s: Foundation.Data
+    public let v: Foundation.Data
+    public var data: Foundation.Data {
+      get
+    }
+    public init(r: Foundation.Data, s: Foundation.Data, v: Foundation.Data)
+  }
+}
+public protocol SessionViewDelegate : AnyObject {
+  func showAlertMessage(_ text: Swift.String)
+  func tagConnected()
+  func tagLost(message: Swift.String)
+  func wrongCard(message: Swift.String)
+  func sessionStarted()
+  #if compiler(>=5.3) && $NonescapableTypes
+  func sessionStopped(completion: (() -> Swift.Void)?)
+  #endif
+  func attestationDidFailDevCard(onContinue: @escaping () -> Swift.Void, onCancel: @escaping () -> Swift.Void)
+  func attestationCompletedWithWarnings(onContinue: @escaping () -> Swift.Void)
+  func attestationCompletedOffline(onContinue: @escaping () -> Swift.Void, onCancel: @escaping () -> Swift.Void, onRetry: @escaping () -> Swift.Void)
+  func setState(_ state: SessionViewState)
+}
+public enum SessionViewState {
+  case delay(remaining: Swift.Float, total: Swift.Float)
+  case progress(percent: Swift.Int)
+  case `default`
+  case empty
+  case scan
+  case requestCode(_: UserCodeType, cardId: Swift.String?, showForgotButton: Swift.Bool, completion: CompletionResult<Swift.String>)
+  case requestCodeChange(_: UserCodeType, cardId: Swift.String?, completion: CompletionResult<Swift.String>)
+}
+public class BackupService {
+  public static let maxBackupCardsCount: Swift.Int
+  public var currentState: BackupService.State {
+    get
+  }
+  public var canAddBackupCards: Swift.Bool {
+    get
+  }
+  public var hasIncompletedBackup: Swift.Bool {
+    get
+  }
+  public var config: Config {
+    get
+    set
+  }
+  public var addedBackupCardsCount: Swift.Int {
+    get
+  }
+  public var canProceed: Swift.Bool {
+    get
+  }
+  public var accessCodeIsSet: Swift.Bool {
+    get
+  }
+  public var passcodeIsSet: Swift.Bool {
+    get
+  }
+  public var primaryCardIsSet: Swift.Bool {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var primaryCard: PrimaryCard? {
+    get
+  }
+  #endif
+  public var backupCards: [BackupCard] {
+    get
+  }
+  public var skipCompatibilityChecks: Swift.Bool
+  public init(sdk: TangemSdk, networkService: NetworkService)
+  @objc deinit
+  public func discardIncompletedBackup()
+  public func addBackupCard(completion: @escaping CompletionResult<Card>)
+  public func setAccessCode(_ code: Swift.String) throws
+  public func setPasscode(_ code: Swift.String) throws
+  public func proceedBackup(completion: @escaping CompletionResult<Card>)
+  public func setPrimaryCard(_ primaryCard: PrimaryCard)
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func readPrimaryCard(cardId: Swift.String? = nil, completion: @escaping CompletionResult<Swift.Void>)
+  #endif
+}
+extension BackupService {
+  public enum State : Swift.Equatable {
+    case preparing
+    case finalizingPrimaryCard
+    case finalizingBackupCard(index: Swift.Int)
+    case finished
+    public static func == (a: BackupService.State, b: BackupService.State) -> Swift.Bool
+  }
+}
+public struct PrimaryCard : Swift.Codable {
+  public let cardId: Swift.String
+  public let cardPublicKey: Foundation.Data
+  public let linkingKey: Foundation.Data
+  public let existingWalletsCount: Swift.Int
+  public let isHDWalletAllowed: Swift.Bool
+  public let issuer: Card.Issuer
+  public let walletCurves: [EllipticCurve]
+  public let batchId: Swift.String?
+  public let firmwareVersion: FirmwareVersion?
+  public let isKeysImportAllowed: Swift.Bool?
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct BackupCard : Swift.Codable {
+  public let cardId: Swift.String
+  public let cardPublicKey: Foundation.Data
+  public let firmwareVersion: FirmwareVersion?
+  public let batchId: Swift.String?
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public protocol CardSessionRunnable {
+  var preflightReadMode: PreflightReadMode { get }
+  var shouldAskForAccessCode: Swift.Bool { get }
+  var encryptionMode: EncryptionMode { get }
+  associatedtype Response
+  func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+  func run(in session: CardSession, completion: @escaping CompletionResult<Self.Response>)
+}
+extension CardSessionRunnable {
+  public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  public var shouldAskForAccessCode: Swift.Bool {
+    get
+  }
+  public var encryptionMode: EncryptionMode {
+    get
+  }
+  public func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+}
+extension CardSessionRunnable where Self.Response : JSONStringConvertible {
+  public func eraseToAnyRunnable() -> AnyJSONRPCRunnable
+}
+final public class TlvDecoder {
+  public init(tlv: [Tlv])
+  final public func decode<T>(_ tag: TlvTag) throws -> T where T : Swift.ExpressibleByNilLiteral
+  final public func decode<T>(_ tag: TlvTag) throws -> T
+  final public func decodeArray<T>(_ tag: TlvTag) throws -> [T]
+  @objc deinit
+}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+final public class WriteIssuerExtraDataCommand {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(issuerData: Foundation.Data, issuerPublicKey: Foundation.Data? = nil, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  public typealias Response = SuccessResponse
+}
+public struct CardConfig : Swift.Decodable {
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct AnyMasterKeyFactory {
+  public init(mnemonic: Mnemonic, passphrase: Swift.String)
+  public func makeMasterKey(for curve: EllipticCurve) throws -> ExtendedPrivateKey
+}
+public class PersonalizeCommand {
+  public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(config: CardConfig, issuer: Issuer, manufacturer: Manufacturer, acquirer: Acquirer? = nil)
+  #endif
+  public func run(in session: CardSession, completion: @escaping CompletionResult<Card>)
+  public typealias Response = Card
+  @objc deinit
+}
+@_hasMissingDesignatedInitializers final public class ReadCommand {
+  final public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<Card>)
+  public typealias Response = Card
+}
+@_hasMissingDesignatedInitializers public class Storage {
+  @objc deinit
+}
+public protocol TangemSdkLogger {
+  func log(_ message: Swift.String, level: Log.Level)
+}
+public struct FileHashData : JSONStringConvertible {
+  public let startingHash: Foundation.Data
+  public let finalizingHash: Foundation.Data
+  public var startingSignature: Foundation.Data?
+  public var finalizingSignature: Foundation.Data?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(startingHash: Foundation.Data, startingSignature: Foundation.Data?, finalizingHash: Foundation.Data, finalizingSignature: Foundation.Data?)
+  #endif
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public enum TangemEndpoint : NetworkEndpoint {
+  case cardData(cardId: Swift.String, cardPublicKey: Foundation.Data)
+  case artworks(cardId: Swift.String, cardPublicKey: Foundation.Data)
+  public var baseUrl: Swift.String {
+    get
+  }
+  public var path: Swift.String {
+    get
+  }
+  public var method: Swift.String {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var queryItems: [Foundation.URLQueryItem]? {
+    get
+  }
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var body: Foundation.Data? {
+    get
+  }
+  #endif
+  public var headers: [Swift.String : Swift.String] {
+    get
+  }
+}
+public struct SignResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let signatures: [Foundation.Data]
+  public let totalSignedHashes: Swift.Int?
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public struct BIP44 {
+  public let coinType: Swift.UInt32
+  public let account: Swift.UInt32
+  public let change: BIP44.Chain
+  public let addressIndex: Swift.UInt32
+  public static let purpose: Swift.UInt32
+  public init(coinType: Swift.UInt32, account: Swift.UInt32, change: BIP44.Chain, addressIndex: Swift.UInt32)
+  public init(coinType: Swift.UInt32)
+  public func buildPath() -> DerivationPath
+}
+extension BIP44 {
+  public enum Chain {
+    case external
+    case `internal`
+    public var index: Swift.UInt32 {
+      get
+    }
+    public static func == (a: BIP44.Chain, b: BIP44.Chain) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension Foundation.Date {
+  public func toString(style: Foundation.DateFormatter.Style = .medium, locale: Foundation.Locale = .current) -> Swift.String
+}
+public struct CreateWalletResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let wallet: Card.Wallet
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+@_hasMissingDesignatedInitializers public class ResetCodesController {
+  public var cardIdDisplayFormat: CardIdDisplayFormat
+  @objc deinit
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func start(codeType: UserCodeType, cardId: Swift.String?, completion: @escaping CompletionResult<Swift.String>)
+  #endif
+}
+public class CreateWalletTask : CardSessionRunnable {
+  public var encryptionMode: EncryptionMode {
+    get
+  }
+  public init(curve: EllipticCurve)
+  public init(curve: EllipticCurve, privateKey: ExtendedPrivateKey)
+  @objc deinit
+  public func run(in session: CardSession, completion: @escaping CompletionResult<CreateWalletResponse>)
+  public typealias Response = CreateWalletResponse
+}
+@_hasMissingDesignatedInitializers public class TerminalKeysService {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var keys: KeyPair? {
+    get
+    set
+  }
+  #endif
+  @objc deinit
+}
+extension Card {
+  public struct UserSettings : Swift.Codable {
+    public var isUserCodeRecoveryAllowed: Swift.Bool {
+      get
+    }
+    public func encode(to encoder: any Swift.Encoder) throws
+    public init(from decoder: any Swift.Decoder) throws
+  }
+}
+public enum EntropyLength : Swift.Int, Swift.CaseIterable {
+  case bits128
+  case bits160
+  case bits192
+  case bits224
+  case bits256
+  public var wordCount: Swift.Int {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.Int)
+  #endif
+  public typealias AllCases = [EntropyLength]
+  public typealias RawValue = Swift.Int
+  nonisolated public static var allCases: [EntropyLength] {
+    get
+  }
+  public var rawValue: Swift.Int {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers final public class BiometricsUtil {
+  public static var isAvailable: Swift.Bool {
+    get
+  }
+  public static func requestAccess(localizedReason: Swift.String, completion: @escaping CompletionResult<LocalAuthentication.LAContext>)
+  @objc deinit
+}
+public struct BLSUtils {
+  public init()
+}
+extension BLSUtils {
+  public func augSchemeMplG2Map(publicKey: Swift.String, message: Swift.String) throws -> Swift.String
+  public func aggregate(signatures: [Swift.String]) throws -> Swift.String
+  public func makePublicKey(from privateKey: Swift.String) throws -> Swift.String
+  public func verify(signatures: [Swift.String], with publicKey: Swift.String, message: Swift.String) throws -> Swift.Bool
+  public func sign(hash: Swift.String, privateKey: Foundation.Data) throws -> Swift.String
+}
+public struct Issuer : Swift.Codable, JSONStringConvertible {
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct ExtendedPrivateKey : Swift.Equatable, Swift.Hashable, JSONStringConvertible, Swift.Codable {
+  public let privateKey: Foundation.Data
+  public let chainCode: Foundation.Data
+  public let depth: Swift.Int
+  public let parentFingerprint: Foundation.Data
+  public let childNumber: Swift.UInt32
+  public init(privateKey: Foundation.Data, chainCode: Foundation.Data, depth: Swift.Int, parentFingerprint: Foundation.Data, childNumber: Swift.UInt32) throws
+  public init(privateKey: Foundation.Data, chainCode: Foundation.Data)
+  public func makePublicKey(for curve: EllipticCurve) throws -> ExtendedPublicKey
+  public func serializeToWIFCompressed(for networkType: NetworkType) -> Swift.String
+  public func sign(_ data: Foundation.Data, curve: EllipticCurve) throws -> Foundation.Data
+  public static func == (a: ExtendedPrivateKey, b: ExtendedPrivateKey) -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+  public init(from decoder: any Swift.Decoder) throws
+}
+extension ExtendedPrivateKey : ExtendedKeySerializable {
+  public init(from extendedKeyString: Swift.String, networkType: NetworkType) throws
+  public func serialize(for networkType: NetworkType) throws -> Swift.String
+}
+@_hasMissingDesignatedInitializers final public class JSONRPCConverter {
+  final public var handlers: [Swift.String : any JSONRPCHandler] {
+    get
+  }
+  @objc deinit
+  final public func register(_ object: any JSONRPCHandler)
+  final public func convert(request: JSONRPCRequest) throws -> AnyJSONRPCRunnable
+  final public func getHandler(from request: JSONRPCRequest) throws -> any JSONRPCHandler
+}
+extension JSONRPCConverter {
+  public static func makeDefaultConverter(networkService: NetworkService) -> JSONRPCConverter
+}
+public protocol JSONRPCHandler {
+  var method: Swift.String { get }
+  func makeRunnable(from parameters: [Swift.String : Any]) throws -> AnyJSONRPCRunnable
+}
+public struct JSONRPCRequest {
+  public let jsonrpc: Swift.String
+  public let id: Swift.Int?
+  public let method: Swift.String
+  public let params: [Swift.String : Any]
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(id: Swift.Int?, method: Swift.String, params: [Swift.String : Any])
+  #endif
+  public init(jsonString: Swift.String) throws
+  public init(data: Foundation.Data) throws
+  public init(json: [Swift.String : Any]) throws
+}
+public struct JSONRPCResponse : JSONStringConvertible {
+  public let jsonrpc: Swift.String
+  public let result: AnyJSONRPCResponse?
+  public let error: JSONRPCError?
+  public let id: Swift.Int?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(id: Swift.Int?, result: AnyJSONRPCResponse?, error: JSONRPCError?)
+  #endif
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+extension Swift.Array : JSONStringConvertible where Element : JSONStringConvertible {
+}
+public struct JSONRPCError : Swift.Error, JSONStringConvertible, Swift.Equatable {
+  public let code: Swift.Int
+  public let message: Swift.String
+  public let data: JSONRPCErrorData?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(code: Swift.Int, message: Swift.String, data: JSONRPCErrorData?)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(_ code: JSONRPCError.Code, data: JSONRPCErrorData? = nil)
+  #endif
+  public static func == (a: JSONRPCError, b: JSONRPCError) -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public struct JSONRPCErrorData : Swift.Encodable, Swift.Equatable, JSONStringConvertible {
+  public let code: Swift.Int
+  public let message: Swift.String
+  public static func == (a: JSONRPCErrorData, b: JSONRPCErrorData) -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+extension JSONRPCErrorData {
+  public init(_ code: JSONRPCError.Code, message: Swift.String)
+}
+extension JSONRPCError {
+  public enum Code : Swift.Int {
+    case parseError
+    case invalidRequest
+    case methodNotFound
+    case invalidParams
+    case internalError
+    case serverError
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.Int)
+    #endif
+    public typealias RawValue = Swift.Int
+    public var rawValue: Swift.Int {
+      get
+    }
+  }
+}
+public class ConsoleLogger : TangemSdkLogger {
+  public init()
+  public func log(_ message: Swift.String, level: Log.Level)
+  @objc deinit
+}
+public class BiometricsStorage {
+  public init()
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func get(_ account: Swift.String, context: LocalAuthentication.LAContext? = nil) throws -> Foundation.Data?
+  #endif
+  public func store(_ object: Foundation.Data, forKey account: Swift.String, overwrite: Swift.Bool = true) throws
+  public func delete(_ account: Swift.String) throws
+  @objc deinit
+}
+public struct BatchId {
+  public static func isDetached(_ batchId: Swift.String) -> Swift.Bool
+}
+public class NetworkService {
+  public init(session: Foundation.URLSession, additionalHeaders: [Swift.String : Swift.String])
+  @objc deinit
+}
+extension NetworkService {
+  public func request<T>(_ endpoint: any NetworkEndpoint) async throws -> T where T : Swift.Decodable
+}
+extension NetworkService {
+  public func requestPublisher<T>(_ endpoint: any NetworkEndpoint) -> Combine.AnyPublisher<T, NetworkServiceError> where T : Swift.Decodable
+}
+public protocol NetworkEndpoint {
+  var baseUrl: Swift.String { get }
+  var path: Swift.String { get }
+  #if compiler(>=5.3) && $NonescapableTypes
+  var queryItems: [Foundation.URLQueryItem]? { get }
+  #endif
+  var method: Swift.String { get }
+  #if compiler(>=5.3) && $NonescapableTypes
+  var body: Foundation.Data? { get }
+  #endif
+  var headers: [Swift.String : Swift.String] { get }
+}
+public enum NetworkServiceError : Swift.Error, Foundation.LocalizedError {
+  case emptyResponse
+  case statusCode(Swift.Int, Swift.String?)
+  case urlSessionError(any Swift.Error)
+  case emptyResponseData
+  case mappingError(any Swift.Error)
+  case failedToMakeRequest
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var errorDescription: Swift.String? {
+    get
+  }
+  #endif
+}
+extension Swift.Int {
+  public var byte: Foundation.Data {
+    get
+  }
+  public var bytes2: Foundation.Data {
+    get
+  }
+  public var bytes4: Foundation.Data {
+    get
+  }
+  public var bytes8: Foundation.Data {
+    get
+  }
+}
+extension Swift.UInt64 {
+  public var bytes8LE: Foundation.Data {
+    get
+  }
+}
+extension Swift.UInt32 {
+  public var bytes4: Foundation.Data {
+    get
+  }
+}
+public enum NFCTagType : Swift.Equatable, Swift.CustomStringConvertible {
+  case tag(uid: Foundation.Data)
+  case unknown
+  case none
+  public var description: Swift.String {
+    get
+  }
+  public static func == (a: NFCTagType, b: NFCTagType) -> Swift.Bool
+}
+public protocol CardReader : AnyObject {
+  var isPaused: Swift.Bool { get }
+  var isReady: Swift.Bool { get }
+  var alertMessage: Swift.String { get set }
+  var tag: Combine.CurrentValueSubject<NFCTagType, TangemSdkError> { get }
+  var viewEventsPublisher: Combine.CurrentValueSubject<CardReaderViewEvent, Swift.Never> { get }
+  func startSession(with message: Swift.String)
+  func resumeSession()
+  #if compiler(>=5.3) && $NonescapableTypes
+  func stopSession(with errorMessage: Swift.String?)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  func pauseSession(with errorMessage: Swift.String?)
+  #endif
+  func stopSession(with error: any Swift.Error)
+  func sendPublisher(apdu: CommandApdu) -> Combine.AnyPublisher<ResponseApdu, TangemSdkError>
+  func restartPolling(silent: Swift.Bool)
+}
+extension CardReader {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func pauseSession(with errorMessage: Swift.String? = nil)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func stopSession(with errorMessage: Swift.String? = nil)
+  #endif
+}
+public enum CardReaderViewEvent : Swift.Equatable {
+  case none
+  case sessionStarted
+  case sessionStopped
+  case tagConnected
+  case tagLost
+  public static func == (a: CardReaderViewEvent, b: CardReaderViewEvent) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public struct WalletData : Swift.Equatable, Swift.Hashable, Swift.Codable, JSONStringConvertible {
+  public let blockchain: Swift.String
+  public let token: WalletData.Token?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(blockchain: Swift.String, token: WalletData.Token?)
+  #endif
+  public static func == (a: WalletData, b: WalletData) -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+  public init(from decoder: any Swift.Decoder) throws
+}
+extension WalletData {
+  public struct Token : Swift.Equatable, Swift.Hashable, Swift.Codable, JSONStringConvertible {
+    public let name: Swift.String
+    public let symbol: Swift.String
+    public let contractAddress: Swift.String
+    public let decimals: Swift.Int
+    public init(name: Swift.String, symbol: Swift.String, contractAddress: Swift.String, decimals: Swift.Int)
+    public static func == (a: WalletData.Token, b: WalletData.Token) -> Swift.Bool
+    public func encode(to encoder: any Swift.Encoder) throws
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+    public init(from decoder: any Swift.Decoder) throws
+  }
+}
+extension Foundation.Data {
+  public var hexString: Swift.String {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var utf8String: Swift.String? {
+    get
+  }
+  #endif
+  public var description: Swift.String {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func toInt() -> Swift.Int?
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func toDate() -> Foundation.Date?
+  #endif
+  public var sha256Ripemd160: Foundation.Data {
+    get
+  }
+  public var ripemd160: Foundation.Data {
+    get
+  }
+  public init(hexString: Swift.String)
+  public init(_ byte: Byte)
+  public func getSha256() -> Foundation.Data
+  public func getSha512() -> Foundation.Data
+  public func getDoubleSha256() -> Foundation.Data
+  public var toBytes: [Byte] {
+    get
+  }
+  public func pbkdf2(hash: CommonCrypto.CCPBKDFAlgorithm, salt: Foundation.Data, keyByteCount: Swift.Int, rounds: Swift.Int) throws -> Foundation.Data
+  public func pbkdf2sha256(salt: Foundation.Data, rounds: Swift.Int, keyByteCount: Swift.Int = 32) throws -> Foundation.Data
+  public func pbkdf2sha512(salt: Foundation.Data, rounds: Swift.Int, keyByteCount: Swift.Int = 64) throws -> Foundation.Data
+  public func crc16() -> Foundation.Data
+  public func encrypt(with encryptionKey: Foundation.Data) throws -> Foundation.Data
+  public func decrypt(with encryptionKey: Foundation.Data) throws -> Foundation.Data
+  public func sign(privateKey: Foundation.Data, curve: EllipticCurve = .secp256k1) throws -> Foundation.Data
+}
+public struct Message : Swift.Codable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(header: Swift.String?, body: Swift.String? = nil)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(_ jsonString: Swift.String)
+  #endif
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+@_hasMissingDesignatedInitializers public class AnyJSONRPCRunnable : CardSessionRunnable {
+  public var preflightReadMode: PreflightReadMode
+  public var id: Swift.Int?
+  @objc deinit
+  public func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+  public func run(in session: CardSession, completion: @escaping CompletionResult<AnyJSONRPCResponse>)
+  public typealias Response = AnyJSONRPCResponse
+}
+public struct AnyJSONRPCResponse : JSONStringConvertible {
+  public init<T>(_ response: T) where T : JSONStringConvertible
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+@_hasMissingDesignatedInitializers public class TrustedCardsRepo {
+  @objc deinit
+}
+public enum MnemonicError : Swift.Error {
+  case invalidEntropyLength
+  case invalidWordCount
+  case invalidWordsFile
+  case invalidCheksum
+  case invalidMnemonic
+  case mnenmonicCreationFailed
+  case normalizationFailed
+  case wrongWordCount
+  case unsupportedLanguage
+  case invalidWords(words: [Swift.String])
+}
+extension Foundation.Data {
+  public var base58EncodedString: Swift.String {
+    get
+  }
+  public var base58CheckEncodedString: Swift.String {
+    get
+  }
+}
+extension Swift.Array where Element == Swift.UInt8 {
+  public var base58EncodedString: Swift.String {
+    get
+  }
+  public var base58CheckEncodedString: Swift.String {
+    get
+  }
+}
+extension Swift.String {
+  public var base58DecodedData: Foundation.Data {
+    get
+  }
+  public var base58DecodedBytes: [Swift.UInt8] {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var base58CheckDecodedData: Foundation.Data? {
+    get
+  }
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var base58CheckDecodedBytes: [Swift.UInt8]? {
+    get
+  }
+  #endif
+}
+@_hasMissingDesignatedInitializers public class CardSession {
+  final public let viewDelegate: any SessionViewDelegate
+  public var environment: SessionEnvironment {
+    get
+  }
+  @objc deinit
+  public func start<T>(with runnable: T, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func start(_ onSessionStarted: @escaping (CardSession, TangemSdkError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func stop(message: Swift.String? = nil, completion: (() -> Swift.Void)? = nil)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func stop(error: any Swift.Error, completion: (() -> Swift.Void)?)
+  #endif
+  public func pause(message: Swift.String)
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func pause(error: TangemSdkError? = nil)
+  #endif
+  public func resume()
+  public func restartPolling(silent: Swift.Bool = false)
+  final public func send(apdu: CommandApdu, completion: @escaping CompletionResult<ResponseApdu>)
+  public func updateConfig(with newConfig: Config)
+}
+public enum EllipticCurve : Swift.String, Swift.CaseIterable {
+  case secp256k1
+  case ed25519
+  case ed25519_slip0010
+  case secp256r1
+  case bls12381_G2
+  case bls12381_G2_AUG
+  case bls12381_G2_POP
+  case bip0340
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias AllCases = [EllipticCurve]
+  public typealias RawValue = Swift.String
+  nonisolated public static var allCases: [EllipticCurve] {
+    get
+  }
+  public var rawValue: Swift.String {
+    get
+  }
+}
+extension EllipticCurve {
+  public var supportsDerivation: Swift.Bool {
+    get
+  }
+}
+public class ResetPinService {
+  public var currentState: ResetPinService.State {
+    get
+  }
+  public var currentStatePublisher: Combine.AnyPublisher<ResetPinService.State, Swift.Never> {
+    get
+  }
+  public var error: TangemSdkError? {
+    get
+  }
+  public init(config: Config)
+  @objc deinit
+  public func setAccessCode(_ code: Swift.String) throws
+  public func setPasscode(_ code: Swift.String) throws
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func proceed(with resetCardId: Swift.String? = nil)
+  #endif
+}
+extension ResetPinService {
+  public enum State : Swift.Equatable, Swift.CaseIterable {
+    case needCode
+    case needScanResetCard
+    case needScanConfirmationCard
+    case needWriteResetCard
+    case finished
+    public static func == (a: ResetPinService.State, b: ResetPinService.State) -> Swift.Bool
+    public typealias AllCases = [ResetPinService.State]
+    nonisolated public static var allCases: [ResetPinService.State] {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension Card {
+  public struct Wallet : Swift.Codable {
+    public let publicKey: Foundation.Data
+    public let chainCode: Foundation.Data?
+    public let curve: EllipticCurve
+    public let settings: Card.Wallet.Settings
+    public var totalSignedHashes: Swift.Int?
+    public var remainingSignatures: Swift.Int?
+    public let index: Swift.Int
+    public let proof: Foundation.Data?
+    public let isImported: Swift.Bool
+    public var hasBackup: Swift.Bool
+    public var derivedKeys: DerivedKeys
+    public func encode(to encoder: any Swift.Encoder) throws
+    public init(from decoder: any Swift.Decoder) throws
+  }
+}
+extension Card.Wallet {
+  public struct Settings : Swift.Codable {
+    public let isPermanent: Swift.Bool
+    public func encode(to encoder: any Swift.Encoder) throws
+    public init(from decoder: any Swift.Decoder) throws
+  }
+}
+extension Card.Wallet {
+  public enum Status : Swift.Int, JSONStringConvertible {
+    case empty
+    case loaded
+    case purged
+    case emptyBackedUp
+    case backedUp
+    case backedUpAndPurged
+    case imported
+    case backedUpImported
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.Int)
+    #endif
+    public typealias RawValue = Swift.Int
+    public var rawValue: Swift.Int {
+      get
+    }
+  }
+}
+public struct WriteFilesResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let filesIndices: [Swift.Int]
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class WriteFilesTask : CardSessionRunnable {
+  public init(files: [FileToWrite])
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<WriteFilesResponse>)
+  public typealias Response = WriteFilesResponse
+  @objc deinit
+}
+public struct CardIdFormatter {
+  public var style: CardIdDisplayFormat
+  public init(style: CardIdDisplayFormat = .full)
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func string(from cardId: Swift.String) -> Swift.String?
+  #endif
+}
+public struct FirmwareVersion : Swift.Codable {
+  public let stringValue: Swift.String
+  public var doubleValue: Swift.Double {
+    get
+  }
+  public var major: Swift.Int {
+    get
+  }
+  public var minor: Swift.Int {
+    get
+  }
+  public var patch: Swift.Int {
+    get
+  }
+  public var type: FirmwareVersion.FirmwareType {
+    get
+  }
+  public init(stringValue: Swift.String)
+  public init(major: Swift.Int, minor: Swift.Int, patch: Swift.Int = 0, type: FirmwareVersion.FirmwareType = .sdk)
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+extension FirmwareVersion : Swift.Comparable {
+  public static func < (lhs: FirmwareVersion, rhs: FirmwareVersion) -> Swift.Bool
+  public static func == (lhs: FirmwareVersion, rhs: FirmwareVersion) -> Swift.Bool
+  public static func >= (lhs: FirmwareVersion, rhs: FirmwareVersion) -> Swift.Bool
+  #if compiler(>=5.3) && $NonescapableTypes
+  public static func < (lhs: FirmwareVersion?, rhs: FirmwareVersion) -> Swift.Bool
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public static func >= (lhs: FirmwareVersion?, rhs: FirmwareVersion) -> Swift.Bool
+  #endif
+}
+extension FirmwareVersion {
+  public static let multiwalletAvailable: FirmwareVersion
+  public static let blsAvailable: FirmwareVersion
+  public static let isPasscodeStatusAvailable: FirmwareVersion
+  public static let isAccessCodeStatusAvailable: FirmwareVersion
+  public static let isDefaultPinsOptional: FirmwareVersion
+  public static let filesAvailable: FirmwareVersion
+  public static let hdWalletAvailable: FirmwareVersion
+  public static let createWalletResponseAvailable: FirmwareVersion
+  public static let backupAvailable: FirmwareVersion
+  public static let walletOwnershipConfirmationAvailable: FirmwareVersion
+  public static let keysImportAvailable: FirmwareVersion
+  public static let visaRange: Swift.ClosedRange<Swift.Double>
+  public static let ed25519Slip0010Available: FirmwareVersion
+}
+extension FirmwareVersion {
+  public enum FirmwareType : Swift.String, Swift.CaseIterable, JSONStringConvertible {
+    case sdk
+    case release
+    case special
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.String)
+    #endif
+    public typealias AllCases = [FirmwareVersion.FirmwareType]
+    public typealias RawValue = Swift.String
+    nonisolated public static var allCases: [FirmwareVersion.FirmwareType] {
+      get
+    }
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+}
+public struct GenerateOTPResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let rootOTP: Foundation.Data
+  public let rootOTPCounter: Swift.Int
+  public let walletPublicKey: Foundation.Data
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public class GenerateOTPCommand {
+  public init()
+  @objc deinit
+  public typealias Response = GenerateOTPResponse
+}
+@_hasMissingDesignatedInitializers public class OnlineAttestationCache {
+  @objc deinit
+}
+public struct AttestWalletKeyResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let salt: Foundation.Data
+  public let walletSignature: Foundation.Data
+  public let challenge: Foundation.Data
+  public let cardSignature: Foundation.Data?
+  public let publicKeySalt: Foundation.Data?
+  public let walletStatus: Card.Wallet.Status?
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class AttestWalletKeyTask {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil, challenge: Foundation.Data? = nil, confirmationMode: AttestWalletKeyTask.ConfirmationMode = .dynamic)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<AttestWalletKeyResponse>)
+  public typealias Response = AttestWalletKeyResponse
+}
+extension AttestWalletKeyTask {
+  public enum ConfirmationMode {
+    case none
+    case `static`
+    case dynamic
+    public static func == (a: AttestWalletKeyTask.ConfirmationMode, b: AttestWalletKeyTask.ConfirmationMode) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+public struct DerivationPath : Swift.Equatable, Swift.Hashable {
+  public let rawPath: Swift.String
+  public let nodes: [DerivationNode]
+  public init()
+  public init(rawPath: Swift.String) throws
+  public init(nodes: [DerivationNode])
+  public func extendedPath(with node: DerivationNode) -> DerivationPath
+  public static func == (a: DerivationPath, b: DerivationPath) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension DerivationPath : Swift.Codable {
+  public init(from decoder: any Swift.Decoder) throws
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class ChangeFileSettingsCommand {
+  final public var requiresPasscode: Swift.Bool {
+    get
+  }
+  public init(fileIndex: Swift.Int, newPermissions: FileVisibility)
+  public typealias Response = SuccessResponse
+  @objc deinit
+}
+public struct SuccessResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public init(cardId: Swift.String)
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public struct CardArtworksProviderFactory {
+  public init(networkService: NetworkService)
+  public func makeArtworksProvider(for card: Card) -> any CardArtworksProvider
+  public func makeArtworksProvider(cardId: Swift.String, cardPublicKey: Foundation.Data, issuerPublicKey: Foundation.Data, firmwareVersionType: FirmwareVersion.FirmwareType) -> any CardArtworksProvider
+}
+extension BIP39 {
+  public enum Wordlist : Swift.CaseIterable {
+    case en
+    public static func == (a: BIP39.Wordlist, b: BIP39.Wordlist) -> Swift.Bool
+    public typealias AllCases = [BIP39.Wordlist]
+    nonisolated public static var allCases: [BIP39.Wordlist] {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension BIP39.Wordlist {
+  public var words: [Swift.String] {
+    get
+  }
+}
+public struct RIPEMD160 {
+  public init()
+  public mutating func update(data: Foundation.Data)
+  public mutating func finalize() -> Foundation.Data
+}
+final public class PurgeWalletCommand {
+  public init(publicKey: Foundation.Data)
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
+}
+public class AccessCodeRepository {
+  public init()
+  @objc deinit
+  public func save(_ accessCode: Foundation.Data, for cardIds: [Swift.String]) throws
+  public func save(_ accessCode: Foundation.Data, for cardId: Swift.String) throws
+  public func deleteAccessCode(for cardIds: [Swift.String]) throws
+  public func clear()
+}
+public struct ReadIssuerDataResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let issuerData: Foundation.Data
+  public let issuerDataSignature: Foundation.Data
+  public let issuerDataCounter: Swift.Int?
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+final public class ReadIssuerDataCommand {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(issuerPublicKey: Foundation.Data? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<ReadIssuerDataResponse>)
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  public typealias Response = ReadIssuerDataResponse
+}
+extension Card {
+  public struct Settings : Swift.Codable {
+    public let securityDelay: Swift.Int
+    public let maxWalletsCount: Swift.Int
+    public var isSettingAccessCodeAllowed: Swift.Bool {
+      get
+    }
+    public var isSettingPasscodeAllowed: Swift.Bool {
+      get
+    }
+    public var isRemovingUserCodesAllowed: Swift.Bool {
+      get
+    }
+    public let isLinkedTerminalEnabled: Swift.Bool
+    public let supportedEncryptionModes: [EncryptionMode]
+    public let isFilesAllowed: Swift.Bool
+    public let isHDWalletAllowed: Swift.Bool
+    public let isBackupAllowed: Swift.Bool
+    public let isKeysImportAllowed: Swift.Bool
+    public func encode(to encoder: any Swift.Encoder) throws
+    public init(from decoder: any Swift.Decoder) throws
+  }
+}
+public struct Tlv : Swift.Equatable {
+  public let tag: TlvTag
+  public let tagRaw: Byte
+  public let value: Foundation.Data
+  public init(_ tag: TlvTag, value: Foundation.Data)
+  public init(tagRaw: Byte, value: Foundation.Data)
+  public func serialize() -> Foundation.Data
+  #if compiler(>=5.3) && $NonescapableTypes
+  public static func deserialize(_ data: Foundation.Data) -> [Tlv]?
+  #endif
+  public static func == (a: Tlv, b: Tlv) -> Swift.Bool
+}
+extension Tlv : Swift.CustomStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+}
+public struct OnlineAttestationResponse : Swift.Codable {
+  public let manufacturerSignature: Foundation.Data?
+  public let issuerSignature: Foundation.Data
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct SessionEnvironment {
+  public var card: Card? {
+    get
+  }
+  public var walletData: WalletData? {
+    get
+  }
+  public var config: Config {
+    get
+  }
+}
+public struct AttestCardKeyResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let salt: Foundation.Data
+  public let cardSignature: Foundation.Data
+  public let challenge: Foundation.Data
+  public let linkedCardPublicKeys: [Foundation.Data]
+  public func verify(with cardPublicKey: Foundation.Data) throws -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public class AttestCardKeyCommand {
+  public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(mode: AttestCardKeyCommand.Mode = .default, challenge: Foundation.Data? = nil)
+  #endif
+  @objc deinit
+  public func run(in session: CardSession, completion: @escaping CompletionResult<AttestCardKeyResponse>)
+  public typealias Response = AttestCardKeyResponse
+}
+extension AttestCardKeyCommand {
+  public enum Mode : Swift.String {
+    case `default`
+    case full
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.String)
+    #endif
+    public typealias RawValue = Swift.String
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+}
+extension AttestCardKeyResponse {
+  public enum Constants {
+  }
+}
+public struct DerivedKeys : JSONStringConvertible {
+  public var keys: [DerivationPath : ExtendedPublicKey] {
+    get
+  }
+  public init(keys: [DerivationPath : ExtendedPublicKey])
+  #if compiler(>=5.3) && $NonescapableTypes
+  public subscript(path: DerivationPath) -> ExtendedPublicKey? {
+    get
+    set(newValue)
+  }
+  #endif
+}
+extension DerivedKeys : Swift.Codable {
+  public init(from decoder: any Swift.Decoder) throws
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+extension DerivedKeys : Swift.ExpressibleByDictionaryLiteral {
+  public init(dictionaryLiteral elements: (DerivationPath, ExtendedPublicKey)...)
+  public typealias Key = DerivationPath
+  public typealias Value = ExtendedPublicKey
+}
+public enum WIF {
+  public static func encodeToWIFCompressed(_ privateKey: Foundation.Data, networkType: NetworkType) -> Swift.String
+  #if compiler(>=5.3) && $NonescapableTypes
+  public static func decodeWIFCompressed(_ string: Swift.String) -> Foundation.Data?
+  #endif
+}
+public class DeriveMultipleWalletPublicKeysTask : CardSessionRunnable {
+  public typealias Response = [Foundation.Data : DerivedKeys]
+  public init(_ derivations: [Foundation.Data : [DerivationPath]])
+  @objc deinit
+  public func run(in session: CardSession, completion: @escaping CompletionResult<DeriveMultipleWalletPublicKeysTask.Response>)
+}
+extension LocalAuthentication.LAContext {
+  public static var `default`: LocalAuthentication.LAContext {
+    get
+  }
+}
+public struct GetEntropyResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let data: Foundation.Data
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public class GetEntropyCommand {
+  public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  public init()
+  @objc deinit
+  public typealias Response = GetEntropyResponse
+}
+extension Swift.Error {
+  public func toTangemSdkError() -> TangemSdkError
+}
+public struct WalletDataDeserializer {
+  public init()
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func deserialize(decoder: TlvDecoder) throws -> WalletData?
+  #endif
+}
+public struct ResponseApdu {
+  public var sw: Swift.UInt16 {
+    get
+  }
+  public var statusWord: StatusWord {
+    get
+  }
+  public init(_ data: Foundation.Data, _ sw1: Byte, _ sw2: Byte)
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func getTlvData(encryptionKey: Foundation.Data? = nil) -> [Tlv]?
+  #endif
+}
+extension ResponseApdu : Swift.CustomStringConvertible {
+  public var description: Swift.String {
+    get
+  }
+}
+public struct Mnemonic {
+  public let mnemonicComponents: [Swift.String]
+  public let wordlist: BIP39.Wordlist
+  public var mnemonic: Swift.String {
+    get
+  }
+  public init(with entropy: EntropyLength = .bits128, wordList: BIP39.Wordlist = .en) throws
+  public init(entropyData: Foundation.Data, wordList: BIP39.Wordlist = .en) throws
+  public init(with mnemonic: Swift.String) throws
+  public func generateSeed(with passphrase: Swift.String = "") throws -> Foundation.Data
+  public func getEntropy() throws -> Foundation.Data
+}
+public struct ReadWalletsListResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let wallets: [Card.Wallet]
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public class ReadWalletsListCommand {
+  public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  public init()
+  @objc deinit
+  public func run(in session: CardSession, completion: @escaping CompletionResult<ReadWalletsListResponse>)
+  public typealias Response = ReadWalletsListResponse
+}
+public struct SecureStorage {
+  public init()
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func get(_ account: Swift.String) throws -> Foundation.Data?
+  #endif
+  public func store(_ object: Foundation.Data, forKey account: Swift.String, overwrite: Swift.Bool = true) throws
+  public func delete(_ account: Swift.String) throws
+}
+final public class SetUserCodeRecoveryAllowedTask : CardSessionRunnable {
+  final public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  public init(isAllowed: Swift.Bool)
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
+}
+public protocol HexConvertible {
+  #if compiler(>=5.3) && $NonescapableTypes
+  init?(hexData: Foundation.Data)
+  #endif
+}
+extension HexConvertible where Self : Swift.FixedWidthInteger {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(hexData: Foundation.Data)
+  #endif
+}
+extension Swift.Int : HexConvertible {
+}
+extension Swift.UInt64 : HexConvertible {
+}
+extension Swift.Int32 : HexConvertible {
+}
+public typealias CompletionResult<T> = (Swift.Result<T, TangemSdkError>) -> Swift.Void
+public struct Manufacturer : Swift.Codable, JSONStringConvertible {
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+extension Swift.Array where Element == Tlv {
+  public func serialize() -> Foundation.Data
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func item(for tag: TlvTag) -> Element?
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public func value(for tag: TlvTag) -> Foundation.Data?
+  #endif
+  public func contains(tag: TlvTag) -> Swift.Bool
+  public func items(for tag: TlvTag) -> [Element]
+}
+public struct FileHashHelper {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public static func prepareHash(for cardId: Swift.String, fileData: Foundation.Data, fileCounter: Swift.Int, fileName: Swift.String? = nil, privateKey: Foundation.Data? = nil) throws -> FileHashData
+  #endif
+}
+final public class TlvEncoder {
+  public init()
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func encode<T>(_ tag: TlvTag, value: T?) throws -> Tlv
+  #endif
+  @objc deinit
+}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+final public class WriteIssuerDataCommand {
+  final public let issuerData: Foundation.Data
+  final public let issuerDataSignature: Foundation.Data
+  final public let issuerDataCounter: Swift.Int?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(issuerData: Foundation.Data, issuerDataSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, issuerPublicKey: Foundation.Data? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  public typealias Response = SuccessResponse
+}
+public enum UserCodeType {
+  case accessCode
+  case passcode
+  public static func == (a: UserCodeType, b: UserCodeType) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers public class SetUserCodeCommand {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(accessCode: Swift.String?)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(passcode: Swift.String?)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(accessCode: Swift.String?, passcode: Swift.String?)
+  #endif
+  @objc deinit
+  public func prepare(_ session: CardSession, completion: @escaping CompletionResult<Swift.Void>)
+  public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
+}
+extension SetUserCodeCommand {
+  public static var resetAccessCodeCommand: SetUserCodeCommand {
+    get
+  }
+  public static var resetPasscodeCommand: SetUserCodeCommand {
+    get
+  }
+  public static var resetUserCodes: SetUserCodeCommand {
+    get
+  }
+}
+public struct SchnorrSignature {
+  public init(with signature: Foundation.Data) throws
+  public func verify(with publicKey: Foundation.Data, message: Foundation.Data) throws -> Swift.Bool
+  public func verify(with publicKey: Foundation.Data, hash: Foundation.Data) throws -> Swift.Bool
+}
+public class TlvBuilder {
+  public init()
+  #if compiler(>=5.3) && $NonescapableTypes
+  @discardableResult
+  public func append<T>(_ tag: TlvTag, value: T?) throws -> TlvBuilder
+  #endif
+  public func serialize() -> Foundation.Data
+  @objc deinit
+}
+public struct ReadFileChecksumResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let checksum: Foundation.Data
+  public let fileIndex: Swift.Int?
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class ReadFileChecksumCommand {
+  final public var shouldReadPrivateFiles: Swift.Bool
+  final public var requiresPasscode: Swift.Bool {
+    get
+  }
+  public init(fileName: Swift.String)
+  public init(fileIndex: Swift.Int)
+  public typealias Response = ReadFileChecksumResponse
+  @objc deinit
+}
+public struct FileSettings : Swift.Codable {
+  public let isPermanent: Swift.Bool
+  public let visibility: FileVisibility
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public enum FileVisibility : Swift.String, Swift.Codable {
+  case `public`
+  case `private`
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+extension Swift.Array where Element == Card.Wallet {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public subscript(publicKey: Foundation.Data) -> Element? {
+    get
+    set(newValue)
+  }
+  #endif
+}
+public struct Attestation : JSONStringConvertible, Swift.Equatable {
+  public var cardKeyAttestation: Attestation.Status {
+    get
+  }
+  public var walletKeysAttestation: Attestation.Status {
+    get
+  }
+  public var firmwareAttestation: Attestation.Status {
+    get
+  }
+  public var cardUniquenessAttestation: Attestation.Status {
+    get
+  }
+  public var status: Attestation.Status {
+    get
+  }
+  public static func == (a: Attestation, b: Attestation) -> Swift.Bool
+}
+extension Attestation {
+  public enum Status : Swift.String {
+    case failed, warning, skipped, verifiedOffline, verified
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.String)
+    #endif
+    public typealias RawValue = Swift.String
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+}
+extension Attestation {
+  public static var empty: Attestation {
+    get
+  }
+}
+extension Attestation.Status {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(intRepresentation: Swift.Int)
+  #endif
+}
+extension Attestation : Swift.Decodable {
+  public init(from decoder: any Swift.Decoder) throws
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public enum StatusWord : Swift.UInt16 {
+  case unknown
+  case processCompleted
+  case invalidParams
+  case errorProcessingCommand
+  case invalidState
+  case insNotSupported
+  case needEcryption
+  case needPause
+  case pin1Changed
+  case pin2Changed
+  case pin3Changed
+  case pins12Changed
+  case pins13Changed
+  case pins23Changed
+  case pins123Changed
+  case fileNotFound
+  case walletNotFound
+  case invalidAccessCode
+  case invalidPascode
+  case walletAlreadyExists
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.UInt16)
+  #endif
+  public typealias RawValue = Swift.UInt16
+  public var rawValue: Swift.UInt16 {
+    get
+  }
+}
+public struct Card : Swift.Codable, JSONStringConvertible {
+  public let cardId: Swift.String
+  public let batchId: Swift.String
+  public let cardPublicKey: Foundation.Data
+  public let firmwareVersion: FirmwareVersion
+  public let manufacturer: Card.Manufacturer
+  public let issuer: Card.Issuer
+  public var settings: Card.Settings
+  public var userSettings: Card.UserSettings {
+    get
+  }
+  public let linkedTerminalStatus: Card.LinkedTerminalStatus
+  public var isAccessCodeSet: Swift.Bool
+  public var isPasscodeSet: Swift.Bool?
+  public let supportedCurves: [EllipticCurve]
+  public var backupStatus: Card.BackupStatus?
+  public var wallets: [Card.Wallet]
+  public var attestation: Attestation
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+extension Card {
+  public struct Manufacturer : Swift.Codable {
+    public let name: Swift.String
+    public let manufactureDate: Foundation.Date
+    public let signature: Foundation.Data?
+    public func encode(to encoder: any Swift.Encoder) throws
+    public init(from decoder: any Swift.Decoder) throws
+  }
+  public struct Issuer : Swift.Codable {
+    public let name: Swift.String
+    public let publicKey: Foundation.Data
+    public func encode(to encoder: any Swift.Encoder) throws
+    public init(from decoder: any Swift.Decoder) throws
+  }
+  public enum LinkedTerminalStatus : Swift.String, Swift.Codable {
+    case current
+    case other
+    case none
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.String)
+    #endif
+    public typealias RawValue = Swift.String
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+  public enum BackupStatus : Swift.Codable, Swift.Equatable {
+    case noBackup
+    case cardLinked(cardsCount: Swift.Int)
+    case active(cardsCount: Swift.Int)
+    public var isActive: Swift.Bool {
+      get
+    }
+    public var canBackup: Swift.Bool {
+      get
+    }
+    public var linkedCardsCount: Swift.Int {
+      get
+    }
+    public var backupCardsCount: Swift.Int {
+      get
+    }
+    public init(from decoder: any Swift.Decoder) throws
+    public func encode(to encoder: any Swift.Encoder) throws
+    public static func == (a: Card.BackupStatus, b: Card.BackupStatus) -> Swift.Bool
+  }
+}
+final public class ChangeFileSettingsTask : CardSessionRunnable {
+  public init(changes: [Swift.Int : FileVisibility])
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
+  @objc deinit
+}
+public struct ReadUserDataResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let userData: Foundation.Data
+  public let userProtectedData: Foundation.Data
+  public let userCounter: Swift.Int
+  public let userProtectedCounter: Swift.Int
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+final public class ReadUserDataCommand {
+  public init()
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  public typealias Response = ReadUserDataResponse
+  @objc deinit
+}
+public struct Secp256k1Key {
+  public init(with data: Foundation.Data) throws
+  public init(with signature: Secp256k1Signature.Extended, hash: Foundation.Data) throws
+  public init(with signature: Secp256k1Signature.Extended, message: Foundation.Data) throws
+  public func compress() throws -> Foundation.Data
+  public func decompress() throws -> Foundation.Data
+}
+final public class ResetBackupCommand {
+  final public var requiresPasscode: Swift.Bool {
+    get
+  }
+  final public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  public init()
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
+}
+final public class AttestationTask : CardSessionRunnable {
+  final public var shouldKeepSessionOpened: Swift.Bool
+  public init(mode: AttestationTask.Mode, networkService: NetworkService)
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<Attestation>)
+  public typealias Response = Attestation
+}
+extension AttestationTask {
+  public enum Mode : Swift.String, Swift.CaseIterable, Swift.Comparable {
+    case offline, normal, full
+    public static func < (lhs: AttestationTask.Mode, rhs: AttestationTask.Mode) -> Swift.Bool
+    #if compiler(>=5.3) && $NonescapableTypes
+    public init?(rawValue: Swift.String)
+    #endif
+    public typealias AllCases = [AttestationTask.Mode]
+    public typealias RawValue = Swift.String
+    nonisolated public static var allCases: [AttestationTask.Mode] {
+      get
+    }
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+}
+public struct SignHashResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public let signature: Foundation.Data
+  public let totalSignedHashes: Swift.Int?
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class SignHashCommand : CardSessionRunnable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(hash: Foundation.Data, walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SignHashResponse>)
+  public typealias Response = SignHashResponse
+}
+public enum DerivationNode : Swift.Equatable, Swift.Hashable {
+  case hardened(Swift.UInt32)
+  case nonHardened(Swift.UInt32)
+  public var pathDescription: Swift.String {
+    get
+  }
+  public var index: Swift.UInt32 {
+    get
+  }
+  public var isHardened: Swift.Bool {
+    get
+  }
+  public static func fromIndex(_ index: Swift.UInt32) -> DerivationNode
+  public static func == (a: DerivationNode, b: DerivationNode) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public struct OnlineAttestationServiceFactory {
+  public init(networkService: NetworkService)
+}
+public enum Instruction : Byte {
+  case unknown
+  case read
+  case attestCardKey
+  case attestCardUniqueness
+  case attestCardFirmware
+  case writeIssuerData
+  case readIssuerData
+  case createWallet
+  case attestWalletKey
+  case setPin
+  case sign
+  case purgeWallet
+  case activate
+  case openSession
+  case writeUserData
+  case readUserData
+  case personalize
+  case depersonalize
+  case readFileData
+  case writeFileData
+  case startPrimaryCardLinking
+  case startBackupCardLinking
+  case linkBackupCards
+  case readBackupData
+  case linkPrimaryCard
+  case writeBackupData
+  case manageFileOwners
+  case authorize
+  case backupReset
+  case generateOTP
+  case getEntropy
+  case setUserSettings
+  case finalizeReadBackupData
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Byte)
+  #endif
+  public typealias RawValue = Byte
+  public var rawValue: Byte {
+    get
+  }
+}
+@_hasMissingDesignatedInitializers final public class Localization {
+  public static var localizationsBundle: Foundation.Bundle?
+  public static func string(_ key: Swift.String, _ args: any Swift.CVarArg...) -> Swift.String
+  public static func getFormat(for key: Swift.String) -> Swift.String
+  @objc deinit
+}
+public protocol JSONStringConvertible : Swift.Encodable {
+  var json: Swift.String { get }
+}
+extension JSONStringConvertible {
+  public var json: Swift.String {
+    get
+  }
+  public var testJson: Swift.String {
+    get
+  }
+  public func eraseToAnyResponse() -> AnyJSONRPCResponse
+}
+public struct Acquirer : Swift.Codable, JSONStringConvertible {
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public class ReadFilesTask : CardSessionRunnable {
+  public var shouldReadPrivateFiles: Swift.Bool
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(fileName: Swift.String? = nil, walletPublicKey: Foundation.Data? = nil)
+  #endif
+  public func run(in session: CardSession, completion: @escaping CompletionResult<[File]>)
+  public typealias Response = [File]
+  @objc deinit
+}
+public struct File : JSONStringConvertible {
+  public let name: Swift.String?
+  public let data: Foundation.Data
+  public let index: Swift.Int
+  public let settings: FileSettings
+  public let counter: Swift.Int?
+  public let signature: Foundation.Data?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(data: Foundation.Data, index: Swift.Int, settings: FileSettings, name: Swift.String? = nil, counter: Swift.Int? = nil, signature: Foundation.Data? = nil)
+  #endif
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public struct NamedFile {
+  public let name: Swift.String
+  public let payload: Foundation.Data
+  public let counter: Swift.Int?
+  public let signature: Foundation.Data?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(name: Swift.String, payload: Foundation.Data, counter: Swift.Int? = nil, signature: Foundation.Data? = nil)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(tlvData: Foundation.Data) throws
+  #endif
+  public func serialize() throws -> Foundation.Data
+}
+public enum FileToWrite : Swift.Decodable {
+  case byUser(data: Foundation.Data, fileName: Swift.String?, fileVisibility: FileVisibility?, walletPublicKey: Foundation.Data?)
+  case byFileOwner(data: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, counter: Swift.Int, fileName: Swift.String?, fileVisibility: FileVisibility?, walletPublicKey: Foundation.Data?)
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct WriteFileResponse : JSONStringConvertible {
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class WriteFileCommand {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(data: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, counter: Swift.Int, fileVisibility: FileVisibility? = nil, walletPublicKey: Foundation.Data? = nil)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(data: Foundation.Data, fileVisibility: FileVisibility? = nil, walletPublicKey: Foundation.Data? = nil)
+  #endif
+  convenience public init(_ file: FileToWrite)
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<WriteFileResponse>)
+  public typealias Response = WriteFileResponse
+  @objc deinit
+}
+public enum CryptoUtils {
+  public static func generateRandomBytes(count: Swift.Int) throws -> Foundation.Data
+  public static func verify(curve: EllipticCurve, publicKey: Foundation.Data, message: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
+  public static func isPrivateKeyValid(_ privateKey: Foundation.Data, curve: EllipticCurve) throws -> Swift.Bool
+  public static func makePublicKey(from privateKey: Foundation.Data, curve: EllipticCurve) throws -> Foundation.Data
+  public static func verify(curve: EllipticCurve, publicKey: Foundation.Data, hash: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
+  @available(iOS 16.0, *)
+  public static func verifySecp256r1Signature(publicKey: Foundation.Data, hash: Foundation.Data, signature: Foundation.Data) throws -> Swift.Bool
+  public static func crypt(operation: Swift.Int, algorithm: Swift.Int, options: Swift.Int, key: Foundation.Data, dataIn: Foundation.Data) throws -> Foundation.Data
+}
+public enum TangemSdkError : Swift.Error, Foundation.LocalizedError, Swift.Encodable {
+  case unsupportedCommand
+  case unsupportedDevice
+  case sessionInactive
+  case nfcStuck
+  case nfcTimeout
+  case nfcReaderError
+  case serializeCommandError
+  case deserializeApduFailed
+  case encodingFailedTypeMismatch(_: Swift.String)
+  case encodingFailed(_: Swift.String)
+  case decodingFailedMissingTag(_: Swift.String)
+  case decodingFailedTypeMismatch(_: Swift.String)
+  case decodingFailed(_: Swift.String)
+  case failedToEncryptApdu
+  case failedToDecryptApdu
+  case failedToEstablishEncryption
+  case invalidResponseApdu
+  case failedToBuildCommandApdu
+  case unknownStatus(_: Swift.String)
+  case errorProcessingCommand
+  case invalidState
+  case insNotSupported
+  case invalidParams
+  case needEncryption
+  case alreadyPersonalized
+  case cannotBeDepersonalized
+  case accessCodeRequired
+  case nonHardenedDerivationNotSupported
+  case alreadyCreated
+  case unsupportedCurve
+  case unsupportedWalletConfig
+  case purgeWalletProhibited
+  case accessCodeCannotBeChanged
+  case passcodeCannotBeChanged
+  case accessCodeCannotBeDefault
+  case passcodeCannotBeDefault
+  case accessCodeTooShort
+  case passcodeTooShort
+  case noRemainingSignatures
+  case oldCard
+  case emptyHashes
+  case signHashesNotAvailable
+  case extendedDataSizeTooLarge
+  case notPersonalized
+  case notActivated
+  case walletIsPurged
+  case passcodeRequired
+  case verificationFailed
+  case cardVerificationFailed
+  case dataSizeTooLarge
+  case missingCounter
+  case overwritingDataIsProhibited
+  case dataCannotBeWritten
+  case missingIssuerPublicKey
+  case wrongAccessCode
+  case wrongPasscode
+  case unknownError
+  case underlying(error: any Swift.Error)
+  case userCancelled
+  case userForgotTheCode
+  case biometricsUnavailable
+  case busy
+  case jsonConverterNotSet
+  case missingPreflightRead
+  case wrongCardNumber(expectedCardId: Swift.String?)
+  case wrongCardType(_: Swift.String?)
+  case preflightFiltered(_: any Swift.Error)
+  case cardError
+  case cryptoUtilsError(_: Swift.String)
+  case failedToGenerateRandomSequence
+  case readerErrorUnsupportedFeature
+  case readerErrorSecurityViolation
+  case readerErrorInvalidParameter
+  case readerErrorInvalidParameterLength
+  case readerErrorParameterOutOfBound
+  case readerTransceiveErrorTagConnectionLost
+  case readerTransceiveErrorRetryExceeded
+  case readerTransceiveErrorTagResponseError
+  case readerTransceiveErrorSessionInvalidated
+  case readerTransceiveErrorTagNotConnected
+  case readerSessionInvalidationErrorSessionTimeout
+  case readerSessionInvalidationErrorSessionTerminatedUnexpectedly
+  case readerSessionInvalidationErrorFirstNDEFTagRead
+  case tagCommandConfigurationErrorInvalidParameters
+  case ndefReaderSessionErrorTagNotWritable
+  case ndefReaderSessionErrorTagUpdateFailure
+  case ndefReaderSessionErrorTagSizeTooSmall
+  case ndefReaderSessionErrorZeroLengthMessage
+  case readerErrorRadioDisabled
+  case readerTransceiveErrorPacketTooLong
+  case fileNotFound
+  case fileSettingsUnsupported
+  case filesIsEmpty
+  case wrongInteractionMode
+  case notSupportedFirmwareVersion
+  case maxNumberOfWalletsCreated
+  case walletNotFound
+  case cardWithMaxZeroWallets
+  case walletCannotBeCreated
+  case walletAlreadyCreated
+  case backupFailedCardNotLinked
+  case backupNotAllowed
+  case backupCardAlreadyAdded
+  case missingPrimaryCard
+  case missingPrimaryAttestSignature
+  case tooMuchBackupCards
+  case backupCardRequired
+  case noBackupDataForCard
+  case backupFailedEmptyWallets
+  case backupFailedNotEmptyWallets(cardId: Swift.String)
+  case certificateSignatureRequired
+  case issuerSignatureLoadingFailed
+  case accessCodeOrPasscodeRequired
+  case noActiveBackup
+  case resetBackupFailedHasBackedUpWallets
+  case backupServiceInvalidState
+  case noBackupCardForIndex
+  case emptyBackupCards
+  case backupFailedWrongIssuer
+  case backupFailedHDWalletSettings
+  case backupFailedNotEnoughCurves
+  case backupFailedNotEnoughWallets
+  case backupFailedFirmware
+  case backupFailedIncompatibleBatch
+  case backupFailedIncompatibleFirmware
+  case backupFailedKeysImportSettings
+  case backupFailedAlreadyCreated
+  case filesDisabled
+  case hdWalletDisabled
+  case keysImportDisabled
+  case userCodeRecoveryDisabled
+  case resetPinNoCardToReset
+  case resetPinWrongCard(internalCode: Swift.Int? = nil)
+  public var code: Swift.Int {
+    get
+  }
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var message: Swift.String? {
+    get
+  }
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var errorDescription: Swift.String? {
+    get
+  }
+  #endif
+  public var jsonDescription: Swift.String {
+    get
+  }
+  public var isUserCancelled: Swift.Bool {
+    get
+  }
+  public static func parse(_ error: any Swift.Error) -> TangemSdkError
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public class DeriveWalletPublicKeyTask : CardSessionRunnable {
+  public init(walletPublicKey: Foundation.Data, derivationPath: DerivationPath)
+  @objc deinit
+  public func run(in session: CardSession, completion: @escaping CompletionResult<ExtendedPublicKey>)
+  public typealias Response = ExtendedPublicKey
+}
+public struct DepersonalizeResponse : JSONStringConvertible {
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public class DepersonalizeCommand {
+  public var preflightReadMode: PreflightReadMode {
+    get
+  }
+  public init()
+  public func run(in session: CardSession, completion: @escaping CompletionResult<DepersonalizeResponse>)
+  public typealias Response = DepersonalizeResponse
+  @objc deinit
+}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+final public class WriteUserDataCommand {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(userData: Foundation.Data?, userCounter: Swift.Int?, userProtectedData: Foundation.Data?, userProtectedCounter: Swift.Int?)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  convenience public init(userData: Foundation.Data, userCounter: Swift.Int?)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  convenience public init(userProtectedData: Foundation.Data, userProtectedCounter: Swift.Int?)
+  #endif
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  public typealias Response = SuccessResponse
+  @objc deinit
+}
+public struct KeyPair : Swift.Equatable, Swift.Codable {
+  public let privateKey: Foundation.Data
+  public let publicKey: Foundation.Data
+  public static func == (a: KeyPair, b: KeyPair) -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+@_hasMissingDesignatedInitializers public class NFCUtils {
+  public static var isNFCAvailable: Swift.Bool {
+    get
+  }
+  public static var isPoorNfcQualityDevice: Swift.Bool {
+    get
+  }
+  @objc deinit
+}
+public struct ExtendedPublicKey : Swift.Equatable, Swift.Hashable, JSONStringConvertible {
+  public let publicKey: Foundation.Data
+  public let chainCode: Foundation.Data
+  public let depth: Swift.Int
+  public let parentFingerprint: Foundation.Data
+  public let childNumber: Swift.UInt32
+  public init(publicKey: Foundation.Data, chainCode: Foundation.Data, depth: Swift.Int, parentFingerprint: Foundation.Data, childNumber: Swift.UInt32) throws
+  public init(publicKey: Foundation.Data, chainCode: Foundation.Data)
+  public func derivePublicKey(node: DerivationNode) throws -> ExtendedPublicKey
+  public func derivePublicKey(path derivationPath: DerivationPath) throws -> ExtendedPublicKey
+  public static func == (a: ExtendedPublicKey, b: ExtendedPublicKey) -> Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension ExtendedPublicKey : ExtendedKeySerializable {
+  public init(from extendedKeyString: Swift.String, networkType: NetworkType) throws
+  public func serialize(for networkType: NetworkType) throws -> Swift.String
+}
+extension ExtendedPublicKey : Swift.Decodable {
+  public init(from decoder: any Swift.Decoder) throws
+}
+extension TangemSdk {
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSessionPublisher<T>(with runnable: T, cardId: Swift.String?, initialMessage: Message? = nil, accessCode: Swift.String? = nil) -> Combine.AnyPublisher<T.Response, TangemSdkError> where T : CardSessionRunnable
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSessionPublisher<T>(with runnable: T, filter: SessionFilter?, initialMessage: Message? = nil, accessCode: Swift.String? = nil) -> Combine.AnyPublisher<T.Response, TangemSdkError> where T : CardSessionRunnable
+  #endif
+}
+@_hasMissingDesignatedInitializers public class TangemSdkStyle : Foundation.ObservableObject {
+  public var colors: TangemSdkStyle.Colors
+  public var textSizes: TangemSdkStyle.TextSizes
+  public var indicatorWidth: Swift.Float
+  public var scanTagImage: TangemSdkStyle.ScanTagImage
+  public static var `default`: TangemSdkStyle
+  public typealias ObjectWillChangePublisher = Combine.ObservableObjectPublisher
+  @objc deinit
+}
+extension TangemSdkStyle {
+  public struct Colors {
+    public var tint: SwiftUICore.Color
+    public var tintUIColor: UIKit.UIColor
+    public var errorTint: SwiftUICore.Color
+    public var buttonColors: TangemSdkStyle.ButtonColors
+    public var secondaryButtonColors: TangemSdkStyle.ButtonColors
+    public var indicatorBackground: SwiftUICore.Color
+    public var phoneBackground: SwiftUICore.Color
+    public var phoneStroke: SwiftUICore.Color
+    public var cardColor: SwiftUICore.Color
+    public var starsColor: SwiftUICore.Color
+    public static var `default`: TangemSdkStyle.Colors
+  }
+  public struct ButtonColors {
+    public var foregroundColor: SwiftUICore.Color
+    public var backgroundColor: SwiftUICore.Color
+    public var disabledForegroundColor: SwiftUICore.Color
+    public var disabledBackgroundColor: SwiftUICore.Color
+  }
+}
+extension TangemSdkStyle {
+  public struct TextSizes {
+    public var indicatorLabel: CoreFoundation.CGFloat
+    public static var `default`: TangemSdkStyle.TextSizes
+  }
+}
+extension TangemSdkStyle {
+  public enum ScanTagImage {
+    case genericCard
+    case genericRing
+    case image(uiImage: UIKit.UIImage, verticalOffset: Swift.Double)
+  }
+}
+@_hasMissingDesignatedInitializers public class Log {
+  public static var config: Log.Config {
+    get
+    set
+  }
+  public static func warning<T>(_ message: T)
+  public static func error<T>(_ message: T)
+  public static func nfc<T>(_ message: T)
+  public static func apdu<T>(_ message: T)
+  public static func command<T>(_ message: T)
+  public static func session<T>(_ message: T)
+  public static func tlv<T>(_ message: T)
+  public static func debug<T>(_ message: T)
+  public static func network<T>(_ message: T)
+  public static func view<T>(_ message: T)
+  public static func filter(_ level: Log.Level) -> Swift.Bool
+  @objc deinit
+}
+extension Log {
+  public enum Level {
+    case command
+    case tlv
+    case apdu
+    case session
+    case nfc
+    case warning
+    case error
+    case debug
+    case network
+    case view
+    public var emoji: Swift.String {
+      get
+    }
+    public var prefix: Swift.String {
+      get
+    }
+    public static func == (a: Log.Level, b: Log.Level) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension Log {
+  public enum Config {
+    case release
+    case debug
+    case verbose
+    case custom(logLevel: [Log.Level], loggers: [any TangemSdkLogger] = [ConsoleLogger()])
+  }
+}
+public enum TlvValueType : Swift.String {
+  case hexString
+  case utf8String
+  case intValue
+  case boolValue
+  case data
+  case ellipticCurve
+  case dateTime
+  case productMask
+  case settingsMask
+  case userSettingsMask
+  case status
+  case signingMethod
+  case byte
+  case uint16
+  case interactionMode
+  case derivationPath
+  case backupStatus
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public enum TlvTag : Byte {
+  case unknown
+  case cardId
+  case pin
+  case pin2
+  case transactionOutHash
+  case transactionOutHashSize
+  case walletSignature
+  case walletRemainingSignatures
+  case walletSignedHashes
+  case pause
+  case flash
+  case issuerTxSignature
+  case status
+  case cardPublicKey
+  case cardSignature
+  case curveId
+  case hashAlgId
+  case signingMethod
+  case maxSignatures
+  case pauseBeforePin2
+  case settingsMask
+  case userSettingsMask
+  case cardData
+  case ndefData
+  case createWalletAtPersonalize
+  case health
+  case newPin
+  case newPin2
+  case newPin3
+  case crExKey
+  case publicKeyChallenge
+  case publicKeySalt
+  case challenge
+  case salt
+  case validationCounter
+  case cvc
+  case sessionKeyA
+  case sessionKeyB
+  case uid
+  case manufacturerName
+  case manufacturerSignature
+  case issuerPublicKey
+  case issuerTransactionPublicKey
+  case issuerData
+  case issuerDataSignature
+  case issuerDataCounter
+  case isActivated
+  case activationSeed
+  case paymentFlowVersion
+  case userData
+  case userProtectedData
+  case userCounter
+  case userProtectedCounter
+  case resetPin
+  case codePageAddress
+  case codePageCount
+  case codeHash
+  case trOutRaw
+  case walletPublicKey
+  case firmwareVersion
+  case batchId
+  case manufactureDateTime
+  case issuerName
+  case blockchainName
+  case manufacturerPublicKey
+  case cardIDManufacturerSignature
+  case tokenSymbol
+  case tokenContractAddress
+  case tokenDecimal
+  case tokenName
+  case denomination
+  case validatedBalance
+  case lastSignDate
+  case denominationText
+  case checkWalletCounter
+  case productMask
+  case isLinked
+  case terminalPublicKey
+  case terminalTransactionSignature
+  case legacyMode
+  case interactionMode
+  case offset
+  case size
+  case acquirerPublicKey
+  case pin2IsDefault
+  case pinIsDefault
+  case walletIndex
+  case walletsCount
+  case walletData
+  case cardWallet
+  case fileIndex
+  case fileSettings
+  case fileTypeName
+  case fileData
+  case fileSignature
+  case fileCounter
+  case fileOwnerIndex
+  case walletHDPath
+  case walletHDChain
+  case walletPrivateKey
+  case certificate
+  case backupStatus
+  case backupCount
+  case primaryCardLinkingKey
+  case backupCardLinkingKey
+  case backupCardLink
+  case backupAttestSignature
+  case backupCardPublicKey
+  case proof
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Byte)
+  #endif
+  public typealias RawValue = Byte
+  public var rawValue: Byte {
+    get
+  }
+}
+final public class ScanTask : CardSessionRunnable {
+  final public var shouldAskForAccessCode: Swift.Bool {
+    get
+  }
+  public init(networkService: NetworkService)
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<Card>)
+  public typealias Response = Card
+}
+public struct SecureEnclaveService {
+  public init(config: SecureEnclaveService.Config)
+}
+extension SecureEnclaveService {
+  public func sign(data: Foundation.Data, keyTag: Swift.String) throws -> Foundation.Data
+  public func verify(signature: Foundation.Data, message: Foundation.Data, keyTag: Swift.String) throws -> Swift.Bool
+}
+extension SecureEnclaveService {
+  public func encryptData(_ data: Foundation.Data, keyTag: Swift.String) throws -> Foundation.Data
+  public func decryptData(_ data: Foundation.Data, keyTag: Swift.String) throws -> Foundation.Data
+}
+extension SecureEnclaveService {
+  public enum Config {
+    case `default`
+    case biometrics(LocalAuthentication.LAContext)
+  }
+}
+extension Foundation.JSONDecoder {
+  public static var tangemSdkDecoder: Foundation.JSONDecoder {
+    get
+  }
+}
+extension Foundation.JSONEncoder {
+  public static var tangemSdkEncoder: Foundation.JSONEncoder {
+    get
+  }
+  public static var tangemSdkTestEncoder: Foundation.JSONEncoder {
+    get
+  }
+}
+public enum PreflightReadMode : Swift.Decodable, Swift.Equatable {
+  case none
+  case readCardOnly
+  case fullCardRead
+  public init(from decoder: any Swift.Decoder) throws
+  public static func == (a: PreflightReadMode, b: PreflightReadMode) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public struct CheckUserCodesResponse : JSONStringConvertible {
+  public let isAccessCodeSet: Swift.Bool
+  public let isPasscodeSet: Swift.Bool
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+final public class CheckUserCodesCommand : CardSessionRunnable {
+  public init()
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<CheckUserCodesResponse>)
+  public typealias Response = CheckUserCodesResponse
+}
+public struct Config {
+  public init()
+  public var legacyMode: Swift.Bool?
+  public var linkedTerminal: Swift.Bool?
+  public var issuerPublicKey: Foundation.Data?
+  public var handleErrors: Swift.Bool
+  public var cardIdDisplayFormat: CardIdDisplayFormat
+  public var productType: ProductType
+  public var logConfig: Log.Config
+  public var attestationMode: AttestationTask.Mode
+  public var filter: CardFilter
+  public var style: TangemSdkStyle
+  public var canonizeSecp256k1Signatures: Swift.Bool
+  public var defaultDerivationPaths: [EllipticCurve : [DerivationPath]]
+  public var accessCodeRequestPolicy: AccessCodeRequestPolicy
+  public var biometricsLocalizedReason: Swift.String
+  public static var useDevApi: Swift.Bool
+  public mutating func setupForProduct(_ product: ProductType)
+}
+public enum CardIdDisplayFormat {
+  case none
+  case full
+  case last(_: Swift.Int)
+  case lastMasked(_: Swift.Int, mask: Swift.String = "***")
+  case lastLunh(_: Swift.Int)
+}
+public enum AccessCodeRequestPolicy : Swift.String, Swift.CaseIterable {
+  case alwaysWithBiometrics
+  case always
+  case `default`
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias AllCases = [AccessCodeRequestPolicy]
+  public typealias RawValue = Swift.String
+  nonisolated public static var allCases: [AccessCodeRequestPolicy] {
+    get
+  }
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public enum ProductType {
+  case any
+  case card
+  case ring
+  public static func == (a: ProductType, b: ProductType) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public enum SessionFilter {
+  case cardId(Swift.String)
+  case custom(any PreflightReadFilter)
+}
+final public class TangemSdk {
+  final public var config: Config
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(cardReader: (any CardReader)? = nil, viewDelegate: (any SessionViewDelegate)? = nil, config: Config = Config())
+  #endif
+  @objc deinit
+  final public func initializeJSONRPC(networkService: NetworkService)
+  final public func registerJSONRPCTask(_ object: any JSONRPCHandler) -> Swift.Bool
+}
+extension TangemSdk {
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func scanCard(initialMessage: Message? = nil, networkService: NetworkService, completion: @escaping CompletionResult<Card>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func attestCardKey(attestationMode: AttestCardKeyCommand.Mode = .default, challenge: Foundation.Data? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<AttestCardKeyResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func sign(hash: Foundation.Data, walletPublicKey: Foundation.Data, cardId: Swift.String? = nil, derivationPath: DerivationPath? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SignHashResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func sign(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, cardId: Swift.String? = nil, derivationPath: DerivationPath? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SignHashesResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func createWallet(curve: EllipticCurve, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<CreateWalletResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func importWallet(curve: EllipticCurve, cardId: Swift.String, mnemonic: Swift.String, passphrase: Swift.String = "", initialMessage: Message? = nil, completion: @escaping CompletionResult<CreateWalletResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func purgeWallet(walletPublicKey: Foundation.Data, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func setAccessCode(_ accessCode: Swift.String? = nil, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func setPasscode(_ passcode: Swift.String? = nil, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func resetUserCodes(cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func setUserCodeRecoveryAllowed(_ isAllowed: Swift.Bool, cardId: Swift.String, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func deriveWalletPublicKey(cardId: Swift.String, walletPublicKey: Foundation.Data, derivationPath: DerivationPath, initialMessage: Message? = nil, completion: @escaping CompletionResult<ExtendedPublicKey>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func deriveWalletPublicKeys(cardId: Swift.String, walletPublicKey: Foundation.Data, derivationPaths: [DerivationPath], initialMessage: Message? = nil, completion: @escaping CompletionResult<DerivedKeys>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func readFiles(readPrivateFiles: Swift.Bool = false, fileName: Swift.String? = nil, walletPublicKey: Foundation.Data? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<[File]>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func changeFileSettings(changes: [Swift.Int : FileVisibility], cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func writeFiles(files: [FileToWrite], cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<WriteFilesResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func deleteFiles(indices: [Swift.Int]?, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func prepareHashes(cardId: Swift.String, fileData: Foundation.Data, fileCounter: Swift.Int, fileName: Swift.String? = nil, privateKey: Foundation.Data? = nil) throws -> FileHashData
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func readIssuerData(cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<ReadIssuerDataResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeIssuerData(issuerData: Foundation.Data, issuerDataSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func readIssuerExtraData(cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<ReadIssuerExtraDataResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeIssuerExtraData(issuerData: Foundation.Data, startingSignature: Foundation.Data, finalizingSignature: Foundation.Data, issuerDataCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func readUserData(cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<ReadUserDataResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeUserData(userData: Foundation.Data, userCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  final public func writeUserProtectedData(userProtectedData: Foundation.Data, userProtectedCounter: Swift.Int? = nil, cardId: Swift.String? = nil, initialMessage: Message? = nil, completion: @escaping CompletionResult<SuccessResponse>)
+  #endif
+}
+extension TangemSdk {
+  final public func startSession<T>(with runnable: T, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession<T>(with runnable: T, filter: SessionFilter?, initialMessage: Message? = nil, accessCode: Swift.String? = nil, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession<T>(with runnable: T, cardId: Swift.String? = nil, initialMessage: Message? = nil, accessCode: Swift.String? = nil, completion: @escaping CompletionResult<T.Response>) where T : CardSessionRunnable
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession(cardId: Swift.String? = nil, initialMessage: Message? = nil, accessCode: Swift.String? = nil, callback: @escaping (CardSession, TangemSdkError?) -> Swift.Void)
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  final public func startSession(with jsonRequest: Swift.String, cardId: Swift.String? = nil, initialMessage: Swift.String? = nil, accessCode: Swift.String? = nil, completion: @escaping (Swift.String) -> Swift.Void)
+  #endif
+}
+public struct BIP39 {
+  public init()
+  public func validate(mnemonicComponents: [Swift.String]) throws
+}
+final public class Secp256k1Utils {
+  public init()
+  @objc deinit
+  final public func sign(_ data: Foundation.Data, with key: Foundation.Data) throws -> Foundation.Data
+  final public func generateKeyPair() throws -> KeyPair
+  final public func serializeDer(_ signature: Foundation.Data) throws -> Foundation.Data
+  final public func sum(compressedPubKey1: Foundation.Data, compressedPubKey2: Foundation.Data) throws -> Foundation.Data
+}
+public struct CardFilter {
+  public var allowedCardTypes: [FirmwareVersion.FirmwareType]
+  public var cardIdFilter: CardFilter.CardIdFilter?
+  public var batchIdFilter: CardFilter.ItemFilter?
+  public var issuerFilter: CardFilter.ItemFilter?
+  public var maxFirmwareVersion: FirmwareVersion?
+  public var localizedDescription: Swift.String?
+  public static var `default`: CardFilter
+  public func verifyCard(_ card: Card) throws
+}
+public struct CardIdRange {
+  public let start: Swift.UInt64
+  public let end: Swift.UInt64
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(start: Swift.String, end: Swift.String)
+  #endif
+  public func contains(_ cardId: Swift.String) -> Swift.Bool
+}
+extension CardFilter {
+  public enum ItemFilter {
+    case allow(_: Swift.Set<Swift.String>)
+    case deny(_: Swift.Set<Swift.String>)
+  }
+  public enum CardIdFilter {
+    case allow(_: Swift.Set<Swift.String>, ranges: [CardIdRange] = [])
+    case deny(_: Swift.Set<Swift.String>, ranges: [CardIdRange] = [])
+  }
+}
+extension Swift.Array where Element == CardIdRange {
+  public func contains(_ cardId: Swift.String) -> Swift.Bool
+}
+final public class StartPrimaryCardLinkingCommand {
+  public init()
+  @objc deinit
+  public typealias Response = PrimaryCard
+}
+public struct BIP32 {
+  public init()
+  public func makeMasterKey(from seed: Foundation.Data, curve: EllipticCurve) throws -> ExtendedPrivateKey
+}
+public enum ExtendedKeySerializationError : Swift.String, Swift.Error, Foundation.LocalizedError {
+  case wrongLength
+  case decodingFailed
+  case wrongVersion
+  case wrongKey
+  #if compiler(>=5.3) && $NonescapableTypes
+  public var errorDescription: Swift.String? {
+    get
+  }
+  #endif
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Swift.String)
+  #endif
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+extension Swift.String {
+  public func sha256() -> Foundation.Data
+  public func sha512() -> Foundation.Data
+  public func remove(_ substring: Swift.String) -> Swift.String
+}
+public typealias Byte = Swift.UInt8
+extension Swift.UInt8 {
+  public var description: Swift.String {
+    get
+  }
+  public var hexString: Swift.String {
+    get
+  }
+}
+extension Swift.UInt16 {
+  public var description: Swift.String {
+    get
+  }
+  public var hexString: Swift.String {
+    get
+  }
+}
+extension Swift.Array where Element == Swift.UInt8 {
+  public func getSha256() -> Foundation.Data
+  public func getSha512() -> Foundation.Data
+  public func getDoubleSha256() -> Foundation.Data
+}
+public protocol PreflightReadFilter {
+  func onCardRead(_ card: Card, environment: SessionEnvironment) throws
+  func onFullCardRead(_ card: Card, environment: SessionEnvironment) throws
+}
+public protocol CardArtworksProvider {
+  func loadArtworks() async throws -> Artworks
+}
+public struct Artworks {
+  public let large: Foundation.Data
+  public let small: Foundation.Data?
+}
+final public class DeleteFilesTask : CardSessionRunnable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(indices: [Swift.Int]?)
+  #endif
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SuccessResponse>)
+  public typealias Response = SuccessResponse
+  @objc deinit
+}
+public protocol ExtendedKeySerializable {
+  init(from extendedKeyString: Swift.String, networkType: NetworkType) throws
+  func serialize(for networkType: NetworkType) throws -> Swift.String
+}
+public struct SLIP23 {
+  public init()
+  public func makeIkarusMasterKey(entropy: Foundation.Data, passphrase: Swift.String) throws -> ExtendedPrivateKey
+}
+public enum NetworkType {
+  case mainnet
+  case testnet
+  public static func == (a: NetworkType, b: NetworkType) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public typealias SignHashesResponse = SignResponse
+final public class SignHashesCommand : CardSessionRunnable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SignHashesResponse>)
+  public typealias Response = SignHashesResponse
+}
+public enum IssuerExtraDataMode : Byte {
+  case readOrStartWrite
+  case writePart
+  case finalizeWrite
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init?(rawValue: Byte)
+  #endif
+  public typealias RawValue = Byte
+  public var rawValue: Byte {
+    get
+  }
+}
+public struct ReadIssuerExtraDataResponse : JSONStringConvertible {
+  public let cardId: Swift.String
+  public var size: Swift.Int?
+  public var issuerData: Foundation.Data
+  public var issuerDataSignature: Foundation.Data?
+  public var issuerDataCounter: Swift.Int?
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(cardId: Swift.String, size: Swift.Int?, issuerData: Foundation.Data, issuerDataSignature: Foundation.Data?, issuerDataCounter: Swift.Int?)
+  #endif
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+final public class ReadIssuerExtraDataCommand {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(issuerPublicKey: Foundation.Data? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<ReadIssuerExtraDataResponse>)
+  @available(iOS, deprecated: 100000.0, message: "Use files instead")
+  public typealias Response = ReadIssuerExtraDataResponse
+}
+extension DeleteFileCommand : CardSessionRunnable {}
+extension EncryptionMode : Swift.RawRepresentable {}
+extension EncryptionMode : Swift.Encodable {}
+extension EncryptionMode : Swift.Decodable {}
+extension EncryptionMode : Swift.Equatable {}
+extension EncryptionMode : Swift.Hashable {}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+extension WriteIssuerExtraDataCommand : CardSessionRunnable {}
+extension PersonalizeCommand : CardSessionRunnable {}
+extension ReadCommand : CardSessionRunnable {}
+extension BIP44.Chain : Swift.Equatable {}
+extension BIP44.Chain : Swift.Hashable {}
+extension EntropyLength : Swift.Equatable {}
+extension EntropyLength : Swift.Hashable {}
+extension EntropyLength : Swift.RawRepresentable {}
+extension JSONRPCError.Code : Swift.Equatable {}
+extension JSONRPCError.Code : Swift.Hashable {}
+extension JSONRPCError.Code : Swift.RawRepresentable {}
+extension CardReaderViewEvent : Swift.Hashable {}
+extension EllipticCurve : Swift.RawRepresentable {}
+extension EllipticCurve : Swift.Encodable {}
+extension EllipticCurve : Swift.Decodable {}
+extension EllipticCurve : Swift.Equatable {}
+extension EllipticCurve : Swift.Hashable {}
+extension ResetPinService.State : Swift.Hashable {}
+extension Card.Wallet.Status : Swift.Equatable {}
+extension Card.Wallet.Status : Swift.Hashable {}
+extension Card.Wallet.Status : Swift.RawRepresentable {}
+extension FirmwareVersion.FirmwareType : Swift.RawRepresentable {}
+extension FirmwareVersion.FirmwareType : Swift.Decodable {}
+extension FirmwareVersion.FirmwareType : Swift.Equatable {}
+extension FirmwareVersion.FirmwareType : Swift.Hashable {}
+extension GenerateOTPCommand : CardSessionRunnable {}
+extension AttestWalletKeyTask : CardSessionRunnable {}
+extension AttestWalletKeyTask.ConfirmationMode : Swift.Equatable {}
+extension AttestWalletKeyTask.ConfirmationMode : Swift.Hashable {}
+extension ChangeFileSettingsCommand : CardSessionRunnable {}
+extension BIP39.Wordlist : Swift.Equatable {}
+extension BIP39.Wordlist : Swift.Hashable {}
+extension PurgeWalletCommand : CardSessionRunnable {}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+extension ReadIssuerDataCommand : CardSessionRunnable {}
+extension AttestCardKeyCommand : CardSessionRunnable {}
+extension AttestCardKeyCommand.Mode : Swift.RawRepresentable {}
+extension AttestCardKeyCommand.Mode : Swift.Encodable {}
+extension AttestCardKeyCommand.Mode : Swift.Decodable {}
+extension AttestCardKeyCommand.Mode : Swift.Equatable {}
+extension AttestCardKeyCommand.Mode : Swift.Hashable {}
+extension NetworkType : Swift.Equatable {}
+extension NetworkType : Swift.Hashable {}
+extension GetEntropyCommand : CardSessionRunnable {}
+extension ReadWalletsListCommand : CardSessionRunnable {}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+extension WriteIssuerDataCommand : CardSessionRunnable {}
+extension UserCodeType : Swift.Equatable {}
+extension UserCodeType : Swift.Hashable {}
+extension SetUserCodeCommand : CardSessionRunnable {}
+extension ReadFileChecksumCommand : CardSessionRunnable {}
+extension FileVisibility : Swift.Equatable {}
+extension FileVisibility : Swift.Hashable {}
+extension FileVisibility : Swift.RawRepresentable {}
+extension Attestation.Status : Swift.RawRepresentable {}
+extension Attestation.Status : Swift.Encodable {}
+extension Attestation.Status : Swift.Decodable {}
+extension Attestation.Status : Swift.Equatable {}
+extension Attestation.Status : Swift.Hashable {}
+extension StatusWord : Swift.Equatable {}
+extension StatusWord : Swift.Hashable {}
+extension StatusWord : Swift.RawRepresentable {}
+extension Card.LinkedTerminalStatus : Swift.Equatable {}
+extension Card.LinkedTerminalStatus : Swift.Hashable {}
+extension Card.LinkedTerminalStatus : Swift.RawRepresentable {}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+extension ReadUserDataCommand : CardSessionRunnable {}
+extension ResetBackupCommand : CardSessionRunnable {}
+extension AttestationTask.Mode : Swift.RawRepresentable {}
+extension AttestationTask.Mode : Swift.Encodable {}
+extension AttestationTask.Mode : Swift.Decodable {}
+extension AttestationTask.Mode : Swift.Hashable {}
+extension Instruction : Swift.Equatable {}
+extension Instruction : Swift.Hashable {}
+extension Instruction : Swift.RawRepresentable {}
+extension WriteFileCommand : CardSessionRunnable {}
+extension DepersonalizeCommand : CardSessionRunnable {}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+extension WriteUserDataCommand : CardSessionRunnable {}
+extension Log.Level : Swift.Equatable {}
+extension Log.Level : Swift.Hashable {}
+extension TlvValueType : Swift.Equatable {}
+extension TlvValueType : Swift.Hashable {}
+extension TlvValueType : Swift.RawRepresentable {}
+extension TlvTag : Swift.Equatable {}
+extension TlvTag : Swift.Hashable {}
+extension TlvTag : Swift.RawRepresentable {}
+extension PreflightReadMode : Swift.Hashable {}
+extension AccessCodeRequestPolicy : Swift.Equatable {}
+extension AccessCodeRequestPolicy : Swift.Hashable {}
+extension AccessCodeRequestPolicy : Swift.RawRepresentable {}
+extension ProductType : Swift.Equatable {}
+extension ProductType : Swift.Hashable {}
+extension StartPrimaryCardLinkingCommand : CardSessionRunnable {}
+extension ExtendedKeySerializationError : Swift.Equatable {}
+extension ExtendedKeySerializationError : Swift.Hashable {}
+extension ExtendedKeySerializationError : Swift.RawRepresentable {}
+extension IssuerExtraDataMode : Swift.Equatable {}
+extension IssuerExtraDataMode : Swift.Hashable {}
+extension IssuerExtraDataMode : Swift.RawRepresentable {}
+@available(iOS, deprecated: 100000.0, message: "Use files instead")
+extension ReadIssuerExtraDataCommand : CardSessionRunnable {}

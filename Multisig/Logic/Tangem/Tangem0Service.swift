@@ -14,6 +14,12 @@ import CoreNFC
 final class Tangem0Service: TangemCardService {
     static let shared = Tangem0Service()
 
+    /// A fixed, non-default access code set on every Tangem0 card during activation.
+    /// Using any non-default code causes TAG_PinIsDefault=false on the card firmware,
+    /// which disables the 15-second SmartSecurityDelay. This value must be the same
+    /// during both activation (SetUserCodeCommand) and signing (startSession accessCode:).
+    static let fixedAccessCode = "000000"
+
     private let sdk: TangemSdk
     private let networkService: NetworkService
     private let initialMessage = Message(
@@ -218,14 +224,14 @@ final class Tangem0Service: TangemCardService {
         }
 
         let signData = SignData(derivationPath: derivationPath, hashes: [hash], publicKey: walletPublicKey)
-        let signTask = MultipleSignTask(
+        let signTask = Tangem0MultipleSignTask(
             dataToSign: [signData],
             seedKey: walletPublicKey,
             pairWalletPublicKey: pairWalletPublicKey
         )
 
         let responses = try await withCheckedThrowingContinuation { continuation in
-            sdk.startSession(with: signTask, filter: sessionFilter, initialMessage: message) { result in
+            sdk.startSession(with: signTask, filter: sessionFilter, initialMessage: message, accessCode: Tangem0Service.fixedAccessCode) { result in
                 switch result {
                 case .success(let value):
                     continuation.resume(returning: value)

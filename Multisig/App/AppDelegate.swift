@@ -36,6 +36,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         ChainManager.migrateOldSafes()
         ChainManager.updateChainsInfo()
+        PublicConfigService.shared.prefetchWhatsAppSupportConfig()
 
         //TODO: adjust cleanUpKeys for security v2
         if !AppConfiguration.FeatureToggles.securityCenter {

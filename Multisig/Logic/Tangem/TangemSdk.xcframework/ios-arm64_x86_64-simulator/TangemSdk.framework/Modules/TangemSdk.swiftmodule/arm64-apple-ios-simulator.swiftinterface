@@ -960,6 +960,7 @@ extension TangemSdk.FirmwareVersion {
   public static let blsAvailable: TangemSdk.FirmwareVersion
   public static let isPasscodeStatusAvailable: TangemSdk.FirmwareVersion
   public static let isAccessCodeStatusAvailable: TangemSdk.FirmwareVersion
+  public static let isDefaultPinsOptional: TangemSdk.FirmwareVersion
   public static let filesAvailable: TangemSdk.FirmwareVersion
   public static let hdWalletAvailable: TangemSdk.FirmwareVersion
   public static let createWalletResponseAvailable: TangemSdk.FirmwareVersion
@@ -2693,6 +2694,15 @@ final public class SignHashesCommand : TangemSdk.CardSessionRunnable {
   @objc deinit
   final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SignHashesResponse>)
   public typealias Response = TangemSdk.SignHashesResponse
+}
+public typealias SignRawHashesResponse = TangemSdk.SignResponse
+final public class SignRawHashesCommand : TangemSdk.CardSessionRunnable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, derivationPath: TangemSdk.DerivationPath? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: TangemSdk.CardSession, completion: @escaping TangemSdk.CompletionResult<TangemSdk.SignRawHashesResponse>)
+  public typealias Response = TangemSdk.SignRawHashesResponse
 }
 public enum IssuerExtraDataMode : TangemSdk.Byte {
   case readOrStartWrite

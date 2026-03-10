@@ -1110,6 +1110,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         var image: UIImage?
         var imageURL: URL?
         var placeholderAddress: AddressString?
+        var compoundMappedTitle: String?
 
         let nonce: String
         let confirmationsSubmitted: UInt64
@@ -1194,6 +1195,11 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 title = legTitle
                 titleCandidates = [legTitle] + titleCandidates
             }
+            if let methodName = customInfo.methodName, !methodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let contractAddress = customInfo.to.value.description
+                compoundMappedTitle = App.shared.transactionNamesRepository
+                    .friendlyName(contractAddress: contractAddress, methodName: methodName)
+            }
             info = customInfo.actionCount != nil ? "\(customInfo.actionCount!) actions" : customInfo.methodName ?? ""
         case .rejection(_):
             title = NSLocalizedString("ui_tx_onchain_rejection_title", comment: "Transaction type label for on-chain rejection")
@@ -1225,12 +1231,14 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             titleCandidates = [title]
         }
 
-        let mapped = titleCandidates.compactMap { App.shared.transactionNamesRepository.friendlyName(for: $0) }.first
+        let mapped = compoundMappedTitle ?? titleCandidates.compactMap { App.shared.transactionNamesRepository.friendlyName(for: $0) }.first
         if let mapped, !mapped.isEmpty {
             #if DEBUG
             // Keep this extremely low noise in Debug: only log when it changes.
             if mapped != title {
-                let source = titleCandidates.first ?? title
+                let source = compoundMappedTitle != nil
+                    ? "compound:\(tx.id)"
+                    : (titleCandidates.first ?? title)
                 LogService.shared.debug("[TransactionNames] mapped '\(source)' -> '\(mapped)'")
             }
             #endif

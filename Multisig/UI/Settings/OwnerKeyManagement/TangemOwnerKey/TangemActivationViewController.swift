@@ -30,7 +30,17 @@ final class TangemActivationViewController: UIViewController {
     var autoStartActivation: Bool = false
     var shouldSuppressError: ((Error) -> Bool)?
     var activateButtonTitle: String?
-    
+    /// Optional access code to set during activation. When non-nil, passed to
+    /// `service.activateCard(accessCode:)` so the card stores a non-default PIN,
+    /// which disables the firmware's SmartSecurityDelay (15s) on future sessions.
+    var accessCode: String?
+
+    init(service: TangemService = .shared, accessCode: String? = nil) {
+        self.service = service
+        self.accessCode = accessCode
+        super.init(nibName: nil, bundle: nil)
+    }
+
     private enum State {
         case idle
         case scanning
@@ -42,11 +52,6 @@ final class TangemActivationViewController: UIViewController {
     
     private var state: State = .idle {
         didSet { updateUI(for: state) }
-    }
-    
-    init(service: TangemService = .shared) {
-        self.service = service
-        super.init(nibName: nil, bundle: nil)
     }
     
     @available(*, unavailable)
@@ -289,7 +294,7 @@ final class TangemActivationViewController: UIViewController {
                     self.state = .creatingWallet
                 }
                 
-                let info = try await service.activateCard(accessCode: nil)
+                let info = try await service.activateCard(accessCode: accessCode)
                 
                 guard !Task.isCancelled else {
                     TangemLogger.debug("🔧 ACTIVATION VC: Activation cancelled")

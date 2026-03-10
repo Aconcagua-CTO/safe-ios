@@ -959,6 +959,7 @@ extension FirmwareVersion {
   public static let blsAvailable: FirmwareVersion
   public static let isPasscodeStatusAvailable: FirmwareVersion
   public static let isAccessCodeStatusAvailable: FirmwareVersion
+  public static let isDefaultPinsOptional: FirmwareVersion
   public static let filesAvailable: FirmwareVersion
   public static let hdWalletAvailable: FirmwareVersion
   public static let createWalletResponseAvailable: FirmwareVersion
@@ -2692,6 +2693,15 @@ final public class SignHashesCommand : CardSessionRunnable {
   @objc deinit
   final public func run(in session: CardSession, completion: @escaping CompletionResult<SignHashesResponse>)
   public typealias Response = SignHashesResponse
+}
+public typealias SignRawHashesResponse = SignResponse
+final public class SignRawHashesCommand : CardSessionRunnable {
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(hashes: [Foundation.Data], walletPublicKey: Foundation.Data, derivationPath: DerivationPath? = nil)
+  #endif
+  @objc deinit
+  final public func run(in session: CardSession, completion: @escaping CompletionResult<SignRawHashesResponse>)
+  public typealias Response = SignRawHashesResponse
 }
 public enum IssuerExtraDataMode : Byte {
   case readOrStartWrite

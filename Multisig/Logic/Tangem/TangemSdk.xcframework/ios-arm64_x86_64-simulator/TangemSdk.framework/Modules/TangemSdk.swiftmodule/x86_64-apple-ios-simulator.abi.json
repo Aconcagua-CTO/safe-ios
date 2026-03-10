@@ -20568,6 +20568,55 @@
           },
           {
             "kind": "Var",
+            "name": "isDefaultPinsOptional",
+            "printedName": "isDefaultPinsOptional",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "FirmwareVersion",
+                "printedName": "TangemSdk.FirmwareVersion",
+                "usr": "s:9TangemSdk15FirmwareVersionV"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:9TangemSdk15FirmwareVersionV21isDefaultPinsOptionalACvpZ",
+            "mangledName": "$s9TangemSdk15FirmwareVersionV21isDefaultPinsOptionalACvpZ",
+            "moduleName": "TangemSdk",
+            "static": true,
+            "declAttributes": [
+              "HasInitialValue",
+              "HasStorage",
+              "RawDocComment"
+            ],
+            "isFromExtension": true,
+            "isLet": true,
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "FirmwareVersion",
+                    "printedName": "TangemSdk.FirmwareVersion",
+                    "usr": "s:9TangemSdk15FirmwareVersionV"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:9TangemSdk15FirmwareVersionV21isDefaultPinsOptionalACvgZ",
+                "mangledName": "$s9TangemSdk15FirmwareVersionV21isDefaultPinsOptionalACvgZ",
+                "moduleName": "TangemSdk",
+                "static": true,
+                "implicit": true,
+                "isFromExtension": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
             "name": "filesAvailable",
             "printedName": "filesAvailable",
             "children": [
@@ -80395,126 +80444,140 @@
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 3871,
+      "offset": 3915,
+      "length": 1,
+      "value": "4"
+    },
+    {
+      "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
+      "kind": "IntegerLiteral",
+      "offset": 3925,
+      "length": 2,
+      "value": "34"
+    },
+    {
+      "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
+      "kind": "IntegerLiteral",
+      "offset": 4009,
       "length": 1,
       "value": "3"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 3881,
+      "offset": 4019,
       "length": 2,
       "value": "29"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 3961,
+      "offset": 4099,
       "length": 1,
       "value": "4"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 3971,
+      "offset": 4109,
       "length": 2,
       "value": "39"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4108,
+      "offset": 4246,
       "length": 1,
       "value": "4"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4118,
+      "offset": 4256,
       "length": 2,
       "value": "25"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4203,
+      "offset": 4341,
       "length": 1,
       "value": "4"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4213,
+      "offset": 4351,
       "length": 2,
       "value": "39"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4342,
+      "offset": 4480,
       "length": 1,
       "value": "2"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4352,
+      "offset": 4490,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4443,
+      "offset": 4581,
       "length": 1,
       "value": "6"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4453,
+      "offset": 4591,
       "length": 2,
       "value": "21"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "FloatLiteral",
-      "offset": 4517,
+      "offset": 4655,
       "length": 4,
       "value": "5.25"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "FloatLiteral",
-      "offset": 4524,
+      "offset": 4662,
       "length": 4,
       "value": "5.30"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4619,
+      "offset": 4757,
       "length": 1,
       "value": "6"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "IntegerLiteral",
-      "offset": 4629,
+      "offset": 4767,
       "length": 2,
       "value": "33"
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "StringLiteral",
-      "offset": 4774,
+      "offset": 4912,
       "length": 7,
       "value": "\"d SDK\""
     },
     {
       "filePath": "\/Users\/manuelrm\/Documents\/GitHub\/CTO\/safe-ios\/Build\/tangem-sdk-mit\/source\/TangemSdk\/TangemSdk\/Common\/Card\/FirmwareVersion.swift",
       "kind": "StringLiteral",
-      "offset": 4816,
+      "offset": 4954,
       "length": 3,
       "value": "\"r\""
     },

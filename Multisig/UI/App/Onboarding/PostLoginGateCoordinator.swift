@@ -22,9 +22,12 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private var lastCardKeyAddress: Address?
     private var tangemKeyFlow: TangemKeyFlow?
     private var tangemProvisioningCoordinator: TangemCardKeyProvisioningCoordinator?
+    private var burnerProvisioningCoordinator: BurnerCardKeyProvisioningCoordinator?
 
     private var generateKeyFlow: GenerateKeyFlow?
     private var userProvisioningService: UserProvisioningService?
+    private var cardsService: PrimaryCardService?
+    private var hasRegisteredKeys: Bool?
     init(sceneDelegate: SceneDelegate) {
         self.sceneDelegate = sceneDelegate
         let action = AppSettings.lastLeadProvisioningAction ?? ""
@@ -51,16 +54,25 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
 
         let leadManufacturer = Self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
         let mobileKeyCount = KeyInfo.count(.deviceImported) + KeyInfo.count(.deviceGenerated)
+        let localCardKeyCount = KeyInfo.count(.tangem) + KeyInfo.count(.tangem0) + KeyInfo.count(.burner)
+        let hasNoLocalKeys = mobileKeyCount == 0 && localCardKeyCount == 0
+        let hasNoVaults = Safe.countExcludingDemo == 0
         let requiredMobileKeyCount = leadManufacturer == "mobile" ? 2 : 1
+
+        if !isSignUp && hasNoLocalKeys && hasNoVaults && hasRegisteredKeys == nil {
+            fetchRegisteredKeysAndProceed()
+            return
+        }
 
         let state = PostLoginGateState(
             hasSyncedVaults: hasAttemptedVaultSync,
-            hasVaults: Safe.countExcludingDemo > 0,
+            hasVaults: !hasNoVaults,
             mobileKeyCount: mobileKeyCount,
             requiredMobileKeyCount: requiredMobileKeyCount,
-            hasCardKey: hasCardKey(),
+            hasCardKey: localCardKeyCount > 0,
             requiresCardKey: ["tangem", "burner"].contains(leadManufacturer),
-            isSignUp: isSignUp
+            isSignUp: isSignUp,
+            hasRegisteredKeys: hasRegisteredKeys ?? true
         )
 
         if shouldShowPostSignupInstructions(for: state) {
@@ -176,6 +188,28 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         }
     }
 
+    private func fetchRegisteredKeysAndProceed() {
+        let service = PrimaryCardService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+        cardsService = service
+        service.fetchHasRegisteredKeys { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.cardsService = nil
+                switch result {
+                case .success(let hasKeys):
+                    self.hasRegisteredKeys = hasKeys
+                case .failure:
+                    // Be conservative on errors and avoid forcing key creation without certainty.
+                    self.hasRegisteredKeys = true
+                }
+                self.evaluateAndProceed()
+            }
+        }
+    }
+
     private func startMobileKeyFlow() {
         guard !isPresentingFlow else { return }
         guard let gateViewController else { return }
@@ -279,50 +313,50 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func provisionBurnerCardKey() {
-        gateViewController?.showLoading(message: NSLocalizedString("post_login_card_key_burner_scanning", comment: "Burner scan loading message"))
-        LogService.shared.info("[PostLoginGate][CardKey][Burner] Starting burner scan")
+        LogService.shared.info("[PostLoginGate][CardKey][Burner] Starting two-scan activation/import")
 
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let summary = try await BurnerService.shared.scanCard(forceRefresh: true)
-                guard let slot = summary.keySlots.first else {
-                    throw BurnerService.BurnerServiceError.invalidResponse(reason: NSLocalizedString("ui_burner_no_eth_slots_error", comment: "No Burner slots error"))
-                }
-                let imported = OwnerKeyController.importKey(
-                    burnerCardId: summary.cardId,
-                    tagIdentifier: summary.tagIdentifier,
-                    slot: slot.slot,
-                    walletPublicKey: slot.publicKey,
-                    address: slot.ethereumAddress,
-                    name: NSLocalizedString("ui_card_key_default_name", comment: "Default card key name"),
-                    derivationPath: nil,
-                    attestationValid: slot.attestationValid
-                )
-                if imported {
-                    self.registerPrimaryCardInBackend(cardId: summary.cardId, manufacturer: "burner")
-                    LogService.shared.info("[PostLoginGate][CardKey][Burner] Imported burner key address=\(slot.ethereumAddress.checksummed)")
-                    await MainActor.run {
+        lastCardKeyAddress = nil
+        var activationNav: UINavigationController?
+
+        let coordinator = BurnerCardKeyProvisioningCoordinator(
+            targetSlot: 3,
+            presentIntro: { [weak self] introVC in
+                guard let self else { return }
+                let nav = UINavigationController(rootViewController: introVC)
+                activationNav = nav
+                self.sceneDelegate?.showPostLoginGateWindow(rootViewController: nav)
+            },
+            presentPostActivationIntro: { [weak self] introVC in
+                guard let self else { return }
+                let nav = UINavigationController(rootViewController: introVC)
+                activationNav = nav
+                self.sceneDelegate?.showPostLoginGateWindow(rootViewController: nav)
+            },
+            onImportCompletion: { [weak self] success, address, cardId in
+                guard let self else { return }
+                self.isPresentingFlow = false
+                self.burnerProvisioningCoordinator = nil
+                if success {
+                    if let address {
+                        if let cardId {
+                            self.registerPrimaryCardInBackend(cardId: cardId, manufacturer: "burner")
+                        }
                         self.isProvisioningCardKey = false
-                        self.showCardKeySuccess(address: slot.ethereumAddress)
-                    }
-                } else {
-                    LogService.shared.error("[PostLoginGate][CardKey][Burner] Import returned false")
-                    await MainActor.run {
+                        self.showCardKeySuccess(address: address)
+                    } else {
                         self.showCardKeyError(messageKey: "post_login_card_key_import_failed")
                     }
+                } else {
+                    self.showCardKeyError(messageKey: "post_login_card_key_cancelled")
                 }
-            } catch {
-                LogService.shared.error("[PostLoginGate][CardKey][Burner] Burner provisioning failed", error: error)
-                await MainActor.run {
-                    if self.isUserCancelled(error: error) {
-                        self.showCardKeyError(messageKey: "post_login_card_key_cancelled")
-                    } else {
-                        self.showCardKeyError(messageKey: "post_login_card_key_burner_failed")
-                    }
-                }
+            },
+            onActivationCancelled: { [weak self] in
+                self?.isProvisioningCardKey = false
             }
-        }
+        )
+
+        burnerProvisioningCoordinator = coordinator
+        coordinator.start()
     }
 
     private func provisionTangemCardKey() {
@@ -438,10 +472,6 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         gateViewController?.showError(message: NSLocalizedString(messageKey, comment: "")) { [weak self] in
             self?.startCardKeyFlow()
         }
-    }
-
-    private func hasCardKey() -> Bool {
-        KeyInfo.count(.tangem) + KeyInfo.count(.tangem0) + KeyInfo.count(.burner) > 0
     }
 
     private func isUserCancelled(error: Error) -> Bool {

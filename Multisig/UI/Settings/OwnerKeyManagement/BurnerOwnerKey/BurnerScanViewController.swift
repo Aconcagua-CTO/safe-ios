@@ -16,6 +16,9 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
     /// This avoids prompting the user to choose a slot.
     var autoSelectFirstSlot: Bool = false
     
+    /// Optional target slot to auto-select (for card-key provisioning we use slot 3).
+    var targetSlot: Int?
+    
     private enum State {
         case idle
         case scanning
@@ -58,7 +61,7 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
         super.viewDidLoad()
         
         view.backgroundColor = .backgroundSecondary
-        navigationItem.title = NSLocalizedString("ui_burner_scan_card_title", comment: "Title for the burner card scan screen")
+        navigationItem.title = NSLocalizedString("ui_tangem_scan_card_title", comment: "Title for scanning a Tangem card")
         navigationItem.largeTitleDisplayMode = .never
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel,
                                                             target: self,
@@ -151,17 +154,37 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
                         self.tableView.isHidden = true
                     } else {
                         self.summary = summary
-                        if self.autoSelectFirstSlot, let first = summary.keySlots.first {
-                            // Proceed automatically with the first slot.
+                        if self.autoSelectFirstSlot {
+                            let selectedSlot: BurnerService.BurnerKeySlot?
+                            if let targetSlot = self.targetSlot {
+                                selectedSlot = summary.keySlots.first(where: { $0.slot == targetSlot })
+                            } else {
+                                selectedSlot = summary.keySlots.first
+                            }
+                            
+                            guard let selected = selectedSlot else {
+                                self.summary = nil
+                                self.state = .error(
+                                    String(
+                                        format: NSLocalizedString("ui_burner_target_slot_missing_format", comment: "Error shown when expected Burner slot is missing"),
+                                        self.targetSlot ?? -1
+                                    )
+                                )
+                                self.tableView.isHidden = true
+                                BurnerLogger.warning("Burner auto-selection failed: target slot not found target=\(self.targetSlot ?? -1) cardId=\(summary.cardId)")
+                                return
+                            }
+                            
+                            // Proceed automatically with the selected slot.
                             self.state = .scanning
                             self.tableView.isHidden = true
                             let selection = BurnerKeySelection(cardId: summary.cardId,
                                                                tagIdentifier: summary.tagIdentifier,
-                                                               slot: first.slot,
-                                                               publicKey: first.publicKey,
-                                                               address: first.ethereumAddress,
-                                                               attestationValid: first.attestationValid)
-                            BurnerLogger.info("Burner auto-selected first slot cardId=\(summary.cardId) slot=\(first.slot)")
+                                                               slot: selected.slot,
+                                                               publicKey: selected.publicKey,
+                                                               address: selected.ethereumAddress,
+                                                               attestationValid: selected.attestationValid)
+                            BurnerLogger.info("Burner auto-selected slot cardId=\(summary.cardId) slot=\(selected.slot)")
                             self.onSlotSelected?(selection)
                         } else {
                             self.state = .ready
@@ -196,8 +219,8 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
             activityIndicator.stopAnimating()
             actionButton.isHidden = true
         case .scanning:
-            statusLabel.text = NSLocalizedString("ui_burner_scanning_title", comment: "Status shown while scanning a Burner card")
-            detailLabel.text = NSLocalizedString("ui_burner_hold_near_top_edge", comment: "Instruction for holding the Burner card near the phone")
+            statusLabel.text = NSLocalizedString("ui_tangem_scanning_title", comment: "Status shown while scanning Tangem card")
+            detailLabel.text = NSLocalizedString("ui_tangem_hold_near_top_edge", comment: "Instruction for holding Tangem card near phone")
             activityIndicator.startAnimating()
             actionButton.isHidden = true
         case .ready:

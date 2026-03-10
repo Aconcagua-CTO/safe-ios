@@ -152,6 +152,7 @@ final class PlaceholderTokenDetailViewController: UIViewController {
 
     @objc private func didTapInvertir() {
         guard let nav = navigationController else { return }
+        let cached = LatestBalancesCache.shared.retrieve(chainId: nil) ?? []
         let availableUsdBalanceFiat = computeAvailableUsdBalanceFiat()
 #if DEBUG
         LogService.shared.debug(
@@ -159,6 +160,10 @@ final class PlaceholderTokenDetailViewController: UIViewController {
             "availableUsd=\(availableUsdBalanceFiat)"
         )
 #endif
+        if !cached.isEmpty && availableUsdBalanceFiat <= 0 {
+            showNoUsdTokensAlert()
+            return
+        }
         let flow = InvertirFromTokenDetailFlowCoordinator(navigationController: nav,
                                                           token: token,
                                                           availableUsdBalanceFiat: availableUsdBalanceFiat)
@@ -169,6 +174,14 @@ final class PlaceholderTokenDetailViewController: UIViewController {
         flow.start()
     }
 
+    private func showNoUsdTokensAlert() {
+        let noUsdVC = InvestNoUsdTokensViewController()
+        noUsdVC.onDismiss = { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
+        navigationController?.pushViewController(noUsdVC, animated: true)
+    }
+
     @objc private func didTapRetirar() {
         let transferAmountVC = TransferAmountViewController()
         transferAmountVC.tokenBalance = token
@@ -177,6 +190,10 @@ final class PlaceholderTokenDetailViewController: UIViewController {
     }
 
     @objc private func didTapComprar() {
+        if InvestBuyFlowCoordinator.shouldShowNoUsdScreen {
+            showNoUsdTokensAlert()
+            return
+        }
         resolveBuyUnitPrice { [weak self] unitPrice in
             guard let self else { return }
             let flow = InvestBuyFlowCoordinator(presenter: self)

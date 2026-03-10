@@ -745,6 +745,9 @@
 "ui_safe_enter_unstoppable_placeholder" = "Ingresá el nombre Unstoppable";
 "ui_invertir_select_asset_title" = "¿Qué querés comprar?";
 "ui_invertir_payment_method_title" = "¿Con qué querés pagar?";
+"ui_invertir_no_usd_title" = "Agregá USD para poder Invertir";
+"ui_invertir_no_usd_message" = "Esta bóveda no tiene tokens USD (por ejemplo USDC, USDT) para comprar. Agregá USD a tu bóveda primero y volvé a intentar.";
+"ui_invertir_no_usd_empty_state" = "No hay tokens USD en esta bóveda. Agregá USDC, USDT o similar para pagar tus compras.";
 "ui_invertir_buy_amount_title" = "¿Cuánto queres comprar?";
 "ui_invertir_confirm_title" = "Confirmar";
 "ui_invertir_buy_action" = "Comprar";
@@ -961,6 +964,9 @@
 "ui_burner_onboarding_pick_slot_body" = "Las tarjetas Burner pueden tener varios slots de llave. Bóveda va a usar automáticamente el primer slot disponible.";
 "ui_burner_onboarding_secure_title" = "Segura por diseño";
 "ui_burner_onboarding_secure_body" = "Las llaves nunca salen de la tarjeta Burner. Solo guardamos metadata necesaria para usar la tarjeta al firmar.";
+"ui_burner_card_key_tap_title" = "Acercá tu tarjeta Burner";
+"ui_burner_card_key_intro_body" = "Primero vamos a hacer un escaneo de activación para crear la llave en el slot #3 si hace falta, y después un segundo escaneo para importarla.";
+"ui_burner_card_key_second_scan_body" = "Necesitamos un segundo escaneo para terminar de registrar tu tarjeta Burner en el slot #3. Acercá nuevamente tu tarjeta a la parte de arriba del iPhone para importarla.";
 "ui_burner_default_name_format" = "Burner %d · %@#%d";
 
 "ui_try_again" = "Probá de nuevo";
@@ -976,6 +982,7 @@
 "ui_burner_unable_to_scan_title" = "No se pudo escanear";
 "ui_burner_unable_to_scan_fallback" = "No se pudo escanear la tarjeta Burner.";
 "ui_burner_no_eth_slots_error" = "Esta tarjeta Burner no tiene slots compatibles con Ethereum.";
+"ui_burner_target_slot_missing_format" = "No encontramos el slot esperado #%d en esta tarjeta Burner.";
 "ui_burner_slot_format" = "Slot #%d";
 
 "ui_burner_ready_to_sign_title" = "Listo para firmar";
@@ -1012,6 +1019,16 @@
 "ui_burner_enable_url_uri_ndef" = "Activar URL de Burner (URI NDEF)";
 "ui_burner_done_txt_ndef" = "Listo. Esta tarjeta Burner ahora va a exponer un registro NDEF de TEXTO en vez de una URL (URI).";
 "ui_burner_done_uri_ndef" = "Listo. Esta tarjeta Burner ahora va a exponer una URL (URI) en vez de un registro NDEF de TEXTO.";
+
+"ui_burner_read_card" = "Leer tarjeta";
+"ui_burner_generate_key" = "Generar clave";
+"ui_burner_card_info_title" = "Info de tarjeta Burner";
+"ui_burner_generate_key_pick_slot" = "Seleccioná el slot de destino";
+"ui_burner_key_generated_format" = "Clave generada en slot %d.\nDirección: %@";
+"ui_burner_key_already_exists_format" = "Ya existe una clave en el slot %d. Las claves de tarjetas HaLo no se pueden sobreescribir.";
+"ui_burner_key_not_initialized_format" = "El slot %d no está inicializado.";
+"nfc_burner_hold_to_generate_key" = "Acercá tu tarjeta Burner (HaLo) a la parte de arriba del iPhone para generar una nueva clave.";
+"nfc_burner_hold_to_read_card" = "Acercá tu tarjeta Burner (HaLo) a la parte de arriba del iPhone para leer la info de la tarjeta.";
 
 "error_failed_add_burner_owner" = "No se pudo agregar el owner Burner";
 "ui_hardware_pair_device_title" = "Vinculá un dispositivo";

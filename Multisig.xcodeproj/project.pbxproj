@@ -737,6 +737,7 @@
 		406FE2C42EC63BD200938806 /* TangemActivationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C12EC63BD200938806 /* TangemActivationViewController.swift */; };
 		406FE2C52EC63BD200938806 /* TangemCardReaderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */; };
 		406FE2C62EC63BD200938806 /* TangemFactoryResetViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */; };
+		A1B2C3D52F45000100ABCDEF /* Tangem0BackupActivationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D42F45000100ABCDEF /* Tangem0BackupActivationViewController.swift */; };
 		406FE2C82EC64C8500938806 /* TangemActivationTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 406FE2C72EC64C8500938806 /* TangemActivationTask.swift */; };
 		40703C272EC8B02900CAAA33 /* TransactionFeeLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C242EC8B02900CAAA33 /* TransactionFeeLogger.swift */; };
 		40703C282EC8B02900CAAA33 /* FunctionSelectorCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */; };
@@ -807,6 +808,8 @@
 		40F123456789ABCDEF0123458 /* TangemSdkConfigFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F123456789ABCDEF0123456 /* TangemSdkConfigFactory.swift */; };
 		40F123456789ABCDEF0123459 /* SignAndReadTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F123456789ABCDEF0123457 /* SignAndReadTask.swift */; };
 		40F123456789ABCDEF012345B /* MultipleSignTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F123456789ABCDEF012345A /* MultipleSignTask.swift */; };
+		BB0001000100010001000001 /* Tangem0SignAndReadTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0001000100010001000003 /* Tangem0SignAndReadTask.swift */; };
+		BB0001000100010001000002 /* Tangem0MultipleSignTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0001000100010001000004 /* Tangem0MultipleSignTask.swift */; };
 		40F123456789ABCDEF012345D /* TerminalKeysService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F123456789ABCDEF012345C /* TerminalKeysService.swift */; };
 		40F1A0032F30000100ABCDEF /* RegisterKeysRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F1A0012F30000100ABCDEF /* RegisterKeysRequest.swift */; };
 		40F1A0042F30000100ABCDEF /* KeysRegistrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F1A0022F30000100ABCDEF /* KeysRegistrationService.swift */; };
@@ -1913,6 +1916,7 @@
 		406FE2C12EC63BD200938806 /* TangemActivationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemActivationViewController.swift; sourceTree = "<group>"; };
 		406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemCardReaderViewController.swift; sourceTree = "<group>"; };
 		406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemFactoryResetViewController.swift; sourceTree = "<group>"; };
+		A1B2C3D42F45000100ABCDEF /* Tangem0BackupActivationViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tangem0BackupActivationViewController.swift; sourceTree = "<group>"; };
 		406FE2C72EC64C8500938806 /* TangemActivationTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemActivationTask.swift; sourceTree = "<group>"; };
 		40703C222EC8B02900CAAA33 /* FunctionSelectorCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunctionSelectorCatalog.swift; sourceTree = "<group>"; };
 		40703C232EC8B02900CAAA33 /* TransactionBatchBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionBatchBuilder.swift; sourceTree = "<group>"; };
@@ -1984,6 +1988,8 @@
 		40F123456789ABCDEF0123456 /* TangemSdkConfigFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TangemSdkConfigFactory.swift; sourceTree = "<group>"; };
 		40F123456789ABCDEF0123457 /* SignAndReadTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignAndReadTask.swift; sourceTree = "<group>"; };
 		40F123456789ABCDEF012345A /* MultipleSignTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleSignTask.swift; sourceTree = "<group>"; };
+		BB0001000100010001000003 /* Tangem0SignAndReadTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tangem0SignAndReadTask.swift; sourceTree = "<group>"; };
+		BB0001000100010001000004 /* Tangem0MultipleSignTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tangem0MultipleSignTask.swift; sourceTree = "<group>"; };
 		40F123456789ABCDEF012345C /* TerminalKeysService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalKeysService.swift; sourceTree = "<group>"; };
 		40F1A0012F30000100ABCDEF /* RegisterKeysRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterKeysRequest.swift; sourceTree = "<group>"; };
 		40F1A0022F30000100ABCDEF /* KeysRegistrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeysRegistrationService.swift; sourceTree = "<group>"; };
@@ -2985,6 +2991,8 @@
 				40F123456789ABCDEF0123456 /* TangemSdkConfigFactory.swift */,
 				40F123456789ABCDEF0123457 /* SignAndReadTask.swift */,
 				40F123456789ABCDEF012345A /* MultipleSignTask.swift */,
+				BB0001000100010001000003 /* Tangem0SignAndReadTask.swift */,
+				BB0001000100010001000004 /* Tangem0MultipleSignTask.swift */,
 				40F123456789ABCDEF012345C /* TerminalKeysService.swift */,
 			);
 			path = Tangem;
@@ -2996,6 +3004,7 @@
 				406FE2C12EC63BD200938806 /* TangemActivationViewController.swift */,
 				406FE2C22EC63BD200938806 /* TangemCardReaderViewController.swift */,
 				406FE2C32EC63BD200938806 /* TangemFactoryResetViewController.swift */,
+				A1B2C3D42F45000100ABCDEF /* Tangem0BackupActivationViewController.swift */,
 				04FAF12A2BDA01AF00A1F111 /* TangemKeyFlow.swift */,
 				093071BDF6884BD0BD2A7D57 /* TangemCardKeyProvisioningCoordinator.swift */,
 				04FAF12B2BDA01AF00A1F111 /* TangemScanViewController.swift */,
@@ -6596,6 +6605,8 @@
 				40F123456789ABCDEF0123458 /* TangemSdkConfigFactory.swift in Sources */,
 				40F123456789ABCDEF0123459 /* SignAndReadTask.swift in Sources */,
 				40F123456789ABCDEF012345B /* MultipleSignTask.swift in Sources */,
+				BB0001000100010001000001 /* Tangem0SignAndReadTask.swift in Sources */,
+				BB0001000100010001000002 /* Tangem0MultipleSignTask.swift in Sources */,
 				40F123456789ABCDEF012345D /* TerminalKeysService.swift in Sources */,
 				B0D61701855BDBDFF8963B8B /* NavigationRouter.swift in Sources */,
 				6A386C6A281ADAFD003FBCB3 /* ValueChangeTableViewCell.swift in Sources */,
@@ -6607,6 +6618,7 @@
 				406FE2C42EC63BD200938806 /* TangemActivationViewController.swift in Sources */,
 				406FE2C52EC63BD200938806 /* TangemCardReaderViewController.swift in Sources */,
 				406FE2C62EC63BD200938806 /* TangemFactoryResetViewController.swift in Sources */,
+				A1B2C3D52F45000100ABCDEF /* Tangem0BackupActivationViewController.swift in Sources */,
 				0468C3442A8CE34C009872C2 /* SafeSecurityViewController.swift in Sources */,
 				6A252CF72818512D001F0887 /* OwnerActionView.swift in Sources */,
 				6AF6297329C359AF004C034A /* PaymentMethodCell.swift in Sources */,

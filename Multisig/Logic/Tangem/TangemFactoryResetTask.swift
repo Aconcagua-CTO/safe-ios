@@ -135,12 +135,33 @@ final class TangemFactoryResetTask: CardSessionRunnable {
         TangemLogger.info("🔥 FACTORY RESET TASK: Deleting wallet \(walletNumber)/\(totalWallets)")
         TangemLogger.debug("🔥 FACTORY RESET TASK: - Wallet index: \(wallet.index)")
         TangemLogger.debug("🔥 FACTORY RESET TASK: - Public key: \(wallet.publicKey.map { String(format: "%02x", $0) }.joined().prefix(32))...")
+        debugTrace(
+            "PurgeWallet request",
+            request: [
+                "walletNumber=\(walletNumber)/\(totalWallets)",
+                "walletIndex=\(wallet.index)",
+                "publicKey=\(wallet.publicKey.map { String(format: "%02x", $0) }.joined())",
+                "session.cardId=\(session.environment.card?.cardId ?? "nil")",
+            ],
+            expected: [
+                "PurgeWalletCommand returns success",
+                "wallet removed from card secure storage",
+                "if default PINs are active, security delay may be enforced by card firmware",
+            ]
+        )
         
         let command = PurgeWalletCommand(publicKey: wallet.publicKey)
         command.run(in: session) { result in
             switch result {
             case .success:
                 TangemLogger.info("🔥 FACTORY RESET TASK: ✅ Wallet \(walletNumber) deleted successfully")
+                self.debugTrace(
+                    "PurgeWallet response",
+                    got: [
+                        "result=success",
+                        "walletNumber=\(walletNumber)/\(totalWallets)",
+                    ]
+                )
                 // Continue with next wallet
                 self.deleteWalletRecursive(in: session, wallets: wallets, index: index + 1, completion: completion)
                 
@@ -148,6 +169,16 @@ final class TangemFactoryResetTask: CardSessionRunnable {
                 TangemLogger.error("🔥 FACTORY RESET TASK ERROR: Failed to delete wallet \(walletNumber)", error: error)
                 TangemLogger.debug("🔥 FACTORY RESET TASK: - Error type: \(type(of: error))")
                 TangemLogger.debug("🔥 FACTORY RESET TASK: - Error code: \(error.code)")
+                self.debugTrace(
+                    "PurgeWallet response",
+                    got: [
+                        "result=failure",
+                        "walletNumber=\(walletNumber)/\(totalWallets)",
+                        "errorType=\(type(of: error))",
+                        "errorCode=\(error.code)",
+                        "error=\(error)",
+                    ]
+                )
                 completion(.failure(error))
             }
         }
@@ -167,26 +198,80 @@ final class TangemFactoryResetTask: CardSessionRunnable {
         if backupStatus == nil || backupStatus == .noBackup {
             TangemLogger.info("🔥 FACTORY RESET TASK: No backup system to reset")
             TangemLogger.info("🔥 FACTORY RESET TASK: ✅ Factory reset completed successfully")
+            debugTrace(
+                "ResetBackup skipped",
+                got: [
+                    "backupStatus=\(String(describing: backupStatus))",
+                    "reason=no backup system on card",
+                ]
+            )
             completion(.success(card))
             return
         }
         
         TangemLogger.debug("🔥 FACTORY RESET TASK: Resetting backup system...")
+        debugTrace(
+            "ResetBackup request",
+            request: [
+                "command=ResetBackupCommand",
+                "cardId=\(card.cardId)",
+                "backupStatus=\(String(describing: backupStatus))",
+            ],
+            expected: [
+                "ResetBackupCommand returns success",
+                "card backup metadata cleared",
+            ]
+        )
         let command = ResetBackupCommand()
         command.run(in: session) { result in
             switch result {
             case .success:
                 TangemLogger.info("🔥 FACTORY RESET TASK: ✅ Backup system reset successfully")
                 TangemLogger.info("🔥 FACTORY RESET TASK: ✅ COMPLETE FACTORY RESET SUCCESSFUL")
+                self.debugTrace(
+                    "ResetBackup response",
+                    got: [
+                        "result=success",
+                        "cardId=\(card.cardId)",
+                    ]
+                )
                 completion(.success(card))
                 
             case .failure(let error):
                 TangemLogger.error("🔥 FACTORY RESET TASK ERROR: Failed to reset backup system", error: error)
                 TangemLogger.debug("🔥 FACTORY RESET TASK: - Error type: \(type(of: error))")
                 TangemLogger.debug("🔥 FACTORY RESET TASK: - Error code: \(error.code)")
+                self.debugTrace(
+                    "ResetBackup response",
+                    got: [
+                        "result=failure",
+                        "cardId=\(card.cardId)",
+                        "errorType=\(type(of: error))",
+                        "errorCode=\(error.code)",
+                        "error=\(error)",
+                    ]
+                )
                 completion(.failure(error))
             }
         }
+    }
+
+    private func debugTrace(_ title: String, request: [String] = [], expected: [String] = [], got: [String] = []) {
+#if DEBUG
+        TangemLogger.debug("🧪 FACTORY RESET TRACE: \(title)")
+        if !request.isEmpty {
+            TangemLogger.debug("🧪 FACTORY RESET TRACE:   REQUEST:")
+            request.forEach { TangemLogger.debug("🧪 FACTORY RESET TRACE:   - \($0)") }
+        }
+        if !expected.isEmpty {
+            TangemLogger.debug("🧪 FACTORY RESET TRACE:   EXPECT:")
+            expected.forEach { TangemLogger.debug("🧪 FACTORY RESET TRACE:   - \($0)") }
+        }
+        if !got.isEmpty {
+            TangemLogger.debug("🧪 FACTORY RESET TRACE:   GOT:")
+            got.forEach { TangemLogger.debug("🧪 FACTORY RESET TRACE:   - \($0)") }
+        }
+#endif
     }
 }
 

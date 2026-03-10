@@ -693,6 +693,9 @@
 "ui_safe_enter_unstoppable_placeholder" = "Enter Unstoppable name";
 "ui_invertir_select_asset_title" = "What do you want to buy?";
 "ui_invertir_payment_method_title" = "How do you want to pay?";
+"ui_invertir_no_usd_title" = "Add USD to invest";
+"ui_invertir_no_usd_message" = "This vault has no USD tokens (e.g. USDC, USDT) to use for purchases. Add USD to your vault first, then try again.";
+"ui_invertir_no_usd_empty_state" = "No USD tokens in this vault. Add USDC, USDT or similar to pay for purchases.";
 "ui_invertir_buy_amount_title" = "How much do you want to buy?";
 "ui_invertir_confirm_title" = "Confirm";
 "ui_invertir_buy_action" = "Buy";
@@ -959,6 +962,9 @@
 "ui_burner_onboarding_pick_slot_body" = "Burner cards can expose multiple key slots. Safe will automatically use the first available slot.";
 "ui_burner_onboarding_secure_title" = "Secure By Design";
 "ui_burner_onboarding_secure_body" = "Keys never leave the Burner card. We only store metadata required to use the card for signing.";
+"ui_burner_card_key_tap_title" = "Tap your Burner Card";
+"ui_burner_card_key_intro_body" = "We will run an activation scan first to create key slot #3 if needed, then a second scan to import that key.";
+"ui_burner_card_key_second_scan_body" = "We need a second scan to finish registering your Burner card key in slot #3. Bring your card near the top of your iPhone again so we can import it.";
 "ui_burner_default_name_format" = "Burner %d · %@#%d";
 
 "ui_try_again" = "Try Again";
@@ -974,6 +980,7 @@
 "ui_burner_unable_to_scan_title" = "Unable to Scan";
 "ui_burner_unable_to_scan_fallback" = "Unable to scan Burner card.";
 "ui_burner_no_eth_slots_error" = "This Burner card does not expose Ethereum-compatible key slots.";
+"ui_burner_target_slot_missing_format" = "Expected slot #%d was not found on this Burner card.";
 "ui_burner_slot_format" = "Slot #%d";
 
 "ui_burner_ready_to_sign_title" = "Ready to Sign";
@@ -1010,6 +1017,16 @@
 "ui_burner_enable_url_uri_ndef" = "Enable Burner URL (URI NDEF)";
 "ui_burner_done_txt_ndef" = "Done. This Burner card will now expose a TEXT NDEF record instead of a URL (URI) record.";
 "ui_burner_done_uri_ndef" = "Done. This Burner card will now expose a URL (URI) NDEF record instead of a TEXT record.";
+
+"ui_burner_read_card" = "Read Card";
+"ui_burner_generate_key" = "Generate Key";
+"ui_burner_card_info_title" = "Burner Card Info";
+"ui_burner_generate_key_pick_slot" = "Select target key slot";
+"ui_burner_key_generated_format" = "Key generated in slot %d.\nAddress: %@";
+"ui_burner_key_already_exists_format" = "Key already exists in slot %d. HaLo card keys cannot be overwritten.";
+"ui_burner_key_not_initialized_format" = "Key slot %d is not initialized.";
+"nfc_burner_hold_to_generate_key" = "Hold your Burner (HaLo) card near the top of your iPhone to generate a new key.";
+"nfc_burner_hold_to_read_card" = "Hold your Burner (HaLo) card near the top of your iPhone to read card info.";
 
 "error_failed_add_burner_owner" = "Failed to add Burner owner";
 "ui_hardware_pair_device_title" = "Pair hardware device";

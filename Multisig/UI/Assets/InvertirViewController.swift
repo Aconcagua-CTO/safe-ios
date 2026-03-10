@@ -58,12 +58,26 @@ class InvertirViewController: AssetsViewController {
     }
 
     private func launchBuyFlow() {
+        if InvestBuyFlowCoordinator.shouldShowNoUsdScreen {
+            showNoUsdTokensScreenFromInvertirTab()
+            return
+        }
         let flow = InvestBuyFlowCoordinator(presenter: self)
         flow.onDismiss = { [weak self] in
             self?.investBuyFlow = nil
         }
         investBuyFlow = flow
         investBuyFlow?.start()
+    }
+
+    private func showNoUsdTokensScreenFromInvertirTab() {
+        let noUsdVC = InvestNoUsdTokensViewController()
+        noUsdVC.onDismiss = { [weak noUsdVC] in
+            noUsdVC?.presentingViewController?.dismiss(animated: true)
+        }
+        let nav = UINavigationController(rootViewController: noUsdVC)
+        nav.modalPresentationStyle = .pageSheet
+        present(nav, animated: true)
     }
 
     private func launchSellFlow() {
@@ -325,6 +339,26 @@ extension InvestSelectTokenViewController {
     }
 
     private func configureBadge(for cell: BalanceTableViewCell, item: TokenBalance, section: BalanceCategorySection) {
+        // Configure description and price for InvertirBalanceTableViewCell (same as main Invertir tab).
+        if let invertirCell = cell as? InvertirBalanceTableViewCell {
+            invertirCell.setDescription(item.name)
+            if section.id == TokenCategory.sectionMoneyMarket || TokenCategory.isMoneyMarket(item.category) {
+                invertirCell.setPrice(nil)
+            } else if let price = tokenPrices[item.address], price > 0 {
+                let formatter = NumberFormatter()
+                formatter.numberStyle = .decimal
+                formatter.locale = Locale.autoupdatingCurrent
+                formatter.usesGroupingSeparator = true
+                formatter.minimumFractionDigits = 2
+                formatter.maximumFractionDigits = 2
+                let formattedValue = formatter.string(from: NSNumber(value: price)) ?? String(format: "%.2f", price)
+                let code = AppSettings.selectedFiatCode
+                invertirCell.setPrice("\(formattedValue) \(code)")
+            } else {
+                invertirCell.setPrice(nil)
+            }
+        }
+
         // Keep the exact same badge logic as `InvertirBalancesViewController`.
         if section.id == TokenCategory.sectionUSD {
             cell.setBadge(text: "3.75%")
@@ -748,6 +782,8 @@ final class InvestSelectPaymentMethodViewController: UIViewController {
 
     private var paymentBalances: [TokenBalance]
     private let tableView = UITableView(frame: .zero, style: .plain)
+    private let emptyStateLabel = UILabel()
+    private let emptyStateContainer = UIView()
 
     init(paymentBalances: [TokenBalance]) {
         self.paymentBalances = paymentBalances
@@ -763,11 +799,14 @@ final class InvestSelectPaymentMethodViewController: UIViewController {
         view.backgroundColor = .backgroundPrimary
         title = NSLocalizedString("ui_invertir_payment_method_title", comment: "Invertir payment method title")
         configureTable()
+        configureEmptyState()
+        updateEmptyStateVisibility()
     }
 
     func updatePaymentBalances(_ balances: [TokenBalance]) {
         paymentBalances = balances
         tableView.reloadData()
+        updateEmptyStateVisibility()
     }
 
     private func configureTable() {
@@ -788,6 +827,37 @@ final class InvestSelectPaymentMethodViewController: UIViewController {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
+    }
+
+    private func configureEmptyState() {
+        emptyStateContainer.translatesAutoresizingMaskIntoConstraints = false
+        emptyStateContainer.isHidden = true
+        view.addSubview(emptyStateContainer)
+
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
+        emptyStateLabel.numberOfLines = 0
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.text = NSLocalizedString("ui_invertir_no_usd_empty_state", comment: "Empty state when no USD tokens to pay with")
+        emptyStateLabel.font = UIFont.gnoFont(forTextStyle: .body)
+        emptyStateLabel.textColor = .labelSecondary
+        emptyStateContainer.addSubview(emptyStateLabel)
+
+        NSLayoutConstraint.activate([
+            emptyStateContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateContainer.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyStateContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            emptyStateContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            emptyStateLabel.topAnchor.constraint(equalTo: emptyStateContainer.topAnchor),
+            emptyStateLabel.leadingAnchor.constraint(equalTo: emptyStateContainer.leadingAnchor),
+            emptyStateLabel.trailingAnchor.constraint(equalTo: emptyStateContainer.trailingAnchor),
+            emptyStateLabel.bottomAnchor.constraint(equalTo: emptyStateContainer.bottomAnchor)
+        ])
+    }
+
+    private func updateEmptyStateVisibility() {
+        let isEmpty = paymentBalances.isEmpty
+        emptyStateContainer.isHidden = !isEmpty
+        tableView.isHidden = isEmpty
     }
 }
 
@@ -1310,6 +1380,65 @@ final class InvestConfirmViewController: UIViewController {
     }
 }
 
+// MARK: - No USD tokens screen (buy/invest flow gate)
+
+/// Dedicated screen shown when the vault has no USD tokens to pay with — tells the user to add USDC, USDT, etc.
+final class InvestNoUsdTokensViewController: UIViewController {
+    var onDismiss: (() -> Void)?
+
+    private let titleLabel = UILabel()
+    private let messageLabel = UILabel()
+    private let button = UIButton(type: .system)
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .backgroundPrimary
+        navigationItem.title = NSLocalizedString("ui_invertir_no_usd_title", comment: "No USD tokens screen title")
+
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.setStyle(.title3)
+        titleLabel.textColor = .labelPrimary
+        titleLabel.numberOfLines = 0
+        titleLabel.textAlignment = .center
+        titleLabel.text = NSLocalizedString("ui_invertir_no_usd_title", comment: "No USD tokens title")
+
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.setStyle(.body)
+        messageLabel.textColor = .labelSecondary
+        messageLabel.numberOfLines = 0
+        messageLabel.textAlignment = .center
+        messageLabel.text = NSLocalizedString("ui_invertir_no_usd_message", comment: "No USD tokens message")
+
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setText(NSLocalizedString("ok", comment: "OK button"), .filled)
+        button.addTarget(self, action: #selector(didTapDismiss), for: .touchUpInside)
+
+        view.addSubview(titleLabel)
+        view.addSubview(messageLabel)
+        view.addSubview(button)
+
+        NSLayoutConstraint.activate([
+            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            titleLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -50),
+
+            messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            messageLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            messageLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+
+            button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            button.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            button.heightAnchor.constraint(equalToConstant: 48)
+        ])
+    }
+
+    @objc private func didTapDismiss() {
+        onDismiss?()
+    }
+}
+
 // MARK: - Stage-1 execution stub screen
 
 final class InvestPurchaseInProgressViewController: UIViewController {
@@ -1358,12 +1487,29 @@ final class InvestPurchaseInProgressViewController: UIViewController {
 // MARK: - Invest (Comprar) Flow - Coordinator
 
 final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationControllerDelegate {
+
+    /// Returns (hasCachedData, paymentBalancesEmpty). Show no-USD screen when hasCachedData and paymentBalancesEmpty.
+    static func cachedUsdPaymentBalances() -> (hasCachedData: Bool, paymentBalancesEmpty: Bool) {
+        let cached = LatestBalancesCache.shared.retrieve(chainId: nil) ?? []
+        guard !cached.isEmpty else { return (false, true) }
+        let payments = cached.filter { $0.balanceValue.value > 0 }
+            .filter { TokenCategory.sectionId(for: $0.category) == TokenCategory.sectionUSD }
+        return (true, payments.isEmpty)
+    }
+
+    /// True when we have cached balances and no USD tokens to pay with — show no-USD screen at Comprar entry.
+    static var shouldShowNoUsdScreen: Bool {
+        let (hasData, empty) = cachedUsdPaymentBalances()
+        return hasData && empty
+    }
+
     private weak var presenter: UIViewController?
     private weak var navigationController: UINavigationController?
     private weak var selectPaymentMethodViewController: InvestSelectPaymentMethodViewController?
     private weak var enterAmountViewController: InvestEnterAmountViewController?
 
     private var paymentBalances: [TokenBalance] = []
+    private var paymentBalancesHaveBeenRefreshed = false
     private var selectedPaymentToken: TokenBalance?
     private var balancesObserver: NSObjectProtocol?
     private var fallbackBalancesTask: URLSessionTask?
@@ -1420,6 +1566,10 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func showSelectPaymentMethod(selectedToken: TokenBalance, unitPriceFiatPerToken: Double?) {
+        if paymentBalancesHaveBeenRefreshed && paymentBalances.isEmpty {
+            showNoUsdTokensAlertAndDismiss()
+            return
+        }
         let s2 = InvestSelectPaymentMethodViewController(paymentBalances: paymentBalances)
         selectPaymentMethodViewController = s2
         s2.onPaymentSelected = { [weak self] paymentToken in
@@ -1507,7 +1657,7 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
         )
 
         let successVC = SuccessViewController(
-            titleText: NSLocalizedString("ui_tx_queued_title", comment: "Title shown after submitting a transaction that is queued"),
+            titleText: NSLocalizedString("ui_vender_sell_request_created_title", comment: "Order created title"),
             bodyText: body,
             primaryAction: NSLocalizedString("button_done", comment: "Done button title"),
             secondaryAction: nil,
@@ -1624,15 +1774,31 @@ final class InvestBuyFlowCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func refreshPaymentBalances(from balances: [TokenBalance]) {
+        paymentBalancesHaveBeenRefreshed = true
         let payments = paymentBalancesFromAllBalances(balances)
         paymentBalances = payments
         selectPaymentMethodViewController?.updatePaymentBalances(payments)
+
+        if payments.isEmpty && selectPaymentMethodViewController != nil {
+            showNoUsdTokensAlertAndDismiss()
+            return
+        }
 
         if let selected = selectedPaymentToken,
            let updated = payments.first(where: { $0.address == selected.address }) {
             selectedPaymentToken = updated
             enterAmountViewController?.updateSelectedPaymentToken(updated)
         }
+    }
+
+    private func showNoUsdTokensAlertAndDismiss() {
+        let noUsdVC = InvestNoUsdTokensViewController()
+        noUsdVC.onDismiss = { [weak self] in
+            self?.navigationController?.dismiss(animated: true) { [weak self] in
+                self?.onDismiss?()
+            }
+        }
+        navigationController?.pushViewController(noUsdVC, animated: true)
     }
 
     private func paymentBalancesFromAllBalances(_ balances: [TokenBalance]) -> [TokenBalance] {

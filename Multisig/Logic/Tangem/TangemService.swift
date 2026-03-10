@@ -141,7 +141,7 @@ class CardSigner: TangemSigner {
                 print("🎯 Using session filter: cardId(\(cardId))")
                 print("🔄 Task type: MultipleSignTask")
                 print("📤 Sending to SDK...")
-                sdk.startSession(with: task, filter: sessionFilter, initialMessage: initialMessage) { result in
+                sdk.startSession(with: task, filter: sessionFilter, initialMessage: initialMessage, accessCode: nil) { result in
                     print("🔙 TangemService ▶️ SDK session callback received")
                     print("📥 TangemService ▶️ SDK session completed")
 

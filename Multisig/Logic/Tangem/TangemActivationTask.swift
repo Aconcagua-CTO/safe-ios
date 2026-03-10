@@ -71,7 +71,7 @@ final class TangemActivationTask: CardSessionRunnable {
             return
         }
 
-        TangemLogger.info("🔧 ACTIVATION TASK: Setting access code")
+        TangemLogger.info("🔧 ACTIVATION TASK: Setting access code and passcode")
         let setCodeCommand = SetUserCodeCommand(accessCode: accessCode)
         setCodeCommand.run(in: session) { result in
             switch result {

@@ -182,13 +182,11 @@ struct ChainListItem: View {
 struct WhatsAppLinkView: View {
     var body: some View {
         Button(action: {
-            // WhatsApp wa.me format - phone number without + sign, text URL encoded
-            let phoneNumber = "5491134120450"
-            let message = "Consulta desde boveda.ai"
-            let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
-            
-            if let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") {
-                UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            PublicConfigService.shared.getWhatsAppSupportConfig { phoneNumber, message in
+                let encodedMessage = message.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? message
+                if let url = URL(string: "https://wa.me/\(phoneNumber)?text=\(encodedMessage)") {
+                    UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                }
             }
         }) {
             Text("Para TRON, BITCOIN u otras redes, contáctanos")

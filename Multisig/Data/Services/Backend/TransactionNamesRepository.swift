@@ -8,6 +8,7 @@ import Foundation
 protocol TransactionNamesRepository {
     func syncTransactionNames(force: Bool, completion: @escaping (Result<Void, Error>) -> Void)
     func friendlyName(for gatewayName: String) -> String?
+    func friendlyName(contractAddress: String, methodName: String) -> String?
 }
 
 final class TransactionNamesRepositoryImpl: TransactionNamesRepository {
@@ -42,7 +43,7 @@ final class TransactionNamesRepositoryImpl: TransactionNamesRepository {
     private var isSyncing = false
     private let syncQueue = DispatchQueue(label: "io.gnosis.multisig.transactionNamesSync", qos: .userInitiated)
     private let accessQueue = DispatchQueue(label: "io.gnosis.multisig.transactionNamesAccess", qos: .userInitiated)
-    private var mapping: [String: String] = [:] // normalized gatewayName -> friendlyName
+    private var mapping: [String: String] = [:] // normalized (contractAddress:gatewayName) -> friendlyName
 
     init(service: TransactionNamesService, authRepository: AuthRepository) {
         self.service = service
@@ -55,9 +56,22 @@ final class TransactionNamesRepositoryImpl: TransactionNamesRepository {
     }
 
     func friendlyName(for gatewayName: String) -> String? {
-        let key = normalize(gatewayName)
+        let key = compoundKey(contractAddress: nil, gatewayName: gatewayName)
         guard !key.isEmpty else { return nil }
         return accessQueue.sync { mapping[key] }
+    }
+
+    func friendlyName(contractAddress: String, methodName: String) -> String? {
+        let lookups = [
+            compoundKey(contractAddress: contractAddress, gatewayName: methodName),
+            compoundKey(contractAddress: nil, gatewayName: methodName)
+        ]
+        return accessQueue.sync {
+            lookups.compactMap { key in
+                guard !key.isEmpty else { return nil }
+                return mapping[key]
+            }.first
+        }
     }
 
     func syncTransactionNames(force: Bool = false, completion: @escaping (Result<Void, Error>) -> Void) {
@@ -108,13 +122,20 @@ final class TransactionNamesRepositoryImpl: TransactionNamesRepository {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
+    private func compoundKey(contractAddress: String?, gatewayName: String) -> String {
+        let normalizedAddress = contractAddress.map(normalize) ?? ""
+        let normalizedGatewayName = normalize(gatewayName)
+        guard !normalizedGatewayName.isEmpty else { return "" }
+        return "\(normalizedAddress):\(normalizedGatewayName)"
+    }
+
     private func buildMapping(entries: [TransactionNameEntryResponse]) -> [String: String] {
         var result: [String: String] = [:]
         var invalid = 0
         var duplicate = 0
 
         for entry in entries {
-            let key = normalize(entry.gatewayName)
+            let key = compoundKey(contractAddress: entry.contractAddress, gatewayName: entry.gatewayName)
             let friendly = entry.friendlyName.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !key.isEmpty, !friendly.isEmpty else {
                 invalid += 1

@@ -977,10 +977,12 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
 
     private func categoryDisplay(for tx: SCGModels.TransactionDetails) -> (title: String, icon: UIImage?, iconURL: URL?, placeholderAddress: AddressString?, tag: String) {
         var title = ""
+        var titleCandidates: [String] = []
         var tag = ""
         var icon: UIImage?
         var imageURL: URL?
         var placeholderAddress: AddressString?
+        var compoundMappedTitle: String?
 
         switch tx.txInfo {
         case .transfer(let transferTx):
@@ -988,48 +990,66 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             title = isOutgoing
                 ? NSLocalizedString("ui_tx_outgoing_transfer_title", comment: "Outgoing transfer title")
                 : NSLocalizedString("ui_tx_incoming_transfer_title", comment: "Incoming transfer title")
+            titleCandidates = [title]
             icon = isOutgoing ? UIImage(named: "ico-outgoing-tx") : UIImage(named: "ico-incomming-tx")?.withTintColor(.success)
         case .settingsChange(_):
             title = NSLocalizedString("ui_tx_modify_settings_title", comment: "Modify settings title")
+            titleCandidates = [title]
             icon = UIImage(named: "ico-settings-tx")
-        case .custom(_):
+        case .custom(let customInfo):
             if let safeAppInfo = tx.safeAppInfo {
                 title = safeAppInfo.name
                 imageURL = URL(string: safeAppInfo.logoUri)
                 tag = NSLocalizedString("ui_tx_app_tag", comment: "Transaction app tag")
                 icon = UIImage(named: "ico-custom-tx")
             } else {
-                title = NSLocalizedString("ui_tx_contract_interaction_title", comment: "Contract interaction title")
+                title = customInfo.to.name ?? NSLocalizedString("ui_tx_contract_interaction_title", comment: "Contract interaction title")
                 icon = UIImage(named: "ico-custom-tx")
+                placeholderAddress = customInfo.to.value
+            }
+            if let methodName = customInfo.methodName, !methodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                titleCandidates = [methodName, title]
+                let contractAddress = customInfo.to.value.description
+                compoundMappedTitle = App.shared.transactionNamesRepository
+                    .friendlyName(contractAddress: contractAddress, methodName: methodName)
+            } else {
+                titleCandidates = [title]
             }
             if let legTitle = batchLegTitleResolver.firstLegTitle(from: tx) {
                 title = legTitle
+                titleCandidates = [legTitle] + titleCandidates
             }
         case .rejection(_):
             title = NSLocalizedString("ui_tx_onchain_rejection_title", comment: "Transaction type label for on-chain rejection")
+            titleCandidates = [title]
             icon = UIImage(named: "ico-rejection-tx")
         case .creation(_):
             title = NSLocalizedString("ui_tx_safe_account_created_title", comment: "Transaction type label for Safe Account creation")
+            titleCandidates = [title]
             icon = UIImage(named: "ico-settings-tx")
         case .swapOrder(let order):
             title = order.swapOrderDisplayName
+            titleCandidates = [title]
             icon = UIImage(named: "ico-custom-tx")
         case .swapTransfer(let order):
             title = order.swapTransferDisplayName
+            titleCandidates = [title]
             icon = UIImage(named: "ico-custom-tx")
         case .twapOrder(let order):
             title = order.displayName
+            titleCandidates = [title]
             icon = UIImage(named: "ico-custom-tx")
         case .stake(let stake):
             title = stake.displayName
+            titleCandidates = [title]
             icon = UIImage(named: "ico-custom-tx")
         case .unknown:
             title = NSLocalizedString("ui_tx_unknown_operation_title", comment: "Unknown operation title")
+            titleCandidates = [title]
             icon = UIImage(named: "ico-custom-tx")
         }
 
-        let titleCandidates = [title]
-        let mapped = titleCandidates.compactMap { App.shared.transactionNamesRepository.friendlyName(for: $0) }.first
+        let mapped = compoundMappedTitle ?? titleCandidates.compactMap { App.shared.transactionNamesRepository.friendlyName(for: $0) }.first
         if let mapped, !mapped.isEmpty {
             title = mapped
         }

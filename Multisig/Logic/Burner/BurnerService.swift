@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreNFC
+import CryptoKit
 import SafeWeb3
 import BigInt
 import secp256k1
@@ -62,11 +63,35 @@ final class BurnerService: NSObject {
         let publicKey: Data   // 65 bytes uncompressed
     }
     
+    struct BurnerGenerateKeyResult {
+        let slot: Int
+        let publicKey: Data       // 65 bytes uncompressed
+        let attestSig: Data
+        let ethereumAddress: Address
+    }
+    
+    struct BurnerKeyInfo {
+        let slot: Int
+        let isInitialized: Bool
+        let hasPassword: Bool
+        let publicKey: Data?
+        let ethereumAddress: Address?
+    }
+    
+    struct BurnerCardInfo {
+        let cardId: String
+        let firmwareVersion: String?
+        let addonVersion: String?
+        let slots: [BurnerKeyInfo]
+    }
+    
     enum BurnerServiceError: LocalizedError {
         case nfcUnavailable
         case userCancelled
         case sessionBusy
         case tagNotSupported
+        case keyAlreadyExists(slot: Int)
+        case keyNotInitialized(slot: Int)
         case invalidResponse(reason: String)
         case commandFailed(code: String, description: String)
         case cardMismatch(expected: String, actual: String)
@@ -82,6 +107,10 @@ final class BurnerService: NSObject {
                 return NSLocalizedString("ui_burner_session_busy", comment: "Error when another Burner NFC session is active")
             case .tagNotSupported:
                 return NSLocalizedString("ui_burner_tag_not_supported", comment: "Error when scanned NFC tag is not a Burner/HaLo card")
+            case .keyAlreadyExists(let slot):
+                return String(format: NSLocalizedString("ui_burner_key_already_exists_format", comment: "Key already exists in slot"), slot)
+            case .keyNotInitialized(let slot):
+                return String(format: NSLocalizedString("ui_burner_key_not_initialized_format", comment: "Key slot is not initialized"), slot)
             case .invalidResponse(let reason):
                 return String(
                     format: NSLocalizedString("ui_burner_invalid_response_format", comment: "Error when Burner card returns unexpected response; includes reason"),
@@ -104,7 +133,7 @@ final class BurnerService: NSObject {
     // MARK: - Public API
     
     func scanCard(forceRefresh: Bool = false,
-                  alertMessage: String = NSLocalizedString("nfc_burner_hold_to_scan", comment: "NFC prompt while scanning a Burner card")) async throws -> BurnerCardSummary {
+                  alertMessage: String = NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")) async throws -> BurnerCardSummary {
         if !forceRefresh,
            let cached = cachedCard,
            Date().timeIntervalSince(cached.timestamp) < cacheValidity {
@@ -192,6 +221,108 @@ final class BurnerService: NSObject {
         }
 
         clearCache()
+    }
+    
+    /// Generates a new key on an empty slot (3-5) using the HaLo gen_key multi-step protocol.
+    /// The entire flow runs in a single NFC session.
+    func generateKey(slot: Int,
+                     alertMessage: String = NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")) async throws -> BurnerGenerateKeyResult {
+        let result = try await perform("generate key on Burner card", alertMessage: alertMessage) { executor in
+            try await executor.ensureCoreSelected()
+            let genResult = try await executor.fullGenerateKey(slot: slot)
+            let address = try BurnerCommandParser.ethereumAddress(fromPublicKey: genResult.publicKey)
+            
+            BurnerLogger.info("BurnerService generateKey: slot=\(slot) address=\(address.checksummed)")
+            
+            return BurnerGenerateKeyResult(
+                slot: slot,
+                publicKey: genResult.publicKey,
+                attestSig: genResult.attestSig,
+                ethereumAddress: address
+            )
+        }
+        
+        clearCache()
+        return result
+    }
+
+    /// Attempts to generate a key on the given slot, but treats KEY_ALREADY_EXISTS as a successful no-op.
+    /// This is used by the two-scan onboarding flow so the first scan never shows a user-facing error
+    /// when slot 3 is already initialized.
+    func generateKeyIfNeeded(
+        slot: Int,
+        alertMessage: String = NSLocalizedString("ui_tangem_scan_message_body", comment: "Tangem scan message body")
+    ) async throws -> BurnerGenerateKeyResult? {
+        let result: BurnerGenerateKeyResult? = try await perform("generate key on Burner card (if needed)", alertMessage: alertMessage) { executor in
+            try await executor.ensureCoreSelected()
+            do {
+                let genResult = try await executor.fullGenerateKey(slot: slot)
+                let address = try BurnerCommandParser.ethereumAddress(fromPublicKey: genResult.publicKey)
+                return BurnerGenerateKeyResult(
+                    slot: slot,
+                    publicKey: genResult.publicKey,
+                    attestSig: genResult.attestSig,
+                    ethereumAddress: address
+                )
+            } catch let error as BurnerServiceError {
+                if case .commandFailed(let code, _) = error, code == "ERROR_CODE_KEY_ALREADY_EXISTS" {
+                    BurnerLogger.info("BurnerService generateKeyIfNeeded: slot \(slot) already exists")
+                    return nil
+                }
+                throw error
+            }
+        }
+        clearCache()
+        return result
+    }
+    
+    /// Reads comprehensive card info including firmware version and key slot status for slots 1-5.
+    func readCardInfo(
+        alertMessage: String = NSLocalizedString("nfc_burner_hold_to_read_card", comment: "NFC prompt while reading Burner card info")
+    ) async throws -> BurnerCardInfo {
+        try await perform("read Burner card info", alertMessage: alertMessage) { executor in
+            try await executor.ensureCoreSelected()
+            let firmwareVersion = try await executor.readFirmwareVersion()
+            let addonVersion = try? await executor.readAddonVersion()
+            let cardId = executor.identifierHex
+            
+            var slots: [BurnerKeyInfo] = []
+            for slotNo in 1...5 {
+                do {
+                    let info = try await executor.getKeyInfo(slot: slotNo)
+                    var address: Address?
+                    if let pk = info.publicKey, pk.count == 65, pk.first == 0x04 {
+                        address = try? BurnerCommandParser.ethereumAddress(fromPublicKey: pk)
+                    }
+                    slots.append(BurnerKeyInfo(
+                        slot: slotNo,
+                        isInitialized: info.isInitialized,
+                        hasPassword: info.hasPassword,
+                        publicKey: info.publicKey,
+                        ethereumAddress: address
+                    ))
+                } catch {
+                    // Slot may not be supported on older firmware; treat as uninitialized
+                    BurnerLogger.debug("BurnerService readCardInfo: slot \(slotNo) query failed: \(error.localizedDescription)")
+                    slots.append(BurnerKeyInfo(
+                        slot: slotNo,
+                        isInitialized: false,
+                        hasPassword: false,
+                        publicKey: nil,
+                        ethereumAddress: nil
+                    ))
+                }
+            }
+            
+            BurnerLogger.info("BurnerService readCardInfo: cardId=\(cardId) firmware=\(firmwareVersion ?? "unknown") slots=\(slots.count)")
+            
+            return BurnerCardInfo(
+                cardId: cardId,
+                firmwareVersion: firmwareVersion,
+                addonVersion: addonVersion,
+                slots: slots
+            )
+        }
     }
     
     // MARK: - Identity Helpers
@@ -485,8 +616,11 @@ private final class BurnerNFCTagExecutor {
         static let firmwareCommand = Data([UInt8(0x00), UInt8(0x51), UInt8(0x00), UInt8(0x00), UInt8(0x01), UInt8(0x07), UInt8(0x00)])
         static let addonCommand = Data([UInt8(0x00), UInt8(0x51), UInt8(0x00), UInt8(0x00), UInt8(0x01), UInt8(0x10), UInt8(0x00)])
         
-        // LibHaLo shared command: SHARED_CMD_SET_NDEF_MODE (cfg_ndef)
         static let sharedCmdSetNdefMode: UInt8 = 0xD8
+        static let sharedCmdGenerateKeyInit: UInt8 = 0xB5
+        static let sharedCmdGenerateKeyCont: UInt8 = 0xB6
+        static let sharedCmdGenerateKeyFinalize: UInt8 = 0xB7
+        static let sharedCmdGetKeyInfo: UInt8 = 0x13
     }
     
     private static let errorCodes: [UInt8: (String, String)] = [
@@ -665,6 +799,234 @@ private final class BurnerNFCTagExecutor {
         return try parseSignatureResponse(response)
     }
     
+    // MARK: - Key Generation (gen_key multi-step flow)
+    
+    enum GenKeyInitResult {
+        case needsConfirm(publicKey: Data)
+        case ready(rootPublicKey: Data, rootAttestSig: Data)
+    }
+    
+    struct GenKeyFinalizeResult {
+        let publicKey: Data   // 65 bytes uncompressed
+        let attestSig: Data
+    }
+    
+    func generateKeyInit(slot: Int, entropy: Data) async throws -> GenKeyInitResult {
+        var payload = Data([Constants.sharedCmdGenerateKeyInit, UInt8(slot)])
+        payload.append(entropy)
+        let data = try await sendCoreCommand(name: "gen_key_init", payload: payload)
+        
+        guard !data.isEmpty else {
+            throw BurnerCardError.invalidResponse(reason: "Empty gen_key_init response.")
+        }
+        
+        if data[0] == 0x00 {
+            // Older firmware: recover public key from two ECDSA samples + signatures
+            guard data.count >= 1 + 64 else {
+                throw BurnerCardError.invalidResponse(reason: "gen_key_init response too short for recovery path.")
+            }
+            let sample1 = data.subdata(in: 1..<33)
+            let sample2 = data.subdata(in: 33..<65)
+            let sigBytes = Data(Array(data.suffix(from: 65)))
+            
+            let hash1 = BurnerNFCTagExecutor.sha256GenKeySample(sample1)
+            let hash2 = BurnerNFCTagExecutor.sha256GenKeySample(sample2)
+            
+            let (sig1, sig1End) = try BurnerNFCTagExecutor.parseDERSignature(from: sigBytes)
+            let sig2Input = Data(Array(sigBytes.suffix(from: sig1End)))
+            let (sig2, _) = try BurnerNFCTagExecutor.parseDERSignature(from: sig2Input)
+            
+            let recoveredKey = try BurnerNFCTagExecutor.recoverPublicKeyFromSamples(
+                hash1: hash1, sig1: sig1,
+                hash2: hash2, sig2: sig2
+            )
+            
+            BurnerLogger.info("BurnerService gen_key_init: needsConfirmPK=true, recovered publicKey=\(recoveredKey.burnerHexDescription(maxBytes: 8))")
+            return .needsConfirm(publicKey: recoveredKey)
+            
+        } else if data[0] == 0x01 {
+            guard data.count >= 66 else {
+                throw BurnerCardError.invalidResponse(reason: "gen_key_init response too short for direct path.")
+            }
+            let rootPublicKey = data.subdata(in: 0..<65)
+            let rootAttestSig = Data(Array(data.suffix(from: 65)))
+            BurnerLogger.info("BurnerService gen_key_init: needsConfirmPK=false")
+            return .ready(rootPublicKey: rootPublicKey, rootAttestSig: rootAttestSig)
+        } else {
+            throw BurnerCardError.invalidResponse(reason: "Unexpected gen_key_init response prefix: 0x\(String(format: "%02X", data[0]))")
+        }
+    }
+    
+    func generateKeyConfirm(slot: Int, publicKey: Data) async throws {
+        var payload = Data([Constants.sharedCmdGenerateKeyCont, UInt8(slot)])
+        payload.append(publicKey)
+        _ = try await sendCoreCommand(name: "gen_key_confirm", payload: payload)
+        BurnerLogger.info("BurnerService gen_key_confirm: slot=\(slot) completed")
+    }
+    
+    func generateKeyFinalize(slot: Int) async throws -> GenKeyFinalizeResult {
+        let payload = Data([Constants.sharedCmdGenerateKeyFinalize, UInt8(slot)])
+        let data = try await sendCoreCommand(name: "gen_key_finalize", payload: payload)
+        
+        // Response: [keyNo: 1 byte][publicKey: 65 bytes][attestSig: DER]
+        guard data.count >= 66 else {
+            throw BurnerCardError.invalidResponse(reason: "gen_key_finalize response too short.")
+        }
+        let publicKey = data.subdata(in: 1..<66)
+        let attestSig = Data(Array(data.suffix(from: 66)))
+        
+        guard publicKey.first == 0x04, publicKey.count == 65 else {
+            throw BurnerCardError.invalidResponse(reason: "gen_key_finalize returned invalid public key.")
+        }
+        
+        BurnerLogger.info("BurnerService gen_key_finalize: slot=\(slot) publicKey=\(publicKey.burnerHexDescription(maxBytes: 8))")
+        return GenKeyFinalizeResult(publicKey: publicKey, attestSig: attestSig)
+    }
+    
+    /// Runs the full gen_key flow (init -> optional confirm -> finalize) in a single NFC session.
+    func fullGenerateKey(slot: Int) async throws -> GenKeyFinalizeResult {
+        var entropy = Data(count: 32)
+        let status = entropy.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        guard status == errSecSuccess else {
+            throw BurnerCardError.invalidResponse(reason: "Failed to generate random entropy.")
+        }
+        
+        try await ensureCoreSelected()
+        
+        let initResult = try await generateKeyInit(slot: slot, entropy: entropy)
+        
+        switch initResult {
+        case .needsConfirm(let publicKey):
+            try await generateKeyConfirm(slot: slot, publicKey: publicKey)
+        case .ready:
+            break
+        }
+        
+        return try await generateKeyFinalize(slot: slot)
+    }
+    
+    // MARK: - Key Info
+    
+    struct KeyInfoResult {
+        let isInitialized: Bool
+        let hasPassword: Bool
+        let publicKey: Data?
+        let attestSig: Data?
+    }
+    
+    func getKeyInfo(slot: Int) async throws -> KeyInfoResult {
+        let payload = Data([Constants.sharedCmdGetKeyInfo, UInt8(slot)])
+        let data = try await sendCoreCommand(name: "get_key_info", payload: payload)
+        
+        // If the command succeeds, the key IS initialized.
+        // ERROR_CODE_KEY_NOT_INITIALIZED (0x0A) is thrown for empty slots.
+        // Response: [keyNo: 1][keyFlags: 1][optional failedAuthCtr: 1][publicKey: 65][attestSig]
+        guard data.count >= 2 else {
+            throw BurnerCardError.invalidResponse(reason: "get_key_info response too short.")
+        }
+        
+        // Flag bits per libhalo keyflags.ts:
+        //   0x01 = KEYFLG_IS_PWD_PROTECTED
+        //   0x02 = KEYFLG_FLAG_FORMAT_V2
+        //   0x04 = KEYFLG_RESERVED_2
+        //   0x08 = KEYFLG_SIGN_NOT_USED
+        //   0x10 = KEYFLG_IS_IMPORTED
+        //   0x20 = KEYFLG_IS_EXPORTED
+        let keyFlags = data[1]
+        let isFormatV2 = (keyFlags & 0x02) != 0
+        let hasPassword = (keyFlags & 0x01) != 0
+        
+        let offset = isFormatV2 ? 3 : 2
+        
+        guard data.count >= offset + 65 else {
+            return KeyInfoResult(isInitialized: true, hasPassword: hasPassword,
+                                 publicKey: nil, attestSig: nil)
+        }
+        
+        let publicKey = data.subdata(in: offset..<(offset + 65))
+        let attestSig: Data? = data.count > offset + 65 ? Data(Array(data.suffix(from: offset + 65))) : nil
+        
+        return KeyInfoResult(isInitialized: true, hasPassword: hasPassword,
+                             publicKey: publicKey, attestSig: attestSig)
+    }
+    
+    // MARK: - Crypto Helpers for gen_key
+    
+    private static func sha256GenKeySample(_ sample: Data) -> Data {
+        var prefixed = Data([0x19])
+        prefixed.append(Data("Key generation sample:\n".utf8))
+        prefixed.append(sample)
+        let digest = SHA256.hash(data: prefixed)
+        return Data(digest)
+    }
+    
+    /// Parses a DER-encoded signature and returns (r(32)||s(32), bytesConsumed).
+    private static func parseDERSignature(from data: Data) throws -> (Data, Int) {
+        guard data.count >= 8, data[0] == 0x30, data[2] == 0x02 else {
+            throw BurnerCardError.invalidResponse(reason: "Invalid DER signature in gen_key response.")
+        }
+        
+        let totalLen = Int(data[1]) + 2
+        guard data.count >= totalLen else {
+            throw BurnerCardError.invalidResponse(reason: "Truncated DER signature in gen_key response.")
+        }
+        
+        let rLen = Int(data[3])
+        let rStart = 4
+        let rEnd = rStart + rLen
+        guard data.count > rEnd + 1, data[rEnd] == 0x02 else {
+            throw BurnerCardError.invalidResponse(reason: "Malformed DER r/s in gen_key response.")
+        }
+        
+        let sLen = Int(data[rEnd + 1])
+        let sStart = rEnd + 2
+        let sEnd = sStart + sLen
+        guard data.count >= sEnd else {
+            throw BurnerCardError.invalidResponse(reason: "Incomplete DER s in gen_key response.")
+        }
+        
+        let rBig = BigUInt(data.subdata(in: rStart..<rEnd))
+        let sBig = BigUInt(data.subdata(in: sStart..<sEnd))
+        let rBytes = Data([UInt8](rBig.serialize()))
+        let sBytes = Data([UInt8](sBig.serialize()))
+        let rData = rBytes.leftPadded(to: 32)
+        let sData = sBytes.leftPadded(to: 32)
+        
+        return (rData + sData, totalLen)
+    }
+    
+    /// Recovers the public key from two hash+signature pairs using ECDSA recovery.
+    /// Tries recovery IDs 0 and 1 for each pair and picks the most common result.
+    private static func recoverPublicKeyFromSamples(
+        hash1: Data, sig1: Data,
+        hash2: Data, sig2: Data
+    ) throws -> Data {
+        var candidates: [Data] = []
+        
+        for recoveryId: UInt8 in [0, 1] {
+            // sig1 + recoveryId -> 65 bytes for SECP256K1.recoverPublicKey
+            let fullSig1 = sig1 + Data([recoveryId])
+            if let pk = SECP256K1.recoverPublicKey(hash: hash1, signature: fullSig1, compressed: false) {
+                candidates.append(pk)
+            }
+            
+            let fullSig2 = sig2 + Data([recoveryId])
+            if let pk = SECP256K1.recoverPublicKey(hash: hash2, signature: fullSig2, compressed: false) {
+                candidates.append(pk)
+            }
+        }
+        
+        guard !candidates.isEmpty else {
+            throw BurnerCardError.invalidResponse(reason: "Failed to recover public key from gen_key_init samples.")
+        }
+        
+        // Pick the most frequent candidate (mode)
+        var counts: [Data: Int] = [:]
+        for c in candidates { counts[c, default: 0] += 1 }
+        let best = counts.max(by: { $0.value < $1.value })!.key
+        return best
+    }
+    
     func logKeyComparisons(keys: [BurnerService.BurnerKeySlot],
                            ndef: BurnerService.BurnerNdefSnapshot?) {
         guard let ndef else { return }
@@ -813,7 +1175,7 @@ enum BurnerCommandParser {
             }
             let key = buffer.dropFirst().prefix(Int(length))
             let uncompressed = Data(Array(key))
-            let address = try ethereumAddress(fromUncompressedKey: uncompressed)
+            let address = try ethereumAddress(fromPublicKey: uncompressed)
             slots.append(BurnerService.BurnerKeySlot(slot: slotIndex,
                                                      publicKey: uncompressed,
                                                      ethereumAddress: address,
@@ -861,7 +1223,7 @@ enum BurnerCommandParser {
         return rData + sData
     }
     
-    private static func ethereumAddress(fromUncompressedKey publicKey: Data) throws -> Address {
+    static func ethereumAddress(fromPublicKey publicKey: Data) throws -> Address {
         guard publicKey.count == 65, publicKey.first == 0x04 else {
             throw BurnerCardError.invalidResponse(reason: "Unexpected public key length \(publicKey.count)")
         }
