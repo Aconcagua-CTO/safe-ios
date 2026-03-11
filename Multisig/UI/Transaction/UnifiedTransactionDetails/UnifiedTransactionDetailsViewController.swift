@@ -474,13 +474,206 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         LogService.shared.debug("[DualSignatureFlow] - Tangem card keys in signers: \(tangemKeys.count)")
         #endif
 
+        // Use dual-signature flow when: 0 existing confirmations, a local key and a card key are both available.
+        let confirmationCount = tx?.multisigInfo?.confirmations.count ?? 0
+        let localKeys = DualSignatureKeySelector.localOwnerKeys(for: safe)
+        let cardKeys = DualSignatureKeySelector.cardOwnerKeys(for: safe)
+
+        if confirmationCount == 0, let localKey = localKeys.first, cardKeys.first != nil {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] UnifiedTransactionDetailsViewController - Using dual-signature flow (0 confirmations, local+card keys available)")
+            #endif
+            proceedWithDualSignatureFlow(localKey: localKey)
+        } else {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] UnifiedTransactionDetailsViewController - Using picker flow (confirmations=\(confirmationCount), localKeys=\(localKeys.count), cardKeys=\(cardKeys.count))")
+            #endif
+            presentPickerForSigning(candidates: signers)
+        }
+    }
+
+    // MARK: - Dual Signature Flow (for proposed transactions with 0 confirmations)
+
+    private func proceedWithDualSignatureFlow(localKey: KeyInfo) {
+        guard let tx = tx,
+              var transaction = Transaction(tx: tx),
+              let safeAddress = try? Address(from: safe.address!),
+              let chainId = safe.chain?.id,
+              let safeTxHash = transaction.safeTxHash?.description else {
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_owner_key_available", comment: "No owner key available to sign transaction"))
+            return
+        }
+
+        transaction.safe = AddressString(safeAddress)
+        transaction.safeVersion = safe.contractVersion != nil ? Version(safe.contractVersion!) : nil
+        transaction.chainId = chainId
+
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] proceedWithDualSignatureFlow() - auto-signing with local key: \(localKey.address.checksummed)")
+        #endif
+
+        Wallet.shared.sign(transaction, keyInfo: localKey) { [weak self] result in
+            guard let self = self else { return }
+            do {
+                let signature = try result.get()
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] Local key signed successfully, confirming on backend")
+                #endif
+                self.confirmDataTask = self.gatewayService.asyncConfirm(
+                    safeTxHash: safeTxHash,
+                    signature: signature.hexadecimal,
+                    chainId: self.safe.chain!.id!
+                ) { [weak self] result in
+                    guard let self = self else { return }
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .failure(let error):
+                            #if DEBUG
+                            LogService.shared.debug("[DualSignatureFlow] Local key confirm failed: \(error.localizedDescription) - falling back to picker")
+                            #endif
+                            let remainingSigners = self.remainingSignerKeysForConfirmation()
+                            let fallbackCandidates = remainingSigners.filter { $0.address != localKey.address }
+                            self.presentPickerForSigning(candidates: fallbackCandidates.isEmpty ? remainingSigners : fallbackCandidates)
+                        case .success:
+                            #if DEBUG
+                            LogService.shared.debug("[DualSignatureFlow] Local key confirmed, proceeding to card signature")
+                            #endif
+                            NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
+                            self.handleCardSignatureIfNeeded(safeTxHash: safeTxHash, localKey: localKey)
+                        }
+                    }
+                }
+            } catch {
+                #if DEBUG
+                LogService.shared.debug("[DualSignatureFlow] Local key signing failed: \(error.localizedDescription) - falling back to picker")
+                #endif
+                DispatchQueue.main.async {
+                    let remainingSigners = self.remainingSignerKeysForConfirmation()
+                    let fallbackCandidates = remainingSigners.filter { $0.address != localKey.address }
+                    self.presentPickerForSigning(candidates: fallbackCandidates.isEmpty ? remainingSigners : fallbackCandidates)
+                }
+            }
+        }
+    }
+
+    private func handleCardSignatureIfNeeded(safeTxHash: String, localKey: KeyInfo) {
+        let cardKeys = DualSignatureKeySelector.cardOwnerKeys(for: safe)
+        guard let cardKey = cardKeys.first else {
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] No card key available after local confirm - falling back to picker")
+            #endif
+            let usermail = App.shared.authRepository.getCurrentUser()?.email ?? "unknown"
+            LogService.shared.info("User (\(usermail)) no card available after local confirm in UnifiedTransactionDetailsViewController, falling back to picker")
+            let remainingSigners = remainingSignerKeysForConfirmation()
+            let fallbackCandidates = remainingSigners.filter { $0.address != localKey.address }
+            presentPickerForSigning(candidates: fallbackCandidates.isEmpty ? remainingSigners : fallbackCandidates)
+            return
+        }
+
+        #if DEBUG
+        LogService.shared.debug("[DualSignatureFlow] handleCardSignatureIfNeeded - using card key: type=\(cardKey.keyType.rawValue), address=\(cardKey.address.checksummed)")
+        #endif
+
+        switch cardKey.keyType {
+        case .tangem, .tangem0:
+            let request = SignRequest(
+                title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
+                tracking: ["action": "confirm"],
+                signer: cardKey,
+                hexToSign: safeTxHash
+            )
+            let tangemService: TangemSigningService = cardKey.keyType == .tangem0 ? Tangem0Service.shared : TangemService.shared
+            let vc = TangemSignerViewController(request: request, service: tangemService)
+            var didSign = false
+            vc.completion = { [weak self] signature in
+                didSign = true
+                self?.confirmWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: cardKey)
+            }
+            vc.onClose = { [weak self] in
+                if !didSign {
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_tx_card_signature_pending", comment: "Card signature pending message"))
+                    self?.reloadData()
+                }
+            }
+            present(vc, animated: true)
+
+        case .burner:
+            let request = SignRequest(
+                title: NSLocalizedString("ui_tx_confirm_transaction_title", comment: "Confirm transaction title"),
+                tracking: ["action": "confirm"],
+                signer: cardKey,
+                hexToSign: safeTxHash
+            )
+            let vc = BurnerSignerViewController(request: request)
+            var didSign = false
+            vc.completion = { [weak self] signature in
+                didSign = true
+                self?.confirmWithSignature(safeTxHash: safeTxHash, signature: signature, keyInfo: cardKey)
+            }
+            vc.onClose = { [weak self] in
+                if !didSign {
+                    App.shared.snackbar.show(message: NSLocalizedString("ui_tx_card_signature_pending", comment: "Card signature pending message"))
+                    self?.reloadData()
+                }
+            }
+            present(vc, animated: true)
+
+        default:
+            #if DEBUG
+            LogService.shared.debug("[DualSignatureFlow] Unsupported card key type \(cardKey.keyType.rawValue) - falling back to picker")
+            #endif
+            let remainingSigners = remainingSignerKeysForConfirmation()
+            let fallbackCandidates = remainingSigners.filter { $0.address != localKey.address }
+            presentPickerForSigning(candidates: fallbackCandidates.isEmpty ? remainingSigners : fallbackCandidates)
+        }
+    }
+
+    private func confirmWithSignature(safeTxHash: String, signature: String, keyInfo: KeyInfo) {
+        confirmDataTask = gatewayService.asyncConfirm(
+            safeTxHash: safeTxHash,
+            signature: signature,
+            chainId: safe.chain!.id!
+        ) { [weak self] result in
+            guard let self = self else { return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
+                DispatchQueue.main.async {
+                    switch result {
+                    case .failure(let error):
+                        #if DEBUG
+                        LogService.shared.debug("[DualSignatureFlow] Card signature confirm failed: \(error.localizedDescription)")
+                        #endif
+                        App.shared.snackbar.show(error: GSError.error(
+                            description: NSLocalizedString("ui_tx_failed_add_card_signature_error", comment: "Failed to add card signature error"),
+                            error: error))
+                        self.reloadData()
+                    case .success:
+                        #if DEBUG
+                        LogService.shared.debug("[DualSignatureFlow] Card signature confirmed successfully")
+                        #endif
+                        NotificationCenter.default.post(name: .transactionDataInvalidated, object: nil)
+                        App.shared.snackbar.show(message: NSLocalizedString("ui_tx_confirmation_submitted_message", comment: "Confirmation submitted message"))
+                        Tracker.trackEvent(
+                            .userTransactionConfirmed,
+                            parameters: TrackingEvent.keyTypeParameters(keyInfo, parameters: ["source": "tx_details"])
+                        )
+                        self.reloadData()
+                    }
+                }
+            }
+        }
+    }
+
+    private func presentPickerForSigning(candidates: [KeyInfo]) {
+        guard !candidates.isEmpty else {
+            App.shared.snackbar.show(message: NSLocalizedString("ui_tx_no_signing_keys_available", comment: "No keys available to sign message"))
+            return
+        }
         let descriptionText = NSLocalizedString("ui_tx_confirm_transaction_description", comment: "Confirm transaction description")
         let vc = ChooseOwnerKeyViewController(
-            owners: { signers },
+            owners: { candidates },
             chainID: safe.chain!.id,
             header: .text(description: descriptionText)
-        ) {
-            [weak self] keyInfo in
+        ) { [weak self] keyInfo in
             self?.dismiss(animated: true) {
                 guard let keyInfo = keyInfo else {
                     #if DEBUG
@@ -494,7 +687,6 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
                 self?.sign(keyInfo)
             }
         }
-
         let navigationController = UINavigationController(rootViewController: vc)
         present(navigationController, animated: true)
     }
