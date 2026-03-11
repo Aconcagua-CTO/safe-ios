@@ -144,18 +144,24 @@ final class BatchLegTitleResolver {
         return normalizedMethod(details.txData?.dataDecoded?.method) == "multisend"
     }
 
-    func firstLegTitle(from details: SCGModels.TransactionDetails) -> String? {
+    func mainLegTitle(from details: SCGModels.TransactionDetails) -> String? {
         guard isBatch(details: details),
               let multiSendActions = extractMultiSendActions(from: details),
-              let firstLeg = multiSendActions.first
+              !multiSendActions.isEmpty
         else {
             return nil
         }
 
-        if let method = normalizedMethod(firstLeg.dataDecoded?.method) {
+        // 2-leg batch: the first leg is the main transaction.
+        // 3+ legs: the last leg is the main transaction.
+        let mainLeg = multiSendActions.count == 2
+            ? multiSendActions[0]
+            : multiSendActions[multiSendActions.count - 1]
+
+        if let method = normalizedMethod(mainLeg.dataDecoded?.method) {
             return method
         }
-        if let data = firstLeg.data, isERC20TransferCalldata(data) {
+        if let data = mainLeg.data, isERC20TransferCalldata(data) {
             return "transfer"
         }
         return nil

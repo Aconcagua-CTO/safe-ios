@@ -590,7 +590,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                     }
                     self.batchLegTitleInFlight.remove(tx.id)
                     if case let .success(details) = result,
-                       let legTitle = self.batchLegTitleResolver.firstLegTitle(from: details),
+                       let legTitle = self.batchLegTitleResolver.mainLegTitle(from: details),
                        !legTitle.isEmpty {
                         self.batchLegTitleByTransactionId[tx.id] = legTitle
                     }
@@ -661,7 +661,10 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 return
             }
         }
-        onSuccess()
+        prefetchBatchLegTitlesIfNeeded(for: mergedTransactions) { [weak self] in
+            guard let self else { return }
+            self.onSuccess()
+        }
     }
 
     private func refreshSafeInfo(forChainIds chainIds: [String], completion: @escaping () -> Void) {
@@ -863,7 +866,10 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 self.refreshSafeInfo(forChainIds: Array(chainsWithTransactions)) { [weak self] in
                     guard let self else { return }
                     self.rebuildMergedModel()
-                    self.onSuccess()
+                    self.prefetchBatchLegTitlesIfNeeded(for: self.mergedTransactions) { [weak self] in
+                        guard let self else { return }
+                        self.onSuccess()
+                    }
                 }
             }
 
@@ -1191,9 +1197,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             } else {
                 titleCandidates = [title]
             }
-            if let legTitle = resolvedBatchLegTitle(for: tx, customInfo: customInfo, chain: displayChain) {
-                title = legTitle
-                titleCandidates = [legTitle] + titleCandidates
+            if let cachedLegTitle = batchLegTitleByTransactionId[tx.id], !cachedLegTitle.isEmpty {
+                title = cachedLegTitle
+                titleCandidates = [cachedLegTitle] + titleCandidates
             }
             if let methodName = customInfo.methodName, !methodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let contractAddress = customInfo.to.value.description
@@ -1278,55 +1284,6 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         cell.set(confirmationsSubmitted: confirmationsSubmitted, confirmationsRequired: confirmationsRequired)
         cell.set(highlight: shouldHighlight(transaction: tx))
     }
-
-    private func resolvedBatchLegTitle(
-        for tx: SCGModels.TxSummary,
-        customInfo: SCGModels.TxInfo.Custom,
-        chain: Chain?
-    ) -> String? {
-        guard batchLegTitleResolver.isBatch(customInfo: customInfo) else {
-            return nil
-        }
-
-        if let cachedTitle = batchLegTitleByTransactionId[tx.id], !cachedTitle.isEmpty {
-            return cachedTitle
-        }
-
-        guard !batchLegTitleInFlight.contains(tx.id),
-              let chainId = chain?.id
-        else {
-            return nil
-        }
-
-        batchLegTitleInFlight.insert(tx.id)
-        let service = chain?.gatewayService() ?? clientGatewayService
-        _ = service.asyncTransactionDetails(id: tx.id, chainId: chainId) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.batchLegTitleInFlight.remove(tx.id)
-                guard case let .success(details) = result,
-                      let legTitle = self.batchLegTitleResolver.firstLegTitle(from: details),
-                      !legTitle.isEmpty
-                else {
-                    return
-                }
-                self.batchLegTitleByTransactionId[tx.id] = legTitle
-                self.reloadTransactionRow(with: tx.id)
-            }
-        }
-        return nil
-    }
-
-    private func reloadTransactionRow(with transactionId: String) {
-        guard let row = model.items.firstIndex(where: { item in
-            guard case let .transaction(itemTx) = item else { return false }
-            return itemTx.transaction.id == transactionId
-        }) else {
-            return
-        }
-        tableView.reloadRows(at: [IndexPath(row: row, section: 0)], with: .none)
-    }
-
     private func isReplacedTransaction(tx: SCGModels.TxSummary, safe: Safe?) -> Bool {
         if isRequestedTransaction(tx) {
             return false

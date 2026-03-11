@@ -1207,7 +1207,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             } else {
                 titleCandidates = [title]
             }
-            if let legTitle = batchLegTitleResolver.firstLegTitle(from: tx) {
+            if let legTitle = batchLegTitleResolver.mainLegTitle(from: tx) {
                 title = legTitle
                 titleCandidates = [legTitle] + titleCandidates
             }
