@@ -18,9 +18,9 @@ struct BackendCard: Codable {
     let updatedAt: String?
 }
 
-struct PrimaryCardRequest: HTTPRequest {
+struct MyKeysRequest: HTTPRequest {
     let httpMethod: String = "GET"
-    let urlPath: String = "api/v1/cards/my-primary"
+    let urlPath: String = "api/v1/cards/my-keys"
     let query: String? = nil
     let body: Data? = nil
     let url: URL? = nil

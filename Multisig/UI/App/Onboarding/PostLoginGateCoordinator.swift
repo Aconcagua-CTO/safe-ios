@@ -15,7 +15,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private var gateNavigationController: UINavigationController?
     private var hasAttemptedVaultSync = false
     private var isSyncingVaults = false
-    private let isSignUp: Bool
+    private var isSignUp: Bool
     private var isPresentingFlow = false
     private var isProvisioningCardKey = false
     private var isShowingPostSignupInstructions = false
@@ -27,18 +27,15 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private var generateKeyFlow: GenerateKeyFlow?
     private var userProvisioningService: UserProvisioningService?
     private var cardsService: PrimaryCardService?
-    private var hasRegisteredKeys: Bool?
+    private var hasCheckedRegisteredKeys = false
     init(sceneDelegate: SceneDelegate) {
         self.sceneDelegate = sceneDelegate
-        let action = AppSettings.lastLeadProvisioningAction ?? ""
-        isSignUp = action == LeadProvisioningAction.copiedFromLead.rawValue
+        isSignUp = AppSettings.isNewSignUp ?? false
         #if DEBUG
-        LogService.shared.debug("[PostLoginGateCoordinator] Loaded lastLeadProvisioningAction='\(action)' isSignUp=\(isSignUp)")
+        LogService.shared.debug("[PostLoginGateCoordinator] isNewSignUp=\(isSignUp)")
         #endif
-        AppSettings.lastLeadProvisioningAction = nil
-        #if DEBUG
-        LogService.shared.debug("[PostLoginGateCoordinator] Cleared lastLeadProvisioningAction after coordinator init")
-        #endif
+        // isNewSignUp is cleared in finish() once onboarding completes successfully,
+        // so it survives app kills during onboarding.
     }
 
     func start(completion: @escaping () -> Void) {
@@ -55,11 +52,10 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         let leadManufacturer = Self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
         let mobileKeyCount = KeyInfo.count(.deviceImported) + KeyInfo.count(.deviceGenerated)
         let localCardKeyCount = KeyInfo.count(.tangem) + KeyInfo.count(.tangem0) + KeyInfo.count(.burner)
-        let hasNoLocalKeys = mobileKeyCount == 0 && localCardKeyCount == 0
         let hasNoVaults = Safe.countExcludingDemo == 0
         let requiredMobileKeyCount = leadManufacturer == "mobile" ? 2 : 1
 
-        if !isSignUp && hasNoLocalKeys && hasNoVaults && hasRegisteredKeys == nil {
+        if !isSignUp && !hasCheckedRegisteredKeys {
             fetchRegisteredKeysAndProceed()
             return
         }
@@ -72,7 +68,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             hasCardKey: localCardKeyCount > 0,
             requiresCardKey: ["tangem", "burner"].contains(leadManufacturer),
             isSignUp: isSignUp,
-            hasRegisteredKeys: hasRegisteredKeys ?? true
+            cardManufacturer: leadManufacturer
         )
 
         if shouldShowPostSignupInstructions(for: state) {
@@ -96,6 +92,8 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         case .startMobileKeyFlow:
             ensureGateVisible()
             startMobileKeyFlow()
+        case .showContactRequired:
+            showContactRequired()
         case .showMain:
             finish()
         }
@@ -200,11 +198,49 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
                 self.cardsService = nil
                 switch result {
                 case .success(let hasKeys):
-                    self.hasRegisteredKeys = hasKeys
+                    if hasKeys {
+                        #if DEBUG
+                        LogService.shared.debug("[PostLoginGateCoordinator] Returning user has registered keys — skipping onboarding")
+                        #endif
+                        self.hasCheckedRegisteredKeys = true
+                        self.evaluateAndProceed()
+                    } else {
+                        #if DEBUG
+                        LogService.shared.debug("[PostLoginGateCoordinator] No registered keys found — starting onboarding as new signup")
+                        #endif
+                        self.convertToSignupMode()
+                    }
                 case .failure:
-                    // Be conservative on errors and avoid forcing key creation without certainty.
-                    self.hasRegisteredKeys = true
+                    // Be conservative on errors: do not force key creation without certainty.
+                    #if DEBUG
+                    LogService.shared.debug("[PostLoginGateCoordinator] fetchHasRegisteredKeys error — treating as existing user")
+                    #endif
+                    self.hasCheckedRegisteredKeys = true
+                    self.evaluateAndProceed()
                 }
+            }
+        }
+    }
+
+    private func convertToSignupMode() {
+        // Re-fetch the user record from the backend so we get the current cardManufacturer.
+        let service = UserProvisioningService(
+            authRepository: App.shared.authRepository,
+            logger: LogService.shared
+        )
+        userProvisioningService = service
+        service.ensureUserRecord { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.userProvisioningService = nil
+                // Activate signup mode.
+                self.isSignUp = true
+                AppSettings.isNewSignUp = true
+                AppSettings.pendingPostSignupInstructions = true
+                AppSettings.didShowPostSignupInstructions = false
+                #if DEBUG
+                LogService.shared.debug("[PostLoginGateCoordinator] convertToSignupMode: cardManufacturer=\(AppSettings.leadCardManufacturer ?? "nil")")
+                #endif
                 self.evaluateAndProceed()
             }
         }
@@ -232,21 +268,21 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         gateViewController.push(flow: flow)
     }
 
+    private func showContactRequired() {
+        let msg = NSLocalizedString("auth_lead_pending_message", comment: "")
+        let vc = ContactRequiredViewController(message: msg)
+        let nav = UINavigationController(rootViewController: vc)
+        sceneDelegate?.showPostLoginGateWindow(rootViewController: nav)
+    }
+
     private func startCardKeyFlow() {
         guard !isProvisioningCardKey else { return }
         isProvisioningCardKey = true
 
         let manufacturer = Self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
-        if manufacturer == "nocard" {
-            isProvisioningCardKey = false
-            evaluateAndProceed()
-            return
-        }
 
-        // Existing users might not have this cached yet. When the user taps "Retry", we need to
-        // refresh from backend before we can route to the correct card flow.
         if manufacturer.isEmpty {
-            LogService.shared.info("[PostLoginGate][CardKey] Lead manufacturer missing; refreshing from backend...")
+            LogService.shared.info("[PostLoginGate][CardKey] Manufacturer missing; refreshing from backend...")
             ensureGateVisible()
             gateViewController?.showLoading(
                 message: NSLocalizedString("post_login_card_key_loading", comment: "Card key loading message")
@@ -254,18 +290,13 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             refreshLeadCardManufacturer { [weak self] in
                 guard let self else { return }
                 let refreshed = Self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
-                LogService.shared.info("[PostLoginGate][CardKey] Lead manufacturer(after refresh)=\(refreshed)")
-                if refreshed == "nocard" {
-                    self.isProvisioningCardKey = false
-                    self.evaluateAndProceed()
-                    return
-                }
+                LogService.shared.info("[PostLoginGate][CardKey] Manufacturer(after refresh)=\(refreshed)")
                 self.routeCardKeyFlow(manufacturer: refreshed)
             }
             return
         }
 
-        LogService.shared.info("[PostLoginGate][CardKey] Lead manufacturer=\(manufacturer)")
+        LogService.shared.info("[PostLoginGate][CardKey] Manufacturer=\(manufacturer)")
         routeCardKeyFlow(manufacturer: manufacturer)
     }
 
@@ -277,8 +308,8 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
             ensureGateVisible()
             provisionBurnerCardKey()
         default:
-            ensureGateVisible()
-            showCardKeyError(messageKey: "post_login_card_key_primary_card_unsupported")
+            isProvisioningCardKey = false
+            showContactRequired()
         }
     }
 
@@ -332,26 +363,23 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
                 activationNav = nav
                 self.sceneDelegate?.showPostLoginGateWindow(rootViewController: nav)
             },
-            onImportCompletion: { [weak self] success, address, cardId in
+            onImportCompletion: { [weak self] success, address, cardId, cardPublicKey, walletPublicKey in
                 guard let self else { return }
                 self.isPresentingFlow = false
                 self.burnerProvisioningCoordinator = nil
-                if success {
-                    if let address {
-                        if let cardId {
-                            self.registerPrimaryCardInBackend(cardId: cardId, manufacturer: "burner")
-                        }
-                        self.isProvisioningCardKey = false
-                        self.showCardKeySuccess(address: address)
-                    } else {
-                        self.showCardKeyError(messageKey: "post_login_card_key_import_failed")
+                if success, let address {
+                    if let cardId {
+                        self.registerPrimaryCardInBackend(cardId: cardId, manufacturer: "burner", cardPublicKey: cardPublicKey, walletPublicKey: walletPublicKey)
                     }
+                    self.isProvisioningCardKey = false
+                    self.showCardKeySuccess(address: address)
                 } else {
-                    self.showCardKeyError(messageKey: "post_login_card_key_cancelled")
+                    self.showCardKeyError(messageKey: "post_login_card_key_import_failed")
                 }
             },
             onActivationCancelled: { [weak self] in
                 self?.isProvisioningCardKey = false
+                self?.showContactRequired()
             }
         )
 
@@ -408,32 +436,33 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
                 self.isPresentingFlow = false
                 self.tangemKeyFlow = nil
                 self.tangemProvisioningCoordinator = nil
-                if success {
-                    if let address = self.lastCardKeyAddress {
-                        self.isProvisioningCardKey = false
-                        self.showCardKeySuccess(address: address)
-                    } else {
-                        self.showCardKeyError(messageKey: "post_login_card_key_import_failed")
-                    }
+                if success, let address = self.lastCardKeyAddress {
+                    self.isProvisioningCardKey = false
+                    self.showCardKeySuccess(address: address)
                 } else {
-                    self.showCardKeyError(messageKey: "post_login_card_key_cancelled")
+                    self.showCardKeyError(messageKey: "post_login_card_key_import_failed")
                 }
             },
             onActivationCancelled: { [weak self] in
                 self?.isProvisioningCardKey = false
+                self?.showContactRequired()
             }
         )
         tangemProvisioningCoordinator = coordinator
         coordinator.start()
     }
 
-    private func registerPrimaryCardInBackend(cardId: String, manufacturer: String) {
+    private func registerPrimaryCardInBackend(cardId: String, manufacturer: String, cardPublicKey: Data? = nil, walletPublicKey: Data? = nil) {
         guard App.shared.authRepository.isAuthenticated() else { return }
+        let cardPublicKeyHex = cardPublicKey.map { $0.map { String(format: "%02x", $0) }.joined() }
+        let walletPublicKeyHex = walletPublicKey.map { $0.map { String(format: "%02x", $0) }.joined() }
         let payload = RegisterPrimaryCardPayload(
             manufacturer: manufacturer,
             cardId: cardId,
             firmwareLevel: nil,
-            state: 1
+            state: 1,
+            cardPublicKey: cardPublicKeyHex,
+            walletPublicKey: walletPublicKeyHex
         )
         let service = PrimaryCardRegistrationService(
             authRepository: App.shared.authRepository,
@@ -468,10 +497,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
 
     private func showCardKeyError(messageKey: String) {
         isProvisioningCardKey = false
-        ensureGateVisible()
-        gateViewController?.showError(message: NSLocalizedString(messageKey, comment: "")) { [weak self] in
-            self?.startCardKeyFlow()
-        }
+        showContactRequired()
     }
 
     private func isUserCancelled(error: Error) -> Bool {
@@ -485,6 +511,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func finish() {
+        AppSettings.isNewSignUp = false
         gateNavigationController = nil
         gateViewController = nil
         sceneDelegate?.dismissPostLoginGateWindow()

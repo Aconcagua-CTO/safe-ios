@@ -722,7 +722,7 @@ extension AppSettingsViewController: NavigationRouter {
                             AppSettings.companyId = nil
                             AppSettings.enterpriseRolsData = nil
                             AppSettings.leadCardManufacturer = nil
-                            AppSettings.lastLeadProvisioningAction = nil
+                            AppSettings.isNewSignUp = false
                             AppSettings.pendingOwnerKeysRegistration = false
                             AppSettings.importedOwnerKey = false
                             AppSettings.pendingPostSignupInstructions = false

@@ -174,9 +174,9 @@ extension AppSettings {
     @UserDefault(key: "io.gnosis.multisig.leadCardManufacturer")
     static var leadCardManufacturer: String?
 
-    /// Stores the last lead provisioning action emitted during login to route post-login gate behavior.
-    @UserDefault(key: "io.gnosis.multisig.lastLeadProvisioningAction")
-    static var lastLeadProvisioningAction: String?
+    /// Whether the current session is a new signup (user just created on the backend).
+    @UserDefault(key: "io.gnosis.multisig.isNewSignUp")
+    static var isNewSignUp: Bool?
 
     /// When true, the app should retry registering onboarding owner keys (deviceGenerated + tangem) with backend.
     static var pendingOwnerKeysRegistration: Bool {

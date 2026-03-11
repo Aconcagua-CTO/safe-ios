@@ -521,7 +521,8 @@ final class TangemService {
                 cardId: result.card.cardId,
                 wallet: wallet,
                 ethereumAddress: ethAddress,
-                accessCodeSet: result.accessCodeSet
+                accessCodeSet: result.accessCodeSet,
+                cardPublicKey: result.card.cardPublicKey
             )
         } catch let error as TangemSdkError {
             throw mapSdkError(error)
@@ -672,6 +673,7 @@ struct ActivatedCardInfo {
     let wallet: TangemCardSummary.Wallet
     let ethereumAddress: Address
     let accessCodeSet: Bool
+    let cardPublicKey: Data?
 }
 
 enum TangemServiceError: LocalizedError {

@@ -23,11 +23,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var presentedWindow: UIWindow?
     private var postLoginGateCoordinator: PostLoginGateCoordinator?
     
-    // Gate to prevent unapproved users (lead not approved) from entering the app on relaunch.
-    private var isCheckingProvisioningGate = false
-    private var provisioningGateApprovedUid: String?
-    private lazy var userProvisioningService =
-        UserProvisioningService(authRepository: App.shared.authRepository, logger: LogService.shared)
 
     private var shouldShowPasscode: Bool {
         App.shared.auth.isPasscodeSetAndAvailable && AppSettings.passcodeOptions.contains(.useForLogin)
@@ -471,65 +466,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     private func showPostLoginGateIfNeeded() {
         guard App.shared.authRepository.isAuthenticated() else {
             showMainContentWindow()
-            return
-        }
-        
-        // If the user is authenticated in Firebase Auth but not approved in the backend (lead gating),
-        // we must not enter post-login gate (vault sync / pending vault activation screens).
-        let currentUid = App.shared.authRepository.getCurrentUser()?.uid
-        if provisioningGateApprovedUid != nil, provisioningGateApprovedUid == currentUid {
-            // already approved for this uid in this session
-        } else {
-            guard !isCheckingProvisioningGate else { return }
-            isCheckingProvisioningGate = true
-            
-            userProvisioningService.ensureUserRecord { [weak self] result in
-                DispatchQueue.main.async {
-                    guard let self else { return }
-                    self.isCheckingProvisioningGate = false
-                    
-                    switch result {
-                    case .success(let leadAction):
-                        switch leadAction {
-                        case .leadCreated:
-                            let msg = NSLocalizedString("auth_lead_created_message", comment: "")
-                            self.provisioningGateApprovedUid = nil
-                            App.shared.authRepository.signOut { _ in
-                                DispatchQueue.main.async {
-                                    self.showContactRequiredWindow(message: msg)
-                                }
-                            }
-                            return
-                        case .leadMissingNames, .leadMissingCardManufacturer:
-                            let msg = NSLocalizedString("auth_lead_pending_message", comment: "")
-                            self.provisioningGateApprovedUid = nil
-                            App.shared.authRepository.signOut { _ in
-                                DispatchQueue.main.async {
-                                    self.showContactRequiredWindow(message: msg)
-                                }
-                            }
-                            return
-                        default:
-                            // allowed: existing_user / copied_from_lead / none
-                            self.provisioningGateApprovedUid = currentUid
-                        }
-                    case .failure:
-                        // Fail closed: if we can't verify approval, sign out and return to login.
-                        self.provisioningGateApprovedUid = nil
-                        App.shared.authRepository.signOut { _ in
-                            DispatchQueue.main.async {
-                                self.postLoginGateCoordinator = nil
-                                self.dismissPostLoginGateWindow()
-                                self.showWindow(self.makeLoginWindow())
-                            }
-                        }
-                        return
-                    }
-                    
-                    // Continue with the normal flow now that provisioning gate passed.
-                    self.showPostLoginGateIfNeeded()
-                }
-            }
             return
         }
 

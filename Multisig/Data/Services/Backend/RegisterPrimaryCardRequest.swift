@@ -10,6 +10,8 @@ struct RegisterPrimaryCardPayload: Codable {
     let cardId: String
     let firmwareLevel: String?
     let state: Int?
+    let cardPublicKey: String?
+    let walletPublicKey: String?
 }
 
 struct RegisterPrimaryCardResponse: Codable {

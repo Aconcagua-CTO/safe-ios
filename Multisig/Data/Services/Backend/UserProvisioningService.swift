@@ -10,15 +10,6 @@ import Foundation
 import FirebaseAuth
 import FirebaseCore
 
-enum LeadProvisioningAction: String {
-    case existingUser = "existing_user"
-    case copiedFromLead = "copied_from_lead"
-    case leadMissingNames = "lead_missing_names"
-    case leadMissingCardManufacturer = "lead_missing_card_manufacturer"
-    case leadCreated = "lead_created"
-    case none = "none"
-}
-
 final class UserProvisioningService {
     private let client: AuthenticatedHTTPClient
 
@@ -30,23 +21,25 @@ final class UserProvisioningService {
         )
     }
 
-    func ensureUserRecord(completion: @escaping (Result<LeadProvisioningAction, Error>) -> Void) {
+    /// Calls the backend to create or retrieve the Firestore user record.
+    /// Returns `true` when the backend created a new user, `false` for an existing one.
+    func ensureUserRecord(completion: @escaping (Result<Bool, Error>) -> Void) {
         let request = FederatedUserSignupRequest()
         _ = client.asyncExecute(request: request) { result in
             switch result {
             case .success(let data):
-                let leadAction = Self.parseLeadAction(from: data)
+                let isNewSignUp = Self.parseIsNewSignUp(from: data)
                 if let manufacturer = Self.parseCardManufacturer(from: data) {
                     AppSettings.leadCardManufacturer = manufacturer
                 }
                 Self.updateFirebaseDisplayNameIfNeeded(from: data)
                 #if DEBUG
                 let preview = String(data: data.prefix(500), encoding: .utf8) ?? "<non-utf8>"
-                LogService.shared.info("[UserProvisioning] sign-up-federated-auth OK. leadAction=\(leadAction.rawValue) bodyPreview=\(preview)")
+                LogService.shared.info("[UserProvisioning] sign-up-federated-auth OK. isNewSignUp=\(isNewSignUp) bodyPreview=\(preview)")
                 #else
-                LogService.shared.info("[UserProvisioning] sign-up-federated-auth OK. leadAction=\(leadAction.rawValue)")
+                LogService.shared.info("[UserProvisioning] sign-up-federated-auth OK. isNewSignUp=\(isNewSignUp)")
                 #endif
-                completion(.success(leadAction))
+                completion(.success(isNewSignUp))
             case .failure(let error):
                 LogService.shared.error("[UserProvisioning] sign-up-federated-auth FAILED", error: error)
                 completion(.failure(error))
@@ -107,16 +100,12 @@ final class UserProvisioningService {
         return nil
     }
 
-    private static func parseLeadAction(from data: Data) -> LeadProvisioningAction {
-        guard !data.isEmpty else { return .none }
-        guard
-            let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-            let action = json["leadAction"] as? String,
-            let parsed = LeadProvisioningAction(rawValue: action)
-        else {
-            return .none
-        }
-        return parsed
+    private static func parseIsNewSignUp(from data: Data) -> Bool {
+        guard !data.isEmpty,
+              let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+              let action = json["leadAction"] as? String
+        else { return false }
+        return action == "new_user"
     }
 
     private static func parseCardManufacturer(from data: Data) -> String? {

@@ -15,7 +15,7 @@ struct PostLoginGateState {
     let hasCardKey: Bool
     let requiresCardKey: Bool
     let isSignUp: Bool
-    let hasRegisteredKeys: Bool
+    let cardManufacturer: String
 }
 
 enum PostLoginGateAction {
@@ -23,26 +23,31 @@ enum PostLoginGateAction {
     case syncVaults
     case showPendingVaultActivation
     case startMobileKeyFlow
+    case showContactRequired
     case showMain
 }
 
 enum PostLoginGateEvaluator {
+    private static let knownManufacturers: Set<String> = ["tangem", "burner", "mobile"]
+
     static func nextAction(for state: PostLoginGateState) -> PostLoginGateAction {
         #if DEBUG
         LogService.shared.debug(
             "[PostLoginGateEvaluator] state synced=\(state.hasSyncedVaults) vaults=\(state.hasVaults) " +
             "mobileKeys=\(state.mobileKeyCount)/\(state.requiredMobileKeyCount) cardKey=\(state.hasCardKey) " +
             "requiresCardKey=\(state.requiresCardKey) isSignUp=\(state.isSignUp) " +
-            "hasRegisteredKeys=\(state.hasRegisteredKeys)"
+            "cardManufacturer=\(state.cardManufacturer)"
         )
         #endif
-        if !state.isSignUp && !state.hasSyncedVaults {
-            let hasNoLocalKeys = state.mobileKeyCount == 0 && !state.hasCardKey
-            if hasNoLocalKeys && !state.hasVaults && !state.hasRegisteredKeys {
-                // Treat this returning login as first-time setup and continue to key flow checks.
-            } else {
-                return .showMain
+        if !state.isSignUp {
+            // Returning user: coordinator already verified they have registered keys.
+            if !state.hasVaults {
+                return .showPendingVaultActivation
             }
+            return .showMain
+        }
+        if !knownManufacturers.contains(state.cardManufacturer) && !state.hasCardKey {
+            return .showContactRequired
         }
         if state.requiresCardKey && !state.hasCardKey {
             return .startCardKeyFlow
@@ -51,7 +56,7 @@ enum PostLoginGateEvaluator {
             return .startMobileKeyFlow
         }
         if !state.hasSyncedVaults {
-            return state.isSignUp ? .showPendingVaultActivation : .showMain
+            return .showPendingVaultActivation
         }
         if !state.hasVaults {
             return .showPendingVaultActivation

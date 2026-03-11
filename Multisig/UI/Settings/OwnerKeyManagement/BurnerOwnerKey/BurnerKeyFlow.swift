@@ -13,6 +13,7 @@ struct BurnerKeySelection {
     let tagIdentifier: String
     let slot: Int
     let publicKey: Data
+    let slot1PublicKey: Data?
     let address: Address
     let attestationValid: Bool
 }
@@ -153,7 +154,11 @@ final class BurnerKeyFlow: AddKeyFlow {
     }
     
     private func handle(selection: BurnerKeySelection) {
-        registerPrimaryCardInBackend(cardId: selection.cardId)
+        registerPrimaryCardInBackend(
+            cardId: selection.cardId,
+            cardPublicKey: selection.slot1PublicKey,
+            walletPublicKey: selection.publicKey
+        )
         let parameters = AddBurnerKeyParameters(address: selection.address,
                                                 defaultName: defaultKeyName,
                                                 cardId: selection.cardId,
@@ -167,17 +172,22 @@ final class BurnerKeyFlow: AddKeyFlow {
         didGetKey()
     }
 
-    private func registerPrimaryCardInBackend(cardId: String) {
+    private func registerPrimaryCardInBackend(cardId: String, cardPublicKey: Data?, walletPublicKey: Data?) {
         guard App.shared.authRepository.isAuthenticated() else {
             BurnerLogger.debug("Burner key flow: Skipping primary card registration (user not authenticated)")
             return
         }
 
+        let cardPublicKeyHex = cardPublicKey.map { $0.map { String(format: "%02x", $0) }.joined() }
+        let walletPublicKeyHex = walletPublicKey.map { $0.map { String(format: "%02x", $0) }.joined() }
+
         let payload = RegisterPrimaryCardPayload(
             manufacturer: "burner",
             cardId: cardId,
             firmwareLevel: nil,
-            state: 1
+            state: 1,
+            cardPublicKey: cardPublicKeyHex,
+            walletPublicKey: walletPublicKeyHex
         )
         let service = PrimaryCardRegistrationService(
             authRepository: App.shared.authRepository,
@@ -223,7 +233,7 @@ final class BurnerKeyFlow: AddKeyFlow {
 final class BurnerCardKeyProvisioningCoordinator {
     typealias PresentIntro = (UIViewController) -> Void
     typealias PresentPostActivationIntro = (UIViewController) -> Void
-    typealias ImportCompletion = (Bool, Address?, String?) -> Void
+    typealias ImportCompletion = (Bool, Address?, String?, Data?, Data?) -> Void
 
     private let service: BurnerService
     private let targetSlot: Int
@@ -354,7 +364,7 @@ final class BurnerCardKeyProvisioningCoordinator {
                     guard let slot = summary.keySlots.first(where: { $0.slot == self.targetSlot }) else {
                         BurnerLogger.error("[BurnerProvisioning] Slot \(self.targetSlot) not found during second scan")
                         await MainActor.run {
-                            self.onImportCompletion(false, nil, nil)
+                            self.onImportCompletion(false, nil, nil, nil, nil)
                         }
                         return
                     }
@@ -370,14 +380,17 @@ final class BurnerCardKeyProvisioningCoordinator {
                         attestationValid: slot.attestationValid
                     )
 
+                    let slot1PublicKey = summary.keySlots.first(where: { $0.slot == 1 })?.publicKey
+                    let walletPublicKey = slot.publicKey
+
                     await MainActor.run {
                         BurnerLogger.info("[BurnerProvisioning] Key import completed. success=\(imported)")
-                        self.onImportCompletion(imported, imported ? slot.ethereumAddress : nil, imported ? summary.cardId : nil)
+                        self.onImportCompletion(imported, imported ? slot.ethereumAddress : nil, imported ? summary.cardId : nil, slot1PublicKey, imported ? walletPublicKey : nil)
                     }
                 } catch {
                     BurnerLogger.error("[BurnerProvisioning] Second scan/import failed", error: error)
                     await MainActor.run {
-                        self.onImportCompletion(false, nil, nil)
+                        self.onImportCompletion(false, nil, nil, nil, nil)
                     }
                 }
             }

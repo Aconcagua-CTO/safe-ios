@@ -307,7 +307,7 @@ final class TangemActivationViewController: UIViewController {
                 TangemLogger.debug("🔧 ACTIVATION VC: - Access Code Set: \(info.accessCodeSet)")
 
                 // Register the primary card record after activation.
-                self.registerPrimaryCardInBackend(cardId: info.cardId)
+                self.registerPrimaryCardInBackend(info: info)
                 
                 await MainActor.run {
                     self.activatedCardInfo = info
@@ -339,17 +339,22 @@ final class TangemActivationViewController: UIViewController {
         }
     }
 
-    private func registerPrimaryCardInBackend(cardId: String) {
+    private func registerPrimaryCardInBackend(info: ActivatedCardInfo) {
         guard App.shared.authRepository.isAuthenticated() else {
             TangemLogger.debug("🔧 ACTIVATION VC: Skipping primary card registration (user not authenticated)")
             return
         }
 
+        let cardPublicKeyHex = info.cardPublicKey.map { $0.map { String(format: "%02x", $0) }.joined() }
+        let walletPublicKeyHex = info.wallet.publicKey.map { String(format: "%02x", $0) }.joined()
+
         let payload = RegisterPrimaryCardPayload(
             manufacturer: "tangem",
-            cardId: cardId,
+            cardId: info.cardId,
             firmwareLevel: nil,
-            state: 1
+            state: 1,
+            cardPublicKey: cardPublicKeyHex,
+            walletPublicKey: walletPublicKeyHex
         )
         let service = PrimaryCardRegistrationService(
             authRepository: App.shared.authRepository,
@@ -359,7 +364,7 @@ final class TangemActivationViewController: UIViewController {
         service.registerPrimaryCard(payload: payload) { result in
             switch result {
             case .success:
-                TangemLogger.info("🔧 ACTIVATION VC: Registered primary Tangem card (cardId=\(cardId))")
+                TangemLogger.info("🔧 ACTIVATION VC: Registered primary Tangem card (cardId=\(info.cardId))")
             case .failure(let error):
                 TangemLogger.error("🔧 ACTIVATION VC: Failed to register primary Tangem card", error: error)
             }

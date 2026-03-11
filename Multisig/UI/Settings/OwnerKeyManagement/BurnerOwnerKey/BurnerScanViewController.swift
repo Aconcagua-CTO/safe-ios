@@ -178,10 +178,12 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
                             // Proceed automatically with the selected slot.
                             self.state = .scanning
                             self.tableView.isHidden = true
+                            let slot1PublicKey = summary.keySlots.first(where: { $0.slot == 1 })?.publicKey
                             let selection = BurnerKeySelection(cardId: summary.cardId,
                                                                tagIdentifier: summary.tagIdentifier,
                                                                slot: selected.slot,
                                                                publicKey: selected.publicKey,
+                                                               slot1PublicKey: slot1PublicKey,
                                                                address: selected.ethereumAddress,
                                                                attestationValid: selected.attestationValid)
                             BurnerLogger.info("Burner auto-selected slot cardId=\(summary.cardId) slot=\(selected.slot)")
@@ -281,10 +283,12 @@ final class BurnerScanViewController: UIViewController, UITableViewDataSource, U
         tableView.deselectRow(at: indexPath, animated: true)
         guard let summary = summary else { return }
         let slot = summary.keySlots[indexPath.row]
+        let slot1PublicKey = summary.keySlots.first(where: { $0.slot == 1 })?.publicKey
         let selection = BurnerKeySelection(cardId: summary.cardId,
                                            tagIdentifier: summary.tagIdentifier,
                                            slot: slot.slot,
                                            publicKey: slot.publicKey,
+                                           slot1PublicKey: slot1PublicKey,
                                            address: slot.ethereumAddress,
                                            attestationValid: slot.attestationValid)
         BurnerLogger.info("Burner slot selected cardId=\(summary.cardId) slot=\(slot.slot)")

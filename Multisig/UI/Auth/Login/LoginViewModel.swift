@@ -23,7 +23,6 @@ class LoginViewModel: ObservableObject {
     
     private let authRepository: AuthRepository
     private var appleSignInCoordinator: AppleFirebaseSignInCoordinator?
-    private static let appleRelayEmailSuffix = "@privaterelay.appleid.com"
     private lazy var userProvisioningService = UserProvisioningService(authRepository: authRepository, logger: LogService.shared)
     private lazy var usersService = UsersService(authRepository: authRepository, logger: LogService.shared)
     
@@ -73,8 +72,8 @@ class LoginViewModel: ObservableObject {
                 self.setPendingPostSignupInstructions(isFederated: false)
 
                 // Ensure backend `users` record exists and refresh claims before sync (Option A).
-                self.ensureBackendUserRecord { leadAction in
-                    self.handlePostProvisioning(user: user, leadAction: leadAction)
+                self.ensureBackendUserRecord { isNewSignUp in
+                    self.handlePostProvisioning(user: user, isNewSignUp: isNewSignUp)
                 }
                 
             case .failure(let error):
@@ -134,48 +133,11 @@ class LoginViewModel: ObservableObject {
                     case .success(let user):
                         AuthLogger.info("Firebase signInWithApple succeeded")
                         NSLog("[AUTH][LoginVM] firebase signInWithApple OK uid=%@", user.uid)
-                        // Policy: relay emails count as "not sharing email".
-                        // Recovery path: if Apple provides a real email in this authorization, update Firebase user email and proceed.
-                        if self.isRelayOrMissingEmail(user.email) {
-                            if let appleEmail = payload.appleProvidedEmail,
-                               !self.isRelayOrMissingEmail(appleEmail) {
-                                AuthLogger.info("Apple provided a non-relay email; attempting to update Firebase user email")
-                                NSLog("[AUTH][LoginVM] updating firebase email to %@", appleEmail)
-                                user.updateEmail(to: appleEmail) { updateError in
-                                    if let updateError {
-                                        AuthLogger.error("Failed to update Firebase email after Apple sign-in", error: updateError)
-                                        NSLog("[AUTH][LoginVM] updateEmail FAILED %@", updateError.localizedDescription)
-                                        // Fail closed to preserve the "must share email" policy.
-                                        let msg = NSLocalizedString("auth_apple_share_email_required", comment: "")
-                                        self.authRepository.signOut { _ in
-                                            self.authState = .error(message: msg, exception: updateError)
-                                        }
-                                        return
-                                    }
-
-                                    AuthLogger.success("Firebase email updated after Apple sign-in")
-                                    NSLog("[AUTH][LoginVM] updateEmail OK")
-                                    self.setPendingPostSignupInstructions(isFederated: true)
-                                    self.ensureBackendUserRecord { leadAction in
-                                        self.handlePostProvisioning(user: user, leadAction: leadAction)
-                                    }
-                                }
-                                return
-                            }
-
-                            let msg = NSLocalizedString("auth_apple_share_email_required", comment: "")
-                            AuthLogger.warning("Apple sign-in blocked: email missing/relay (\(user.email ?? "nil")) - signing out")
-                            NSLog("[AUTH][LoginVM] Apple sign-in blocked email=%@", user.email ?? "nil")
-                            self.authRepository.signOut { _ in
-                                self.authState = .error(message: msg)
-                            }
-                            return
-                        }
 
                         AuthLogger.success("Apple sign-in successful: \(user.uid)")
                         self.setPendingPostSignupInstructions(isFederated: true)
-                        self.ensureBackendUserRecord { leadAction in
-                            self.handlePostProvisioning(user: user, leadAction: leadAction)
+                        self.ensureBackendUserRecord { isNewSignUp in
+                            self.handlePostProvisioning(user: user, isNewSignUp: isNewSignUp)
                         }
 
                     case .failure(let error):
@@ -264,12 +226,6 @@ class LoginViewModel: ObservableObject {
 
     // MARK: - Helpers
 
-    private func isRelayOrMissingEmail(_ email: String?) -> Bool {
-        guard let email = email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-              !email.isEmpty else { return true }
-        return email.hasSuffix(Self.appleRelayEmailSuffix)
-    }
-
     private func appleFriendlyErrorMessage(_ error: Error) -> String {
         // Firebase Auth error codes
         let nsError = error as NSError
@@ -306,53 +262,33 @@ class LoginViewModel: ObservableObject {
         }
     }
 
-    private func ensureBackendUserRecord(completion: @escaping (LeadProvisioningAction) -> Void) {
+    private func ensureBackendUserRecord(completion: @escaping (Bool) -> Void) {
         LogService.shared.info("[UserProvisioning] Ensuring backend user record exists...")
         userProvisioningService.ensureUserRecord { result in
             switch result {
-            case .success(let leadAction):
-                LogService.shared.info("[UserProvisioning] Backend user record ensured. leadAction=\(leadAction.rawValue)")
-                // If we're going to show the "contact/pending" gate, don't try to refresh
-                // companyId/session via backend profile (it will fail because no Firestore user exists yet).
-                switch leadAction {
-                case .leadCreated, .leadMissingNames, .leadMissingCardManufacturer:
-                    completion(leadAction)
-                default:
-                    self.refreshCompanyIdSession {
-                        completion(leadAction)
-                    }
+            case .success(let isNewSignUp):
+                LogService.shared.info("[UserProvisioning] Backend user record ensured. isNewSignUp=\(isNewSignUp)")
+                self.refreshCompanyIdSession {
+                    completion(isNewSignUp)
                 }
             case .failure(let error):
-                // Don't block login if provisioning fails; can be retried later.
                 LogService.shared.error("[UserProvisioning] Failed to ensure backend user record: \(error.localizedDescription)")
                 self.refreshCompanyIdSession {
-                    completion(.none)
+                    completion(false)
                 }
             }
         }
     }
 
-    private func handlePostProvisioning(user: User, leadAction: LeadProvisioningAction) {
-        switch leadAction {
-        case .leadMissingNames:
-            AppSettings.lastLeadProvisioningAction = nil
-            authState = .contactRequired(message: NSLocalizedString("auth_lead_pending_message", comment: ""))
-        case .leadMissingCardManufacturer:
-            AppSettings.lastLeadProvisioningAction = nil
-            authState = .contactRequired(message: NSLocalizedString("auth_lead_pending_message", comment: ""))
-        case .leadCreated:
-            AppSettings.lastLeadProvisioningAction = nil
-            authState = .contactRequired(message: NSLocalizedString("auth_lead_created_message", comment: ""))
-        default:
-            AppSettings.lastLeadProvisioningAction = leadAction.rawValue
-            #if DEBUG
-            LogService.shared.debug("[LoginViewModel] Stored lastLeadProvisioningAction=\(leadAction.rawValue)")
-            #endif
-            AuthLogger.stateTransition("State: Loading → Success")
-            authState = .success(user: user)
-            OwnerKeyController.migrateBackendKeyRegistryIfNeeded()
-            triggerPostLoginSync()
-        }
+    private func handlePostProvisioning(user: User, isNewSignUp: Bool) {
+        AppSettings.isNewSignUp = isNewSignUp
+        #if DEBUG
+        LogService.shared.debug("[LoginViewModel] Stored isNewSignUp=\(isNewSignUp)")
+        #endif
+        AuthLogger.stateTransition("State: Loading → Success")
+        authState = .success(user: user)
+        OwnerKeyController.migrateBackendKeyRegistryIfNeeded()
+        triggerPostLoginSync()
     }
 
     private func refreshCompanyIdSession(completion: @escaping () -> Void) {
