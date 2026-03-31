@@ -27,8 +27,6 @@ extension AppleWeb3AuthLogin: ASAuthorizationControllerDelegate {
         
         switch authorization.credential {
         case let appleIDCredential as ASAuthorizationAppleIDCredential:
-            let userIdentifier = appleIDCredential.user
-
             let token = String(data: appleIDCredential.identityToken!, encoding: .utf8)!
             let JWT = try? JWTDecode.decode(jwt: token)
             let subClaim = JWT?.claim(name: "sub")

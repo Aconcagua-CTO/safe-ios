@@ -57,7 +57,7 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = NSLocalizedString("ui_account_security_title", comment: "Title for account security screen")
+        title = NSLocalizedString("ui_safe_account_security_title", comment: "Title for vault account security screen")
         tableView.delegate = self
         tableView.dataSource = self
         tableView.backgroundColor = tableBackgroundColor
@@ -209,16 +209,19 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
         }
         
         sections = [(section: .status, items: [Section.Status.status(safe.security, [
-            (safe.securityHasBackup, "Back up your owners"),
-            (safe.securityHasEnoughOwners, "Add more owners"),
-            (safe.securityHasRecommendedThreshold , "Increase confirmation threshold")
+            (safe.securityHasBackup, NSLocalizedString("ui_safe_security_action_backup_owners", comment: "Security recommendation")),
+            (safe.securityHasEnoughOwners, NSLocalizedString("ui_safe_security_action_add_owners", comment: "Security recommendation")),
+            (safe.securityHasRecommendedThreshold, NSLocalizedString("ui_safe_security_action_increase_threshold", comment: "Security recommendation"))
         ])])]
         
+        let confirmationsLabel = String(format: NSLocalizedString("ui_safe_confirmations_count_format", comment: "Threshold out of owners count"),
+                                      String(describing: threshold),
+                                      ownersInfo.count)
         sections += [
-            (section: .ownerAddresses("Owners"),
+            (section: .ownerAddresses(NSLocalizedString("ui_safe_owners_section_title", comment: "Owners section header")),
              items: ownersInfoItems),
-            (section: .requiredConfirmations("Required confirmations"),
-             items: [Section.RequiredConfirmations.confirmations("\(threshold) out of \(ownersInfo.count)")])
+            (section: .requiredConfirmations(NSLocalizedString("ui_safe_required_confirmations_header", comment: "Required confirmations header")),
+             items: [Section.RequiredConfirmations.confirmations(confirmationsLabel)])
         ]
     }
 
@@ -251,8 +254,8 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
         switch item {
         case Section.Status.status(let state, let actions):
             let cell = tableView.dequeueCell(SecurityStatusTableViewCell.self)
-            cell.set(title: "Your account security",
-                     subTitle: "Increase the security by following our recommendations",
+            cell.set(title: NSLocalizedString("ui_safe_security_overview_title", comment: "Vault security overview title"),
+                     subTitle: NSLocalizedString("ui_safe_security_overview_subtitle", comment: "Vault security overview subtitle"),
                      imageName: state == .high ? "ico-account-secure" : "ico-account-insecure", actions: actions)
             return cell
         case Section.RequiredConfirmations.confirmations(let name):
@@ -303,7 +306,7 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
             let prevOwner = safeOwners.before(ownerIndex)
 
             if safeOwners.count > 1 {
-                let removeOwnerAction = UIContextualAction(style: .destructive, title: "Remove") {
+                let removeOwnerAction = UIContextualAction(style: .destructive, title: NSLocalizedString("ui_owner_swipe_remove_title", comment: "Swipe to remove owner")) {
                     [weak self] _, _, completion in
                     self?.remove(owner: info.address, prevOwner: prevOwner?.address)
                     completion(true)
@@ -313,7 +316,7 @@ class SafeSecurityViewController: LoadableViewController, UITableViewDelegate, U
                 actions.append(removeOwnerAction)
             }
 
-            let replaceAction = UIContextualAction(style: .normal, title: "Replace") {
+            let replaceAction = UIContextualAction(style: .normal, title: NSLocalizedString("ui_owner_swipe_replace_title", comment: "Swipe to replace owner")) {
                 [weak self] _, _, completion in
                 self?.replace(owner: info.address, prevOwner: prevOwner?.address)
                 completion(true)

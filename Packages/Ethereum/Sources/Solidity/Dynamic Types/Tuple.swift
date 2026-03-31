@@ -150,10 +150,10 @@ extension SolKeyPathTuple {
         }
         set {
             for (keyPath, element) in zip(Self.keyPaths, newValue) {
-                // the keyPath we get has a concrete Value type which is not
-                // the SolAbiEncodable type (type of element). Force-casting to WritableKeyPath fails
-                // so we use unsafeBitCast.
-                let kp = unsafeBitCast(keyPath, to: WritableKeyPath<Self, SolAbiEncodable>.self)
+                // the keyPath we get has a concrete Value type which is a subtype of
+                // any SolAbiEncodable. Force-casting to WritableKeyPath fails,
+                // so we use unsafeDowncast to perform the subtype cast safely.
+                let kp = unsafeDowncast(keyPath, to: WritableKeyPath<Self, any SolAbiEncodable>.self)
                 self[keyPath: kp] = element
             }
         }

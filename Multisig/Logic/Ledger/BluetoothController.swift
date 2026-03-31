@@ -159,9 +159,8 @@ class BluetoothController: BaseBluetoothController {
         writeCommands[device.peripheral.identifier] = { [weak self] in
             self?.responses[device.peripheral.identifier] = completion
 
-            for (index, command) in commands.enumerated() {
+            for (_, command) in commands.enumerated() {
                 let apduData = APDUController.prepareAPDU(message: command)
-                let isLast = index == commands.count - 1
                 device.peripheral.writeValue(apduData, for: device.writeCharacteristic!, type: .withResponse)
             }
         }
@@ -252,7 +251,7 @@ extension BluetoothController: CBPeripheralDelegate {
     }
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
-        print("BLE:", peripheral, characteristic, error)
+        print("BLE:", peripheral, characteristic, error as Any)
     }
 
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
@@ -260,7 +259,7 @@ extension BluetoothController: CBPeripheralDelegate {
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
-        print("BLE:", peripheral, characteristic, error)
+        print("BLE:", peripheral, characteristic, error as Any)
 
         if let error = error {
             LogService.shared.info("Failed to connect with bluetooth device", error: error)

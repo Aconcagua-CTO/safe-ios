@@ -9,6 +9,8 @@
 import UIKit
 
 class StepInstructionTableViewCell: UITableViewCell {
+    @IBOutlet weak var circleFillImageView: UIImageView!
+    @IBOutlet weak var leadingCheckmarkImageView: UIImageView!
     @IBOutlet weak var circleLabel: UILabel!
     @IBOutlet weak var headerLabel: UILabel!
     @IBOutlet weak var descriptionLabel: UILabel!
@@ -18,6 +20,26 @@ class StepInstructionTableViewCell: UITableViewCell {
     override func awakeFromNib() {
         super.awakeFromNib()
         setStyles()
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        descriptionLabel.isHidden = false
+        setStyles()
+    }
+
+    func apply(leading: InstructionStepLeading) {
+        switch leading {
+        case .number(let digit):
+            leadingCheckmarkImageView.isHidden = true
+            circleFillImageView.isHidden = false
+            circleLabel.isHidden = false
+            circleLabel.text = digit
+        case .greenCheckmark:
+            leadingCheckmarkImageView.isHidden = false
+            circleFillImageView.isHidden = true
+            circleLabel.isHidden = true
+        }
     }
 
     func setStyles(circleStyle: GNOTextStyle = .subheadlineSecondary,

@@ -204,7 +204,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                 }
                 
                 // Map backend vaults to CoreData Safe entities
-                var mappedSafes: [(address: String, name: String, chainId: String, chain: Chain, version: String?)] = []
+                var mappedSafes: [(address: String, name: String, chainId: String, chain: Chain, version: String?, vaultName: String?)] = []
                 var skippedCount = 0
                 var seenServerKeys = Set<String>()
                 
@@ -287,7 +287,8 @@ class VaultsRepositoryImpl: VaultsRepository {
                         name: vault.name,
                         chainId: chainId,
                         chain: chain,
-                        version: vault.contractVersion
+                        version: vault.contractVersion,
+                        vaultName: vault.vaultName
                     ))
                     
                     VaultLogger.success("Mapped vault \(index + 1): \(normalizedAddress.prefix(10))... -> Safe(\(vault.name), chain: \(chainId))")
@@ -370,6 +371,10 @@ class VaultsRepositoryImpl: VaultsRepository {
                             existingSafe.ownerName = nil
                             changed = true
                         }
+                        if existingSafe.vaultName != mappedSafe.vaultName {
+                            existingSafe.vaultName = mappedSafe.vaultName
+                            changed = true
+                        }
                         
                         if changed {
                             updatedSafesNeedingSave.append(existingSafe)
@@ -394,6 +399,7 @@ class VaultsRepositoryImpl: VaultsRepository {
                         )
                         safe.isDelegate = false
                         safe.ownerName = nil
+                        safe.vaultName = mappedSafe.vaultName
                         insertedCount += 1
                         
                         if shouldSelect {

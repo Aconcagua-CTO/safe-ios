@@ -323,7 +323,7 @@ class SecurityCenter {
 
         if isStoreLockEnabled {
             guard let newDerivedPassword else {
-                throw GSError.GenericPasscodeError(reason: "Missing passcode for security lock")
+                throw GSError.GenericPasscodeError(reason: "Missing PIN for security lock")
             }
             newStorePassword = newDerivedPassword
             biometryUsed = AppSettings.securityLockMethod.isUserPresenceRequired()

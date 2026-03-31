@@ -49,6 +49,8 @@
             <viewLayoutGuide key="safeArea" id="njF-e1-oar"/>
             <connections>
                 <outlet property="cellLabel" destination="vJZ-Lx-2fi" id="VVU-Fm-ciC"/>
+                <outlet property="checkmarkImageView" destination="Jsw-DM-49x" id="out-final-chk"/>
+                <outlet property="labelLeadingToCheckmarkConstraint" destination="lbl-lead" id="out-lbl-lead-chk"/>
             </connections>
             <point key="canvasLocation" x="139" y="154"/>
         </tableViewCell>

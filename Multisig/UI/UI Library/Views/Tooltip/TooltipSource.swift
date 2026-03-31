@@ -5,6 +5,11 @@ import UIKit
 
 public class TooltipSource: TooltipDelegate {
 
+    private static var keyWindow: UIWindow? {
+        (UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene)?
+            .windows.first(where: { $0.isKeyWindow })
+    }
+
     private weak var tooltip: Tooltip?
     private weak var target: UIView?
     private var arrowTarget: UIView?
@@ -48,7 +53,7 @@ public class TooltipSource: TooltipDelegate {
        
         guard isActive,
               let message = self.message, !message.isEmpty,
-              let window = UIApplication.shared.keyWindow,
+              let window = Self.keyWindow,
               let target = target else { return }
         // show only one at all times
         Self.hideAll()
@@ -74,7 +79,7 @@ public class TooltipSource: TooltipDelegate {
     }
 
     static func hideAll() {
-        guard let window = UIApplication.shared.keyWindow else { return }
+        guard let window = Self.keyWindow else { return }
         let allTooltips = window.subviews.compactMap { $0 as? Tooltip }
         for tooltip in allTooltips {
             tooltip.hide()

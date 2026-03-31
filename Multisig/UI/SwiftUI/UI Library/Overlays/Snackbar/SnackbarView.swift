@@ -44,7 +44,7 @@ struct SnackbarView<T: View>: View {
                 -self.bottomSpacing : SnackbarViewMetrics.offscreenOffset)
         }
         .opacity(isPresented ? 1 : 0)
-        .animation(.spring())
+        .animation(.spring(), value: isPresented)
     }
 
 }

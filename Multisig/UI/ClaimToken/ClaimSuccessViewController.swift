@@ -60,7 +60,7 @@ class ClaimSuccessViewController: UIViewController {
         shareButton.setText(NSLocalizedString("ui_claim_share_transaction_action", comment: "Share transaction action"),
                             .primary)
         shareButton.setImage(UIImage(named: "ico-share")?.withTintColor(.primary), for: .normal)
-        shareButton.imageEdgeInsets.right = 16
+        shareButton.configuration?.imagePadding = 16
         animationView.animation = LottieAnimation.named(isDarkMode ? "successAnimationDark" : "successAnimation",
                                                   animationCache: nil)
         animationView.contentMode = .scaleAspectFit

@@ -142,7 +142,7 @@ class KeySecurityOverviewViewController: LoadableViewController, UITableViewDele
         } else {
             let factor = sections[indexPath.section].items[indexPath.row]
 
-            if case let Section.Factor.factor(name, value, image, isDefault, selected) = factor {
+            if case Section.Factor.factor = factor {
                 createPasswordFlow = SetupRecoveryKitFlow(completion: { [weak self] _ in
                     self?.createPasswordFlow = nil
                     self?.buildSections()

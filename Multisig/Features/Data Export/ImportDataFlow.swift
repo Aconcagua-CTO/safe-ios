@@ -22,13 +22,13 @@ class ImportDataFlow: UIFlow {
         
         vc.steps = [
             .header,
-            .step(number: "1",
+            .step(leading: .number("1"),
                   title: NSLocalizedString("ui_data_import_step1_title", comment: "Import step 1 title"),
                   description: NSLocalizedString("ui_data_import_step1_description", comment: "Import step 1 description")),
-            .step(number: "2",
+            .step(leading: .number("2"),
                   title: NSLocalizedString("ui_data_import_step2_title", comment: "Import step 2 title"),
                   description: NSLocalizedString("ui_data_import_step2_description", comment: "Import step 2 description")),
-            .step(number: "3",
+            .step(leading: .number("3"),
                   title: NSLocalizedString("ui_data_import_step3_title", comment: "Import step 3 title"),
                   description: NSLocalizedString("ui_data_import_step3_description", comment: "Import step 3 description")),
             .finalStep(title: NSLocalizedString("ui_data_import_complete_title", comment: "Import complete title"))

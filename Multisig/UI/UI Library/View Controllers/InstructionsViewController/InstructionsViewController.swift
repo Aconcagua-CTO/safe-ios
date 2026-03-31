@@ -8,15 +8,24 @@
 
 import UIKit
 
+enum InstructionStepLeading {
+    case number(String)
+    case greenCheckmark
+}
+
 class InstructionsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
     @IBOutlet weak var button: UIButton!
     @IBOutlet weak var tableView: UITableView!
 
+    /// Subclasses (e.g. safe onboarding “Comencemos”) can opt in to match login’s full-screen secondary surface.
+    var prefersSecondaryScreenFill: Bool { false }
+
     enum Step {
         case header
-        case step(number: String, title: String, description: String)
-        case finalStep(title: String)
+        case step(leading: InstructionStepLeading, title: String, description: String)
+        /// When `showsLeadingCheckmark` is false, only the title text is shown (full width).
+        case finalStep(title: String, showsLeadingCheckmark: Bool = true)
     }
 
     var onClose: () -> Void = {}
@@ -24,8 +33,20 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
     var steps: [Step] = []
     var chain: Chain?
 
+    /// First-row header image (`InstructionHeaderTableViewCell`). Export/Import keep `launchscreen-logo` + non-circular.
+    var instructionHeaderImageName: String = "launchscreen-logo"
+    /// When true, header image is clipped to a circle (same diameter as Mobile Key “¿Es seguro?” hero).
+    var instructionHeaderUsesCircularImage: Bool = false
+    var instructionHeaderCircularDiameter: CGFloat = 141
+
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        if prefersSecondaryScreenFill {
+            view.backgroundColor = .backgroundSecondary
+            tableView.backgroundColor = .backgroundSecondary
+            tableView.separatorStyle = .none
+        }
         
         title = NSLocalizedString("ui_instructions_how_it_works_title", comment: "Title for the instructions screen")
 
@@ -64,20 +85,27 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
             let cell = tableView.dequeueCell(InstructionHeaderTableViewCell.self, for: indexPath)
             cell.selectionStyle = .none
             cell.separatorInset.left = .greatestFiniteMagnitude
+            cell.configure(
+                imageName: instructionHeaderImageName,
+                circularClip: instructionHeaderUsesCircularImage,
+                circularDiameter: instructionHeaderCircularDiameter
+            )
             return cell
-        case let .step(number: number, title: title, description: description):
+        case let .step(leading: leading, title: title, description: description):
             let cell = tableView.dequeueCell(StepInstructionTableViewCell.self, for: indexPath)
             cell.selectionStyle = .none
             cell.separatorInset.left = .greatestFiniteMagnitude
-            cell.circleLabel.text = number
+            cell.apply(leading: leading)
             cell.headerLabel.text = title
-            cell.descriptionLabel.text = description
+            let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+            cell.descriptionLabel.text = trimmedDescription
+            cell.descriptionLabel.isHidden = trimmedDescription.isEmpty
+            let isLastRow = indexPath.row == steps.count - 1
+            cell.setStyles(verticalBarViewHidden: isLastRow)
             return cell
-        case let .finalStep(title: title):
+        case let .finalStep(title: title, showsLeadingCheckmark: showsCheck):
             let cell = tableView.dequeueCell(FinalStepInstructionTableViewCell.self, for: indexPath)
-            cell.cellLabel.text = title
-            cell.cellLabel.numberOfLines = 0
-            cell.cellLabel.lineBreakMode = .byWordWrapping
+            cell.configure(title: title, showsLeadingCheckmark: showsCheck)
             cell.selectionStyle = .none
             cell.separatorInset.left = .greatestFiniteMagnitude
             return cell
@@ -86,5 +114,11 @@ class InstructionsViewController: UIViewController, UITableViewDelegate, UITable
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         steps.count
+    }
+
+    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        guard prefersSecondaryScreenFill else { return }
+        cell.backgroundColor = .backgroundSecondary
+        cell.contentView.backgroundColor = .backgroundSecondary
     }
 }

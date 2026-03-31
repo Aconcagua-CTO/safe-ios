@@ -26,7 +26,7 @@ class EnterPasscodeViewController: PasscodeViewController {
 
     var passcodeCompletion: (_ result: Result) -> Void = { _ in }
 
-    var navigationItemTitle = "Enter Passcode"
+    var navigationItemTitle = "Enter PIN"
     var screenTrackingEvent = TrackingEvent.enterPasscode
     var showsCloseButton: Bool = true
     var usesBiometry: Bool = true
@@ -158,12 +158,12 @@ class EnterPasscodeViewController: PasscodeViewController {
     override func didTapButton(_ sender: Any) {
         let alertController = UIAlertController(
             title: "Remove all content",
-            message: "Disabling the passcode will remove all app content. This cannot be undone. Please type in \"Remove\" to continue.",
+            message: "Disabling the PIN will remove all app content. This cannot be undone. Please type in \"Remove\" to continue.",
             preferredStyle: .alert)
 
         alertController.addTextField()
 
-        let remove = UIAlertAction(title: "Disable Passcode", style: .destructive) { [unowned self] _ in
+        let remove = UIAlertAction(title: "Disable PIN", style: .destructive) { [unowned self] _ in
             guard alertController.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) == "Remove" else {
                 return
             }
@@ -171,7 +171,7 @@ class EnterPasscodeViewController: PasscodeViewController {
                 self.passcodeCompletion(.close)
                 try App.shared.auth.deleteAllData()
             } catch {
-                showGenericError(description: "Failed to remove passcode", error: error)
+                showGenericError(description: "Failed to remove PIN", error: error)
                 return
             }
         }
@@ -234,9 +234,9 @@ class EnterPasscodeViewController: PasscodeViewController {
         } else {
             wrongAttemptsCount += 1
             if wrongAttemptsCount >= warnAfterWrongAttemptCount {
-                showError("\(wrongAttemptsCount) failed password attempts. You can reset password via \"Forgot passcode?\" button below.")
+                showError("\(wrongAttemptsCount) failed password attempts. You can reset password via \"Forgot PIN?\" button below.")
             } else {
-                showError("Wrong passcode")
+                showError("Wrong PIN")
             }
         }
     }

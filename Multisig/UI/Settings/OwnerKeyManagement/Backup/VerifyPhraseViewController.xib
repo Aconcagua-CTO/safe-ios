@@ -95,7 +95,7 @@
                         <constraint firstAttribute="height" constant="56" id="adE-Pf-euK"/>
                     </constraints>
                     <inset key="imageEdgeInsets" minX="0.0" minY="0.0" maxX="16" maxY="0.0"/>
-                    <state key="normal" title="Restart" image="arrow.triangle.2.circlepath" catalog="system">
+                    <state key="normal" title="Restart" image="arrow.trianglehead.2.clockwise.rotate.90" catalog="system">
                         <color key="titleColor" red="0.32397973540000002" green="0.61783987279999997" blue="0.97258967159999998" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
                     </state>
                     <connections>
@@ -120,7 +120,7 @@
         </view>
     </objects>
     <resources>
-        <image name="arrow.triangle.2.circlepath" catalog="system" width="128" height="101"/>
+        <image name="arrow.trianglehead.2.clockwise.rotate.90" catalog="system" width="128" height="101"/>
         <image name="exclamationmark.triangle" catalog="system" width="128" height="112"/>
         <namedColor name="error">
             <color red="0.94117647058823528" green="0.14509803921568629" blue="0.14509803921568629" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

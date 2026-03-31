@@ -407,24 +407,19 @@ private final class TangemSignContentViewController: UIViewController {
 
         TangemLogger.debug("TangemSigner ▶️ Falling back to SafeWeb3 recovery")
         for recoveryId in 0...1 {
-            do {
-                let publicKey = try? EthereumPublicKey(
-                    message: Array(hash),
-                    v: EthereumQuantity(quantity: BigUInt(recoveryId)),
-                    r: EthereumQuantity(rBytes),
-                    s: EthereumQuantity(sBytes)
-                )
+            let publicKey = try? EthereumPublicKey(
+                message: Array(hash),
+                v: EthereumQuantity(quantity: BigUInt(recoveryId)),
+                r: EthereumQuantity(rBytes),
+                s: EthereumQuantity(sBytes)
+            )
 
-                if let pubKey = publicKey {
-                    TangemLogger.debug("TangemSigner ▶️ SafeWeb3 recovered address=\(pubKey.address) for recoveryId=\(recoveryId)")
-                    if Address(pubKey.address) == expectedAddress {
-                        TangemLogger.debug("TangemSigner ▶️ Found correct recovery ID (fallback): \(recoveryId)")
-                        return recoveryId
-                    }
+            if let pubKey = publicKey {
+                TangemLogger.debug("TangemSigner ▶️ SafeWeb3 recovered address=\(pubKey.address) for recoveryId=\(recoveryId)")
+                if Address(pubKey.address) == expectedAddress {
+                    TangemLogger.debug("TangemSigner ▶️ Found correct recovery ID (fallback): \(recoveryId)")
+                    return recoveryId
                 }
-            } catch {
-                TangemLogger.error("TangemSigner ⚠️ SafeWeb3 recovery error for recoveryId=\(recoveryId)", error: error)
-                continue
             }
         }
 

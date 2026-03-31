@@ -28,7 +28,7 @@ enum PostLoginGateAction {
 }
 
 enum PostLoginGateEvaluator {
-    private static let knownManufacturers: Set<String> = ["tangem", "burner", "mobile"]
+    private static let knownManufacturers: Set<String> = ["tangem", "burner", "mobile", "demo"]
 
     static func nextAction(for state: PostLoginGateState) -> PostLoginGateAction {
         #if DEBUG

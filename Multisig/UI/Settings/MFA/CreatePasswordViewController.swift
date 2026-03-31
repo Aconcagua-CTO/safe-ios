@@ -43,7 +43,7 @@ class CreatePasswordViewController: UIViewController {
             self?.keyboardBehavior.activeTextField = self?.confirmPasswordField.textField
         }
 
-        passwordInputField.onTextChanged = { [weak self] password in
+        passwordInputField.onTextChanged = { _ in
             // TODO: Validate password
             return (PasswordInputField.State.empty, "")
         }

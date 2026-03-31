@@ -132,7 +132,7 @@ class SecuritySettingsViewController: UITableViewController {
         if AppConfiguration.FeatureToggles.securityCenter {
             App.shared.auth.deletePasscode()
         } else {
-            withPasscodeAuthentication(for: "Enter Passcode") { success, _, finish in
+            withPasscodeAuthentication(for: NSLocalizedString("ui_security_reason_enter_pin", comment: "Passcode prompt reason")) { success, _, finish in
                 if success {
                     App.shared.auth.deletePasscode()
                 }
@@ -190,7 +190,7 @@ class SecuritySettingsViewController: UITableViewController {
     }
 
     private func toggleBiometricsKeychainStorage(sourceIndexPath: IndexPath) {
-        withPasscodeAuthentication(for: "Login with biometrics") { [unowned self] success, nav, finish in
+        withPasscodeAuthentication(for: NSLocalizedString("ui_security_reason_login_biometrics", comment: "Passcode prompt for biometrics login")) { [unowned self] success, nav, finish in
             let completion = { [unowned self] in
                 finish()
                 reloadData()
@@ -270,7 +270,7 @@ class SecuritySettingsViewController: UITableViewController {
                                       sourceIndexPath: IndexPath, 
                                       completion: @escaping () -> Void) {
         let alertVC = UIAlertController(title: nil,
-                                        message: "To activate biometry, navigate to Settings.",
+                                        message: NSLocalizedString("ui_security_biometry_requires_settings_message", comment: "Message when biometry must be enabled in system settings"),
                                         preferredStyle: .alert)
 
         let cancel = UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"),
@@ -278,7 +278,7 @@ class SecuritySettingsViewController: UITableViewController {
                                    handler: { _ in
             completion()
         })
-        let settings = UIAlertAction(title: "Settings", style: .default) { _ in
+        let settings = UIAlertAction(title: NSLocalizedString("settings", comment: "System settings app title"), style: .default) { _ in
             // opens device settings
             let url = URL(string: UIApplication.openSettingsURLString)!
             if UIApplication.shared.canOpenURL(url) {
@@ -351,12 +351,12 @@ class SecuritySettingsViewController: UITableViewController {
         case .enableSecurityLock:
             return switchDetailCell(
                 for: indexPath,
-                with: "Enable security lock",
+                with: NSLocalizedString("ui_security_enable_lock_title", comment: "Enable app security lock toggle title"),
                 detail: detail,
                 isOn: isPasscodeSet)
 
         case .changePasscode:
-            return tableView.basicCell(name: "Change passcode", indexPath: indexPath)
+            return tableView.basicCell(name: NSLocalizedString("ui_passcode_change_title", comment: "Change PIN row title"), indexPath: indexPath)
 
         case .lockMethod:
             let cell = tableView.dequeueCell(MenuTableViewCell.self, for: indexPath)
@@ -391,20 +391,20 @@ class SecuritySettingsViewController: UITableViewController {
 
         case .requireToOpenApp:
             return switchDetailCell(for: indexPath,
-                                    with: "Unlocking the app",
+                                    with: NSLocalizedString("ui_security_unlocking_app_title", comment: "Require lock to open app"),
                                     detail: detail,
                                     isOn: AppSettings.passcodeOptions.contains(.useForLogin))
 
         case .requireForConfirmations:
             return switchDetailCell(for: indexPath,
-                                    with: "Making transactions",
+                                    with: NSLocalizedString("ui_security_making_transactions_title", comment: "Require lock for transactions"),
                                     detail: detail,
                                     isOn: AppSettings.passcodeOptions.contains(.useForConfirmation))
 
         case .oneOptionSelectedText:
             return tableView.helpCell(
                 for: indexPath,
-                with: "At least one setting must be enabled.",
+                with: NSLocalizedString("ui_security_at_least_one_setting", comment: "Help text when both usage toggles could be off"),
                 hasSeparator: false)
         }
     }
@@ -415,34 +415,38 @@ class SecuritySettingsViewController: UITableViewController {
         case .lockMethod:
             switch lock {
             case .passcode:
-                return "Passcode"
+                return NSLocalizedString("ui_passcode_short_label", comment: "Short label for PIN")
             case .userPresence:
                 return biometry.name
             case .passcodeAndUserPresence:
-                return "Passcode & \(biometry.name)"
+                return String(format: NSLocalizedString("ui_security_pin_and_biometry_format", comment: "PIN and biometry combined label"), biometry.name)
             }
             
         case .enableSecurityLock:
-            let text = biometry == .passcode ? "" : "or \(biometry.name) "
-            return "Require passcode \(text)for unlocking the app, making transactions and using signer accounts"
+            if biometry == .passcode {
+                return NSLocalizedString("ui_security_enable_lock_detail_passcode_only", comment: "Security lock detail when only PIN")
+            }
+            return String(format: NSLocalizedString("ui_security_enable_lock_detail_with_biometry_format", comment: "Security lock detail with biometry"), biometry.name)
 
         case .requireToOpenApp:
-            let text: String
+            let fragment: String
             switch lock {
-            case .passcode: text = "Passcode"
-            case .userPresence: text = biometry.name
-            case .passcodeAndUserPresence: text = biometry.name
+            case .passcode:
+                fragment = NSLocalizedString("ui_passcode_short_label", comment: "Short label for PIN")
+            case .userPresence, .passcodeAndUserPresence:
+                fragment = biometry.name
             }
-            return "Only \(text) will be required to unlock the app."
+            return String(format: NSLocalizedString("ui_security_only_unlock_format", comment: "Only X required to unlock app"), fragment)
 
         case .requireForConfirmations:
-            let text: String
             switch lock {
-            case .passcode: text = "Passcode"
-            case .userPresence: text = biometry.name
-            case .passcodeAndUserPresence: text = "Both Passcode & \(biometry.name)"
+            case .passcode:
+                return NSLocalizedString("ui_security_tx_uses_passcode_only", comment: "Transactions secured with PIN only")
+            case .userPresence:
+                return String(format: NSLocalizedString("ui_security_tx_uses_biometry_format", comment: "Transactions secured with biometry"), biometry.name)
+            case .passcodeAndUserPresence:
+                return String(format: NSLocalizedString("ui_security_tx_uses_pin_and_biometry_format", comment: "Transactions secured with PIN and biometry"), biometry.name)
             }
-            return "\(text) will be used for making transactions."
 
         default:
             return nil
@@ -472,10 +476,10 @@ class SecuritySettingsViewController: UITableViewController {
             changePasscode()
 
         case .requireToOpenApp:
-            toggleUsage(option: .useForLogin, reason: "Require to open app")
+            toggleUsage(option: .useForLogin, reason: NSLocalizedString("ui_security_reason_require_open_app", comment: "Authentication reason for opening app"))
 
         case .requireForConfirmations:
-            toggleUsage(option: .useForConfirmation, reason: "Require for confirmations")
+            toggleUsage(option: .useForConfirmation, reason: NSLocalizedString("ui_security_reason_require_confirmations", comment: "Authentication reason for confirmations"))
 
         default:
             break
@@ -485,9 +489,9 @@ class SecuritySettingsViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         switch data[section].section {
         case .single: return nil
-        case .lockMethod: return makeHeader(with: "LOCK METHOD")
-        case .passcode: return makeHeader(with: "PASSCODE")
-        case .usePasscodeFor: return makeHeader(with: "REQUIRE LOCK METHOD FOR...")
+        case .lockMethod: return makeHeader(with: NSLocalizedString("ui_security_header_lock_method", comment: "Section header for lock method"))
+        case .passcode: return makeHeader(with: NSLocalizedString("ui_security_header_pin", comment: "Section header for PIN options"))
+        case .usePasscodeFor: return makeHeader(with: NSLocalizedString("ui_security_header_require_lock_for", comment: "Section header for where lock is required"))
         }
     }
 

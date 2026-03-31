@@ -261,6 +261,61 @@ extension VaultsService {
         return nil
     }
 
+    func updateVaultNameForCurrentSession(
+        vaultId: String,
+        vaultName: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        LogService.shared.info("[VaultsService] updateVaultNameForCurrentSession requested vaultId=\(vaultId)")
+        guard let userId = authRepository.getCurrentUser()?.uid else {
+            completion(.failure(ExecuteSessionError.missingUserId))
+            return
+        }
+        ensureCompanyId(userId: userId) { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let companyId):
+                LogService.shared.debug("[VaultsService] resolved companyId=\(companyId) for vault rename")
+                self.updateVaultName(
+                    companyId: companyId,
+                    userId: userId,
+                    vaultId: vaultId,
+                    vaultName: vaultName,
+                    completion: completion
+                )
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func updateVaultName(
+        companyId: String,
+        userId: String,
+        vaultId: String,
+        vaultName: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        LogService.shared.info("[VaultsService] PATCH \(companyId)/\(userId)/\(vaultId)/vault-name")
+        let request = UpdateVaultNameApiRequest(
+            companyId: companyId,
+            userId: userId,
+            vaultId: vaultId,
+            payload: UpdateVaultNameRequestBody(vaultName: vaultName)
+        )
+
+        _ = client.asyncExecute(request: request) { result in
+            switch result {
+            case .success:
+                LogService.shared.info("[VaultsService] updateVaultName success vaultId=\(vaultId)")
+                completion(.success(()))
+            case .failure(let error):
+                LogService.shared.error("[VaultsService] updateVaultName failed vaultId=\(vaultId)", error: error)
+                completion(.failure(error))
+            }
+        }
+    }
+
     func executeTransactionForCurrentSession(
         vaultId: String,
         executionData: ExecuteSafeTransactionExecutionData,
@@ -525,7 +580,7 @@ final class AutoExecutionCoordinator {
     }
 
     private func finishExecution(safeTxHash: String) {
-        lockQueue.sync {
+        _ = lockQueue.sync {
             inFlightSafeTxHashes.remove(safeTxHash)
         }
     }

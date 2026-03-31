@@ -206,7 +206,7 @@ final class TangemCardReaderViewController: UIViewController {
         addSection(title: "Security Settings") { stack in
             self.addDetailRow(label: "Access Code Set", value: info.isAccessCodeSet ? "Yes" : "No", to: stack)
             if let passcodeSet = info.isPasscodeSet {
-                self.addDetailRow(label: "Passcode Set", value: passcodeSet ? "Yes" : "No", to: stack)
+                self.addDetailRow(label: "PIN set", value: passcodeSet ? "Yes" : "No", to: stack)
             } else {
                 self.addDetailRow(label: "Passcode Set", value: "Unknown", to: stack)
             }
@@ -227,7 +227,7 @@ final class TangemCardReaderViewController: UIViewController {
         // PIN Management Section
         addSection(title: "PIN Management") { stack in
             self.addDetailRow(label: "Set Access Code Allowed", value: info.isSettingAccessCodeAllowed ? "Yes" : "No", to: stack)
-            self.addDetailRow(label: "Set Passcode Allowed", value: info.isSettingPasscodeAllowed ? "Yes" : "No", to: stack)
+            self.addDetailRow(label: "Set PIN allowed", value: info.isSettingPasscodeAllowed ? "Yes" : "No", to: stack)
             self.addDetailRow(label: "Remove User Codes Allowed", value: info.isRemovingUserCodesAllowed ? "Yes" : "No", to: stack)
         }
         

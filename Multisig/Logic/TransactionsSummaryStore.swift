@@ -23,12 +23,15 @@ final class TransactionsSummaryStore {
     @discardableResult
     func fetchSummary(
         forceRefresh: Bool = false,
+        activeVaultGroup: ActiveVaultGroup? = nil,
         completion: @escaping (Result<MultiVaultTransactionsSummaryResponse, Error>) -> Void
     ) -> URLSessionTask? {
-        LogService.shared.debug("[TxSummaryStore] fetchSummary called - forceRefresh=\(forceRefresh)")
+        LogService.shared.debug("[TxSummaryStore] fetchSummary called - forceRefresh=\(forceRefresh) activeVaultGroup=\(activeVaultGroup != nil)")
         var task: URLSessionTask?
+        // When requesting a specific vault group, skip cache so we never serve data for a different group.
+        let skipCache = forceRefresh || (activeVaultGroup != nil)
         queue.sync {
-            if let cachedSummary, !forceRefresh {
+            if let cachedSummary, !skipCache {
                 LogService.shared.debug("[TxSummaryStore] Returning cached summary")
                 DispatchQueue.main.async {
                     completion(.success(cachedSummary))
@@ -66,7 +69,8 @@ final class TransactionsSummaryStore {
             LogService.shared.debug("[TxSummaryStore] Starting fetch - companyId=\(companyId) userId=\(userId)")
             inFlightTask = App.shared.clientGatewayService.asyncMultiVaultTransactionsSummary(
                 companyId: companyId,
-                userId: userId
+                userId: userId,
+                activeVaultGroup: activeVaultGroup
             ) { [weak self] result in
                 guard let self else { return }
                 self.queue.async {

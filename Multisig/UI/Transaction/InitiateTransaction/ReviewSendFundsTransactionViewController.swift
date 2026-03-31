@@ -194,7 +194,7 @@ class ReviewSendFundsTransactionViewController: ReviewSafeTransactionViewControl
             vaultEvmAddress: safe.addressValue.checksummed,
             chainId: safe.chain?.id,
             payload: payload
-        ) { [service] result in
+        ) { result in
             switch result {
             case .success:
                 LogService.shared.info("[TransactionRequests][send] created")

@@ -166,7 +166,8 @@ class ReviewSafeTransactionViewController: UIViewController {
                 }
                 
                 // Check all owner keys (not just remaining signers)
-                if let allOwnerKeys = try? KeyInfo.owners(safe: self.safe) {
+                if let safe = self.safe {
+                    let allOwnerKeys = KeyInfo.owners(safe: safe)
                     let tangemOwnerKeys = allOwnerKeys.filter { $0.keyType == .tangem || $0.keyType == .tangem0 }
                     LogService.shared.debug("[DualSignatureFlow] - Total Tangem owner keys in Safe: \(tangemOwnerKeys.count)")
                     for (index, tangemKey) in tangemOwnerKeys.enumerated() {
@@ -541,8 +542,8 @@ class ReviewSafeTransactionViewController: UIViewController {
         let vc = ChooseOwnerKeyViewController(
             owners: { candidates },
             chainID: safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) { [weak self] keyInfo in
+            header: .text(description: descriptionText),
+            completionHandler: { [weak self] keyInfo in
             self?.dismiss(animated: true) {
                 guard let self = self, let keyInfo = keyInfo else {
                     self?.endConfirm()
@@ -555,7 +556,7 @@ class ReviewSafeTransactionViewController: UIViewController {
                     self.signAndPropose(transaction: transaction, localKey: keyInfo, safeTxHash: safeTxHash)
                 }
             }
-        }
+        } )
 
         let navigationController = UINavigationController(rootViewController: vc)
         presentModal(navigationController)
@@ -715,8 +716,8 @@ class ReviewSafeTransactionViewController: UIViewController {
         let vc = ChooseOwnerKeyViewController(
             owners: { candidates },
             chainID: safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) { [weak self] keyInfo in
+            header: .text(description: descriptionText),
+            completionHandler: { [weak self] keyInfo in
             self?.dismiss(animated: true) {
                 guard let keyInfo = keyInfo else {
                     self?.endConfirm()
@@ -726,7 +727,7 @@ class ReviewSafeTransactionViewController: UIViewController {
                                               existingTx: proposedTransaction,
                                               safeTxHash: safeTxHash)
             }
-        }
+        } )
 
         let navigationController = UINavigationController(rootViewController: vc)
         presentModal(navigationController)
@@ -845,8 +846,8 @@ class ReviewSafeTransactionViewController: UIViewController {
         let vc = ChooseOwnerKeyViewController(
             owners: { signers },
             chainID: safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) { [weak self] keyInfo in
+            header: .text(description: descriptionText),
+            completionHandler: { [weak self] keyInfo in
             // dismiss presented ChooseOwnerKeyViewController right after receiving the completion
             self?.dismiss(animated: true) {
                 guard let keyInfo = keyInfo else {
@@ -861,7 +862,7 @@ class ReviewSafeTransactionViewController: UIViewController {
                 #endif
                 self?.signExistingTransaction(keyInfo: keyInfo, existingTx: existingTx, safeTxHash: safeTxHash)
             }
-        }
+        } )
 
         let navigationController = UINavigationController(rootViewController: vc)
         presentModal(navigationController)

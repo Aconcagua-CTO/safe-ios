@@ -216,7 +216,7 @@ class SelectNetworkViewController: LoadableViewController, UITableViewDelegate, 
         let chain = model.models[indexPath.row]
         cell.setText(chain.chainName)
         if showWeb2SupportHint && chain.isSupported(feature: Chain.Feature.web3authCreateSafe.rawValue) {
-            var text = NSMutableAttributedString(string: "Enjoy ",
+            let text = NSMutableAttributedString(string: "Enjoy ",
                                                  attributes: GNOTextStyle.subheadlineSecondary.attributes)
             
             if AppConfiguration.FeatureToggles.socialLogin {

@@ -63,7 +63,6 @@ class NavigatingDAOViewController: UIViewController {
         )
         openUrlOnTap(link: .propose, label: proposeItemLabel)
 
-        let governText = NSLocalizedString("ui_claim_dao_govern_text", comment: "DAO govern text")
         governItemLabel.setStyle(.body)
 
         chatItemLabel.setStyle(.body)

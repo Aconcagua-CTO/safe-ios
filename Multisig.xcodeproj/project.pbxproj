@@ -716,6 +716,8 @@
 		400E95E62F0ED95100785010 /* TransactionNamesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400E95E32F0ED95100785010 /* TransactionNamesRepository.swift */; };
 		400E95E72F0ED95100785010 /* TransactionNamesRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400E95E42F0ED95100785010 /* TransactionNamesRequest.swift */; };
 		400E95E82F0ED95100785010 /* TransactionNamesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400E95E52F0ED95100785010 /* TransactionNamesService.swift */; };
+		40ABEB032FAA100100AA0001 /* AddressBookEntriesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40ABEB012FAA100100AA0001 /* AddressBookEntriesRepository.swift */; };
+		40ABEB042FAA100100AA0001 /* AddressBookEntriesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40ABEB022FAA100100AA0001 /* AddressBookEntriesService.swift */; };
 		400FFD5A2EF41AB4006697BB /* InvertirViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400FFD592EF41AB4006697BB /* InvertirViewController.swift */; };
 		400FFD5B2EF41AB4006697BB /* InvertirBalancesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400FFD582EF41AB4006697BB /* InvertirBalancesViewController.swift */; };
 		400FFD5E2EF4246E006697BB /* InvertirBalanceTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 400FFD5C2EF4246E006697BB /* InvertirBalanceTableViewCell.swift */; };
@@ -1905,6 +1907,8 @@
 		4029FB912EF1754F00933402 /* TokenWhitelistRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenWhitelistRepository.swift; sourceTree = "<group>"; };
 		4029FB922EF1754F00933402 /* TokenWhitelistRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenWhitelistRequest.swift; sourceTree = "<group>"; };
 		4029FB932EF1754F00933402 /* TokenWhitelistService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenWhitelistService.swift; sourceTree = "<group>"; };
+		40ABEB012FAA100100AA0001 /* AddressBookEntriesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBookEntriesRepository.swift; sourceTree = "<group>"; };
+		40ABEB022FAA100100AA0001 /* AddressBookEntriesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBookEntriesService.swift; sourceTree = "<group>"; };
 		403F2D652F22C4CD00C61304 /* ChainsConfigRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChainsConfigRequest.swift; sourceTree = "<group>"; };
 		403F2D662F22C4CD00C61304 /* SafeConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeConfigService.swift; sourceTree = "<group>"; };
 		403F2D6A2F22E0D200C61304 /* CardKeyActivatedViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardKeyActivatedViewController.swift; sourceTree = "<group>"; };
@@ -4285,6 +4289,8 @@
 				400E95E32F0ED95100785010 /* TransactionNamesRepository.swift */,
 				400E95E42F0ED95100785010 /* TransactionNamesRequest.swift */,
 				400E95E52F0ED95100785010 /* TransactionNamesService.swift */,
+				40ABEB012FAA100100AA0001 /* AddressBookEntriesRepository.swift */,
+				40ABEB022FAA100100AA0001 /* AddressBookEntriesService.swift */,
 				4029FB912EF1754F00933402 /* TokenWhitelistRepository.swift */,
 				4029FB922EF1754F00933402 /* TokenWhitelistRequest.swift */,
 				4029FB932EF1754F00933402 /* TokenWhitelistService.swift */,
@@ -6218,6 +6224,8 @@
 				93EF2FA727C550BC0077BE95 /* InstructionHeaderTableViewCell.swift in Sources */,
 				40066C922EFAF332004DC6C5 /* DualSignatureKeySelector.swift in Sources */,
 				4029FB942EF1754F00933402 /* TokenWhitelistRepository.swift in Sources */,
+				40ABEB032FAA100100AA0001 /* AddressBookEntriesRepository.swift in Sources */,
+				40ABEB042FAA100100AA0001 /* AddressBookEntriesService.swift in Sources */,
 				4029FB952EF1754F00933402 /* TokenWhitelistService.swift in Sources */,
 				4029FB962EF1754F00933402 /* TokenWhitelistRequest.swift in Sources */,
 				40F1A0032F30000100ABCDEF /* RegisterKeysRequest.swift in Sources */,

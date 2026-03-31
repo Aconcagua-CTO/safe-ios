@@ -21,7 +21,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
             Messaging.messaging().appDidReceiveMessage(userInfo)
             LogService.shared.debug("PUSH: App is in foreground, willPresent notification with userInfo: \(userInfo)")
-            completionHandler([.alert, .badge, .sound])
+            completionHandler([.banner, .list, .badge, .sound])
         }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,

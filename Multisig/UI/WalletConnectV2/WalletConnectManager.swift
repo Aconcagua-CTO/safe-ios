@@ -377,7 +377,7 @@ class WalletConnectManager {
             
             if request.method == "eth_sendTransaction" {
                 guard 
-                    let idString = safe.chain?.id,
+                    safe.chain?.id != nil,
                     let safeChainId = Blockchain(namespace: NAMESPACE_ID, reference: safe.chain!.id!),
                     request.chainId == safeChainId
                 else {

@@ -23,6 +23,7 @@ extension Safe {
     @NSManaged public var isDelegate: Bool
     @NSManaged public var name: String?
     @NSManaged public var ownerName: String?
+    @NSManaged public var vaultName: String?
     @NSManaged public var sessionTopics: String?
     @NSManaged public var status: Int16
     @NSManaged public var chain: Chain?

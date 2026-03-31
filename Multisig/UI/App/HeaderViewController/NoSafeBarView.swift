@@ -14,5 +14,6 @@ class NoSafeBarView: UINibView {
     override func commonInit() {
         super.commonInit()
         textLabel.setStyle(.bodyTertiary)
+        textLabel.text = NSLocalizedString("ui_no_vaults_loaded_bar_title", comment: "Header bar when no vault/safe is selected")
     }
 }

@@ -28,6 +28,11 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     private var userProvisioningService: UserProvisioningService?
     private var cardsService: PrimaryCardService?
     private var hasCheckedRegisteredKeys = false
+    private var isDemoVaultPollingActive = false
+    private var demoVaultPollingAttemptCount = 0
+    private var demoVaultPollingWorkItem: DispatchWorkItem?
+    private let demoVaultPollingInterval: TimeInterval = 3.0
+    private let demoVaultPollingMaxAttempts = 20
     init(sceneDelegate: SceneDelegate) {
         self.sceneDelegate = sceneDelegate
         isSignUp = AppSettings.isNewSignUp ?? false
@@ -53,7 +58,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         let mobileKeyCount = KeyInfo.count(.deviceImported) + KeyInfo.count(.deviceGenerated)
         let localCardKeyCount = KeyInfo.count(.tangem) + KeyInfo.count(.tangem0) + KeyInfo.count(.burner)
         let hasNoVaults = Safe.countExcludingDemo == 0
-        let requiredMobileKeyCount = leadManufacturer == "mobile" ? 2 : 1
+        let requiredMobileKeyCount = (leadManufacturer == "mobile" || leadManufacturer == "demo") ? 2 : 1
 
         if !isSignUp && !hasCheckedRegisteredKeys {
             fetchRegisteredKeysAndProceed()
@@ -80,6 +85,9 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         #if DEBUG
         LogService.shared.debug("[PostLoginGateCoordinator] Next action=\(String(describing: nextAction)) isSignUp=\(isSignUp)")
         #endif
+        if nextAction != .showPendingVaultActivation {
+            stopDemoVaultPolling()
+        }
         switch nextAction {
         case .startCardKeyFlow:
             startCardKeyFlow()
@@ -178,12 +186,103 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         }
     }
 
-    private func showPendingVaultActivation() {
+    private func showPendingVaultActivation(forceClassic: Bool = false) {
+        if !forceClassic && shouldUseDemoCreatingVaultFlow() {
+            gateViewController?.showDemoCreatingVault()
+            startDemoVaultPollingIfNeeded()
+            return
+        }
+
+        stopDemoVaultPolling()
         gateViewController?.showPendingVaultActivation { [weak self] in
             guard let self else { return }
             self.hasAttemptedVaultSync = true
             self.evaluateAndProceed()
         }
+    }
+
+    private func shouldUseDemoCreatingVaultFlow() -> Bool {
+        let leadManufacturer = Self.normalizedLeadManufacturer(AppSettings.leadCardManufacturer)
+        return isSignUp && leadManufacturer == "demo"
+    }
+
+    private func startDemoVaultPollingIfNeeded() {
+        guard shouldUseDemoCreatingVaultFlow() else { return }
+        guard !isDemoVaultPollingActive else { return }
+
+        isDemoVaultPollingActive = true
+        demoVaultPollingAttemptCount = 0
+        runDemoVaultPollingAttempt()
+    }
+
+    private func runDemoVaultPollingAttempt() {
+        guard isDemoVaultPollingActive else { return }
+        guard !isSyncingVaults else {
+            scheduleNextDemoVaultPollingAttempt()
+            return
+        }
+
+        if demoVaultPollingAttemptCount >= demoVaultPollingMaxAttempts {
+            fallbackToClassicPendingVaultActivation()
+            return
+        }
+
+        demoVaultPollingAttemptCount += 1
+        isSyncingVaults = true
+
+        App.shared.vaultsRepository.syncVaultsFromBackend(force: true) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isSyncingVaults = false
+                self.hasAttemptedVaultSync = true
+
+                guard self.isDemoVaultPollingActive else { return }
+
+                switch result {
+                case .success:
+                    if Safe.countExcludingDemo > 0 {
+                        self.stopDemoVaultPolling()
+                        self.evaluateAndProceed()
+                        return
+                    }
+                case .failure:
+                    break
+                }
+
+                if self.demoVaultPollingAttemptCount >= self.demoVaultPollingMaxAttempts {
+                    self.fallbackToClassicPendingVaultActivation()
+                } else {
+                    self.scheduleNextDemoVaultPollingAttempt()
+                }
+            }
+        }
+    }
+
+    private func scheduleNextDemoVaultPollingAttempt() {
+        guard isDemoVaultPollingActive else { return }
+
+        demoVaultPollingWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.runDemoVaultPollingAttempt()
+        }
+        demoVaultPollingWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + demoVaultPollingInterval, execute: workItem)
+    }
+
+    private func fallbackToClassicPendingVaultActivation() {
+        stopDemoVaultPolling()
+        gateViewController?.showPendingVaultActivation { [weak self] in
+            guard let self else { return }
+            self.hasAttemptedVaultSync = true
+            self.evaluateAndProceed()
+        }
+    }
+
+    private func stopDemoVaultPolling() {
+        isDemoVaultPollingActive = false
+        demoVaultPollingWorkItem?.cancel()
+        demoVaultPollingWorkItem = nil
+        demoVaultPollingAttemptCount = 0
     }
 
     private func fetchRegisteredKeysAndProceed() {
@@ -347,20 +446,17 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
         LogService.shared.info("[PostLoginGate][CardKey][Burner] Starting two-scan activation/import")
 
         lastCardKeyAddress = nil
-        var activationNav: UINavigationController?
 
         let coordinator = BurnerCardKeyProvisioningCoordinator(
             targetSlot: 3,
             presentIntro: { [weak self] introVC in
                 guard let self else { return }
                 let nav = UINavigationController(rootViewController: introVC)
-                activationNav = nav
                 self.sceneDelegate?.showPostLoginGateWindow(rootViewController: nav)
             },
             presentPostActivationIntro: { [weak self] introVC in
                 guard let self else { return }
                 let nav = UINavigationController(rootViewController: introVC)
-                activationNav = nav
                 self.sceneDelegate?.showPostLoginGateWindow(rootViewController: nav)
             },
             onImportCompletion: { [weak self] success, address, cardId, cardPublicKey, walletPublicKey in
@@ -511,6 +607,7 @@ final class PostLoginGateCoordinator: NSObject, UIAdaptivePresentationController
     }
 
     private func finish() {
+        stopDemoVaultPolling()
         AppSettings.isNewSignUp = false
         gateNavigationController = nil
         gateViewController = nil
@@ -531,6 +628,7 @@ final class PostLoginGateViewController: ContainerViewController {
     private var loadingMessage: String?
     private var errorViewController: UIViewController?
     private var pendingVaultActivationViewController: PendingVaultActivationViewController?
+    private var demoCreatingVaultViewController: DemoCreatingVaultViewController?
     private var introViewController: UIViewController?
 
     func showLoading(message: String) {
@@ -575,4 +673,150 @@ final class PostLoginGateViewController: ContainerViewController {
         viewControllers = [pendingVaultActivationViewController!]
         displayChild(at: 0, in: view)
     }
+
+    func showDemoCreatingVault() {
+        if demoCreatingVaultViewController == nil {
+            demoCreatingVaultViewController = DemoCreatingVaultViewController()
+        }
+        viewControllers = [demoCreatingVaultViewController!]
+        displayChild(at: 0, in: view)
+    }
+}
+
+final class DemoCreatingVaultViewController: UIViewController {
+    private let loadingViewController = VaultSyncLoadingViewController(
+        message: NSLocalizedString("demo_creating_vault_loading_message", comment: "Demo creating vault loading message")
+    )
+    #if DEBUG
+    private let signOutButton = UIButton(type: .system)
+    private let signOutDeleteKeysButton = UIButton(type: .system)
+    #endif
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        view.backgroundColor = .backgroundPrimary
+        setUpLoadingView()
+        setUpSignOutButtons()
+    }
+
+    private func setUpLoadingView() {
+        addChild(loadingViewController)
+        loadingViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(loadingViewController.view)
+        loadingViewController.didMove(toParent: self)
+
+        NSLayoutConstraint.activate([
+            loadingViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
+            loadingViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            loadingViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            loadingViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+    }
+
+    private func setUpSignOutButtons() {
+        #if DEBUG
+        signOutButton.translatesAutoresizingMaskIntoConstraints = false
+        signOutButton.setText(
+            NSLocalizedString("ui_settings_sign_out_title", comment: "Sign out button title"),
+            .filledError
+        )
+        signOutButton.addTarget(self, action: #selector(signOutTapped), for: .touchUpInside)
+        signOutButton.isHidden = !App.shared.authRepository.isAuthenticated()
+        view.addSubview(signOutButton)
+
+        signOutDeleteKeysButton.translatesAutoresizingMaskIntoConstraints = false
+        signOutDeleteKeysButton.setText(
+            NSLocalizedString("ui_settings_sign_out_delete_keys_title", comment: "Sign out and delete keys button title"),
+            .filledError
+        )
+        signOutDeleteKeysButton.addTarget(self, action: #selector(signOutAndDeleteKeysTapped), for: .touchUpInside)
+        signOutDeleteKeysButton.isHidden = !App.shared.authRepository.isAuthenticated()
+        view.addSubview(signOutDeleteKeysButton)
+
+        NSLayoutConstraint.activate([
+            signOutButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            signOutButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            signOutButton.bottomAnchor.constraint(equalTo: signOutDeleteKeysButton.topAnchor, constant: -12),
+            signOutButton.heightAnchor.constraint(equalToConstant: 50),
+            signOutDeleteKeysButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            signOutDeleteKeysButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+            signOutDeleteKeysButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+            signOutDeleteKeysButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
+        #endif
+    }
+
+    #if DEBUG
+    @objc private func signOutTapped() {
+        let alert = UIAlertController(
+            title: NSLocalizedString("ui_settings_sign_out_title", comment: "Sign out alert title"),
+            message: NSLocalizedString("ui_sign_out_confirm_message", comment: "Sign out confirmation message"),
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
+        alert.addAction(
+            UIAlertAction(
+                title: NSLocalizedString("ui_settings_sign_out_title", comment: "Sign out action title"),
+                style: .destructive
+            ) { [weak self] _ in
+                self?.performSignOut()
+            }
+        )
+        present(alert, animated: true)
+    }
+
+    @objc private func signOutAndDeleteKeysTapped() {
+        let alert = UIAlertController(
+            title: NSLocalizedString("ui_settings_sign_out_delete_keys_title", comment: "Sign out and delete keys alert title"),
+            message: NSLocalizedString("ui_settings_sign_out_delete_keys_message", comment: "Sign out and delete keys confirmation message"),
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
+        alert.addAction(
+            UIAlertAction(
+                title: NSLocalizedString("ui_settings_sign_out_delete_keys_title", comment: "Sign out and delete keys action title"),
+                style: .destructive
+            ) { [weak self] _ in
+                self?.performDeleteKeysAndSignOut()
+            }
+        )
+
+        present(alert, animated: true)
+    }
+
+    private func performDeleteKeysAndSignOut() {
+        do {
+            try OwnerKeyController.deleteAllKeys(showingMessage: false)
+        } catch {
+            SnackbarViewController.show(
+                "No se pudieron borrar las llaves locales: \(error.localizedDescription)",
+                duration: 4.0
+            )
+            return
+        }
+        performSignOut()
+    }
+
+    private func performSignOut() {
+        App.shared.authRepository.signOut { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                switch result {
+                case .success:
+                    if let sceneDelegate = self.view.window?.windowScene?.delegate as? SceneDelegate {
+                        sceneDelegate.onAppUpdateCompletion()
+                    }
+                case .failure(let error):
+                    SnackbarViewController.show(
+                        "Failed to sign out: \(error.localizedDescription)",
+                        duration: 4.0
+                    )
+                }
+            }
+        }
+    }
+    #endif
 }

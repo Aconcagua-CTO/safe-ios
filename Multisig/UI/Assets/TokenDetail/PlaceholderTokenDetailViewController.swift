@@ -129,12 +129,23 @@ final class PlaceholderTokenDetailViewController: UIViewController {
             singleActionButton.isHidden = false
             dualButtonsStack.isHidden = true
         case TokenCategory.sectionMoneyMarket:
-            leftActionButton.setText(NSLocalizedString("ui_invertir_progress_title", comment: "Invertir button title"), .filled)
-            leftActionButton.addTarget(self, action: #selector(didTapInvertir), for: .touchUpInside)
-            rightActionButton.setText(NSLocalizedString("ui_balance_withdraw_action", comment: "Withdraw action"), .filled)
-            rightActionButton.addTarget(self, action: #selector(didTapRetirar), for: .touchUpInside)
-            singleActionButton.isHidden = true
-            dualButtonsStack.isHidden = false
+            if isUSDYToken() {
+                // USDY tokens should show Comprar and Vender buttons like other investment tokens
+                leftActionButton.setText(NSLocalizedString("ui_invertir_buy_action", comment: "Invertir buy action"), .filled)
+                leftActionButton.addTarget(self, action: #selector(didTapComprar), for: .touchUpInside)
+                rightActionButton.setText(NSLocalizedString("ui_vender_sell_action", comment: "Vender sell action"), .filled)
+                rightActionButton.addTarget(self, action: #selector(didTapVender), for: .touchUpInside)
+                singleActionButton.isHidden = true
+                dualButtonsStack.isHidden = false
+            } else {
+                // Non-USDY moneymarket tokens show Invertir and Rescatar buttons
+                leftActionButton.setText(NSLocalizedString("ui_invertir_progress_title", comment: "Invertir button title"), .filled)
+                leftActionButton.addTarget(self, action: #selector(didTapInvertir), for: .touchUpInside)
+                rightActionButton.setText(NSLocalizedString("ui_balance_withdraw_action", comment: "Withdraw action"), .filled)
+                rightActionButton.addTarget(self, action: #selector(didTapRetirar), for: .touchUpInside)
+                singleActionButton.isHidden = true
+                dualButtonsStack.isHidden = false
+            }
         default:
             leftActionButton.setText(NSLocalizedString("ui_invertir_buy_action", comment: "Invertir buy action"), .filled)
             leftActionButton.addTarget(self, action: #selector(didTapComprar), for: .touchUpInside)
@@ -143,6 +154,12 @@ final class PlaceholderTokenDetailViewController: UIViewController {
             singleActionButton.isHidden = true
             dualButtonsStack.isHidden = false
         }
+    }
+
+    private func isUSDYToken() -> Bool {
+        let wrapLabel = (token.wrapLabel ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let symbol = token.symbol.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return wrapLabel == "usdy" || symbol == "usdy"
     }
 
     private func reloadRows() {

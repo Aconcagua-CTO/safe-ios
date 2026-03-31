@@ -20,6 +20,7 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
     @IBOutlet private weak var appendixLabel: UILabel!
     @IBOutlet private weak var statusIconImageView: UIImageView!
     @IBOutlet private weak var statusLabel: UILabel!
+    @IBOutlet private weak var sentAmountLabel: UILabel!
     @IBOutlet private weak var bottomStackView: UIStackView!
     @IBOutlet private weak var confirmationsCountLabel: UILabel!
     @IBOutlet private weak var confirmationsCountImageView: UIImageView!
@@ -35,6 +36,8 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
         infoLabel.setStyle(.headline)
         appendixLabel.setStyle(.footnote)
         statusLabel.setStyle(.footnote)
+        sentAmountLabel.setStyle(.footnoteSecondary)
+        sentAmountLabel.textAlignment = .right
         confirmationsCountLabel.setStyle(.footnote)
         highlightView.clipsToBounds = true
         highlightView.layer.cornerRadius = 4
@@ -83,6 +86,22 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
         infoLabel.textColor = color
     }
 
+    func set(attributedInfo: NSAttributedString) {
+        infoLabel.attributedText = attributedInfo
+    }
+
+    /// Sending/sell token amount on the second row, right-aligned, small font (e.g. "-2 USDT" in red).
+    func set(sentAmount: String?, color: UIColor = .labelSecondary) {
+        let isEmpty = sentAmount?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+        sentAmountLabel.isHidden = isEmpty
+        if isEmpty {
+            sentAmountLabel.text = nil
+        } else {
+            sentAmountLabel.text = sentAmount
+            sentAmountLabel.textColor = color
+        }
+    }
+
     func set(confirmationsSubmitted: UInt64, confirmationsRequired: UInt64) {
         let color = confirmationColor(confirmationsSubmitted, confirmationsRequired)
         confirmationsCountLabel.text = "\(confirmationsSubmitted) out of \(confirmationsRequired)"
@@ -107,6 +126,7 @@ class TransactionListTableViewCell: SwiftUITableViewCell {
         applyStrikethrough(titleLabel, enabled: isReplaced)
         applyStrikethrough(infoLabel, enabled: isReplaced)
         applyStrikethrough(nonceLabel, enabled: isReplaced)
+        applyStrikethrough(sentAmountLabel, enabled: isReplaced)
     }
 
     private func transactionListStatusTitle(for status: SCGModels.TxStatus) -> String {

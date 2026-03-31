@@ -1004,7 +1004,7 @@ extension Sol.Address: RlpCodable {
     }
 }
 
-extension Sol.Address: CustomStringConvertible {
+extension Sol.Address: @retroactive CustomStringConvertible {
     public var description: String {
         EthRpc1.Data(self).description
     }

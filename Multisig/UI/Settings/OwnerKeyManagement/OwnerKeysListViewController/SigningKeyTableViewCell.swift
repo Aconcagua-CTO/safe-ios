@@ -45,7 +45,7 @@ class SigningKeyTableViewCell: UITableViewCell {
         addressLabel.text = keyInfo.address.ellipsized()
         addressLabel.setStyle(.bodyTertiary)
 
-        identicon.set(address: keyInfo.address, imageURL: nil, badgeName: keyInfo.keyType.badgeName)
+        identicon.setOwnerKeyListIcon(keyType: keyInfo.keyType)
 
         set(connectionStatus: KeyConnectionStatus(keyInfo: keyInfo, chainID: chainID))
 

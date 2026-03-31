@@ -26,6 +26,7 @@ class DetailAccountCell: UITableViewCell {
                     copyEnabled: Bool = true,
                     browseURL: URL? = nil,
                     prefix: String? = nil,
+                    networkPrefixes: String? = nil,
                     titleStyle: GNOTextStyle = .headline,
                     showDelegateWarning: Bool = false,
                     showAccessoryImage: Bool = false) {
@@ -35,7 +36,8 @@ class DetailAccountCell: UITableViewCell {
                                    showIdenticon: showIdenticon,
                                    badgeName: badgeName,
                                    browseURL: browseURL,
-                                   prefix: prefix)
+                                   prefix: prefix,
+                                   networkPrefixes: networkPrefixes)
         addressInfoView.setTitle(title, style: titleStyle)
         qrCodeView.isHidden = !showQRCode
         qrCodeView.value = address.checksummed

@@ -70,7 +70,7 @@ class SafeDeploymentNotificationController {
 extension String {
     func ellipsize(maxLength: Int = 14) -> String {
         if self.count > maxLength {
-            var shortString = self.prefix(maxLength)
+            let shortString = self.prefix(maxLength)
             return shortString.trimmingCharacters(in: .whitespaces) + "…"
         }
         return self

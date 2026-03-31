@@ -17,14 +17,12 @@ class AboutGnosisSafeTableViewController: UITableViewController {
         case advanced(String)
         case terms(String)
         case privacyPolicy(String)
-        case licenses(String)
         case rateTheApp(String)
     }
     
     private var items: [Item] = [
-        .terms(NSLocalizedString("ui_settings_about_terms_title", comment: "About item title for terms of use")),
+        .terms(NSLocalizedString("ui_settings_about_terms_title", comment: "About item title for licenses and terms")),
         .privacyPolicy(NSLocalizedString("ui_settings_about_privacy_title", comment: "About item title for privacy policy")),
-        .licenses(NSLocalizedString("ui_settings_about_licenses_title", comment: "About item title for licenses")),
         .rateTheApp(NSLocalizedString("ui_settings_about_rate_app_title", comment: "About item title for rate the app")),
         .advanced(NSLocalizedString("ui_settings_about_advanced_title", comment: "About item title for advanced"))
     ]
@@ -58,8 +56,6 @@ class AboutGnosisSafeTableViewController: UITableViewController {
             return tableView.basicCell(name: name, indexPath: indexPath)
         case Item.privacyPolicy(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
-        case Item.licenses(let name):
-            return tableView.basicCell(name: name, indexPath: indexPath)
         case Item.rateTheApp(let name):
             return tableView.basicCell(name: name, indexPath: indexPath)
         }
@@ -77,9 +73,6 @@ class AboutGnosisSafeTableViewController: UITableViewController {
         case Item.privacyPolicy:
             showPrivacyPolicy()
 
-        case Item.licenses:
-            showLicenses()
-
         case Item.rateTheApp:
             showRateTheApp()
         }
@@ -93,11 +86,6 @@ class AboutGnosisSafeTableViewController: UITableViewController {
     fileprivate func showPrivacyPolicy() {
         openInSafari(legal.privacyURL)
         Tracker.trackEvent(.settingsPrivacyPolicy)
-    }
-    
-    fileprivate func showLicenses() {
-        openInSafari(legal.licensesURL)
-        Tracker.trackEvent(.settingsLicenses)
     }
     
     fileprivate func showRateTheApp() {
@@ -175,7 +163,7 @@ extension AboutGnosisSafeTableViewController: NavigationRouter {
             }
         } else if route.path == NavigationRoute.licenses().path {
             presentAfterDelay { [weak self] in
-                self?.showLicenses()
+                self?.showTerms()
             }
         }
     }

@@ -27,8 +27,6 @@ struct TermsView: View {
     private let bottomPadding: CGFloat = Spacing.large
     let interItemSpacing: CGFloat = Spacing.small
 
-    private let termsAndConditionsURL = URL(string: "https://boveda.ai/licenses.html")!
-
     var body: some View {
         VStack(spacing: interItemSpacing) {
             Text(NSLocalizedString("ui_terms_title", comment: "Terms of Use and Privacy Policy screen title"))
@@ -40,7 +38,7 @@ struct TermsView: View {
                 BulletText(NSLocalizedString("ui_terms_no_demographic_data", comment: "No demographic data collection"))
                 HStack (spacing: 0) {
                     BulletText(NSLocalizedString("ui_terms_read_more", comment: "Read more prefix text"))
-                    LinkButton(NSLocalizedString("ui_terms_conditions_link", comment: "Terms and Conditions link text"), url: termsAndConditionsURL).padding(0)
+                    LinkButton(NSLocalizedString("ui_terms_conditions_link", comment: "Terms and Conditions link text"), url: App.configuration.legal.termsURL).padding(0)
                 }
             }
 

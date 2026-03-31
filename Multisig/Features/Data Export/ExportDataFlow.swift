@@ -23,13 +23,13 @@ class ExportDataFlow: UIFlow {
         
         vc.steps = [
             .header,
-            .step(number: "1",
+            .step(leading: .number("1"),
                   title: NSLocalizedString("ui_data_export_step1_title", comment: "Export step 1 title"),
                   description: NSLocalizedString("ui_data_export_step1_description", comment: "Export step 1 description")),
-            .step(number: "2",
+            .step(leading: .number("2"),
                   title: NSLocalizedString("ui_data_export_step2_title", comment: "Export step 2 title"),
                   description: NSLocalizedString("ui_data_export_step2_description", comment: "Export step 2 description")),
-            .step(number: "3",
+            .step(leading: .number("3"),
                   title: NSLocalizedString("ui_data_export_step3_title", comment: "Export step 3 title"),
                   description: NSLocalizedString("ui_data_export_step3_description", comment: "Export step 3 description")),
             .finalStep(title: NSLocalizedString("ui_data_export_complete_title", comment: "Export complete title"))

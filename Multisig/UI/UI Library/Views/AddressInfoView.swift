@@ -28,6 +28,8 @@ class AddressInfoView: UINibView {
     private(set) var label: String?
     private(set) var showFullAddress: Bool = false
     private(set) var copyAddressEnabled: Bool = true
+    /// When set, shown on a third row below the address (e.g. "eth, rsk, bnb"); address row shows address only without prefix.
+    private(set) var networkPrefixesLine: String?
     
     private(set) var addToContactsGestureRecognizer: UILongPressGestureRecognizer!
     
@@ -88,6 +90,7 @@ class AddressInfoView: UINibView {
     ///   - badgeName: name of the badge asset image
     ///   - browseURL: if not nil, then the detail button will show that would open the browser to look for this address
     ///   - prefix: chain prefix
+    ///   - networkPrefixes: when set, address is shown without prefix and this is shown on a third row (e.g. "eth, rsk, bnb"), like the vault list
     func setAddress(_ address: Address,
                     ensName: String? = nil,
                     label: String? = nil,
@@ -96,13 +99,15 @@ class AddressInfoView: UINibView {
                     badgeName: String? = nil,
                     browseURL: URL? = nil,
                     prefix: String? = nil,
-                    showFullAddress: Bool = false) {
+                    showFullAddress: Bool = false,
+                    networkPrefixes: String? = nil) {
         self.address = address
         self.ensName = ensName
         self.browseURL = browseURL
         self.prefix = prefix
         self.label = label
         self.showFullAddress = showFullAddress
+        self.networkPrefixesLine = networkPrefixes
         
         if let label = label {
             textLabel.isHidden = false
@@ -204,12 +209,19 @@ class AddressInfoView: UINibView {
     @objc func displayAddress() {
         addressLabel.isHidden = false
         addressLabel.textAlignment = .left
-        if let ensName = ensName {
+        if networkPrefixesLine != nil {
+            addressLabel.numberOfLines = 0
+            let formattedAddress = showFullAddress ? self.address.checksummed : self.address.ellipsized()
+            addressLabel.text = formattedAddress + "\n" + (networkPrefixesLine ?? "")
+        } else if let ensName = ensName {
+            addressLabel.numberOfLines = 2
             addressLabel.text = ensName
         } else if let _ = label {
+            addressLabel.numberOfLines = 2
             let formattedAddress = showFullAddress ? self.address.checksummed : self.address.ellipsized()
             addressLabel.text = prependingPrefixString() + formattedAddress
         } else {
+            addressLabel.numberOfLines = 2
             let prefixString = prependingPrefixString()
             addressLabel.attributedText = (prefixString + self.address.checksummed).highlight(prefix: prefixString.count + 6)
         }

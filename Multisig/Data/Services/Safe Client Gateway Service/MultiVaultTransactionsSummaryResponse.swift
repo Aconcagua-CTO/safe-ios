@@ -46,6 +46,7 @@ struct MultiVaultTransactionsSummaryMeta: Decodable {
     let perSafeQueueLimit: Int?
     let perSafeHistoryLimit: Int?
     let includeNonces: Bool?
+    let includeCalldata: Bool?
     let maxConcurrent: Int?
     let keyFp: String?
     let companyId: String?

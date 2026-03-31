@@ -352,19 +352,59 @@ extension SCGModels {
         var timestamp: Date
         var txStatus: TxStatus
         var txInfo: TxInfo
+        var txData: TxData?
         var executionInfo: ExecutionInfo?
         var safeAppInfo: SafeAppInfo?
         var transactionRequestMeta: TransactionRequestMeta?
+        var aconcagua: Aconcagua?
 
         enum CodingKeys: String, CodingKey {
             case id
             case timestamp
             case txStatus
             case txInfo
+            case txData
             case executionInfo
             case safeAppInfo
             case transactionRequestMeta = "_transactionRequest"
+            case aconcagua = "_aconcagua"
         }
+    }
+
+    struct Aconcagua: Decodable {
+        var tokenMovements: TokenMovements?
+        var cowSwap: CowSwap?
+
+        enum CodingKeys: String, CodingKey {
+            case tokenMovements
+            case cowSwap
+        }
+    }
+
+    struct CowSwap: Decodable {
+        var orderId: String?
+        var status: String?
+        var label: String?
+        var source: String?
+        var transactionRequestId: String?
+    }
+
+    struct TokenMovements: Decodable {
+        var sendingTokens: [TokenMovement]
+        var receivingTokens: [TokenMovement]
+    }
+
+    struct TokenMovement: Decodable {
+        var transferId: String?
+        var transactionHash: String?
+        var tokenAddress: String?
+        var tokenName: String?
+        var tokenSymbol: String?
+        var logoUri: String?
+        var decimals: Int?
+        var value: String?
+        var from: String?
+        var to: String?
     }
 
     struct TransactionRequestMeta: Decodable {
@@ -793,6 +833,20 @@ extension SCGModels {
         var txHash: DataString?
         var executedAt: Date?
         var safeAppInfo: SafeAppInfo?
+        var aconcagua: Aconcagua?
+
+        enum CodingKeys: String, CodingKey {
+            case txId
+            case safeAddress
+            case txStatus
+            case txInfo
+            case txData
+            case detailedExecutionInfo
+            case txHash
+            case executedAt
+            case safeAppInfo
+            case aconcagua = "_aconcagua"
+        }
 
         enum DetailedExecutionInfo: Decodable {
             case module(Module)

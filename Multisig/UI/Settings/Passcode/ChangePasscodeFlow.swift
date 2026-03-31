@@ -36,7 +36,7 @@ class ChangePasscodeFlow: UIFlow {
                 // For the old secuirty either if biometry is enabled then we validate without entering the passcode
                 if App.shared.auth.isPasscodeSetAndAvailable && !AppSettings.passcodeOptions.contains(.useBiometry) {
                     guard let passcode = passcode else {
-                        App.shared.snackbar.show(error: GSError.FailedToChangePasscode(reason: "Passcode required"))
+                        App.shared.snackbar.show(error: GSError.FailedToChangePasscode(reason: "PIN required"))
                         stop(success: false)
                         return
                     }

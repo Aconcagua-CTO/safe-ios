@@ -23,6 +23,7 @@ class LoginViewModel: ObservableObject {
     
     private let authRepository: AuthRepository
     private var appleSignInCoordinator: AppleFirebaseSignInCoordinator?
+    private var isAppleSignInInFlight = false
     private lazy var userProvisioningService = UserProvisioningService(authRepository: authRepository, logger: LogService.shared)
     private lazy var usersService = UsersService(authRepository: authRepository, logger: LogService.shared)
     
@@ -110,6 +111,11 @@ class LoginViewModel: ObservableObject {
      * - Note: Requires a valid presentation anchor (window) for ASAuthorizationController.
      */
     func signInWithApple(presentationAnchor: ASPresentationAnchor) {
+        if isAppleSignInInFlight {
+            AuthLogger.warning("Apple sign-in ignored because a request is already in flight")
+            NSLog("[AUTH][LoginVM] signInWithApple ignored (already in flight)")
+            return
+        }
         AuthLogger.info("Apple sign-in initiated")
         AuthLogger.stateTransition("State: Idle → Loading")
         authState = .loading
@@ -117,6 +123,7 @@ class LoginViewModel: ObservableObject {
 
         let coordinator = AppleFirebaseSignInCoordinator()
         appleSignInCoordinator = coordinator
+        isAppleSignInInFlight = true
 
         coordinator.start(presentationAnchor: presentationAnchor) { [weak self] result in
             guard let self = self else { return }
@@ -128,6 +135,7 @@ class LoginViewModel: ObservableObject {
                 NSLog("[AUTH][LoginVM] coordinator payload emailPresent=%d", payload.appleProvidedEmail != nil ? 1 : 0)
                 self.authRepository.signInWithApple(idTokenString: payload.idTokenString, rawNonce: payload.rawNonce) { [weak self] signInResult in
                     guard let self = self else { return }
+                    self.isAppleSignInInFlight = false
 
                     switch signInResult {
                     case .success(let user):
@@ -149,6 +157,7 @@ class LoginViewModel: ObservableObject {
                 }
 
             case .failure(let error):
+                self.isAppleSignInInFlight = false
                 AuthLogger.warning("Apple coordinator failed: \(error.localizedDescription)")
                 NSLog("[AUTH][LoginVM] coordinator FAILED %@", error.localizedDescription)
                 // If user cancels Apple auth, don't show a scary error.
@@ -260,6 +269,7 @@ class LoginViewModel: ObservableObject {
                 LogService.shared.error("[Whitelist] Sync failed after login: \(error.localizedDescription)")
             }
         }
+
     }
 
     private func ensureBackendUserRecord(completion: @escaping (Bool) -> Void) {

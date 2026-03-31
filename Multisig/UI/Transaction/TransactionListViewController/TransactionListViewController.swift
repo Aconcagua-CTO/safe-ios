@@ -14,8 +14,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
     var clientGatewayService = App.shared.clientGatewayService
     private let batchLegTitleResolver = BatchLegTitleResolver.shared
 
-    #if DEBUG
-    // #region agent log
+    // #region agent log (no-op in Release; full behavior in DEBUG)
     private static func agentAppendNDJSON(
         runId: String,
         hypothesisId: String,
@@ -23,8 +22,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         message: String,
         data: [String: Any]
     ) {
+        #if DEBUG
         let record: [String: Any] = [
-            "sessionId": "debug-session",
+            "sessionId": "6ff90b",
             "runId": runId,
             "hypothesisId": hypothesisId,
             "location": location,
@@ -37,31 +37,34 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
               let line = String(data: json, encoding: .utf8)
         else { return }
 
-        // Attempt to post logs to the local debug ingest server (writes NDJSON to workspace debug.log).
-        if let url = URL(string: "http://127.0.0.1:7242/ingest/4cfd103e-f1f5-471d-9c87-aee73ccaec3c") {
+        // Only send to local ingest when running in Simulator (127.0.0.1 = host Mac).
+        // On device this would fail with connection refused and spam logs.
+        #if targetEnvironment(simulator)
+        if let url = URL(string: "http://127.0.0.1:7242/ingest/d4162b9c-1479-4960-b98b-c3af51f135e6") {
             var req = URLRequest(url: url)
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue("6ff90b", forHTTPHeaderField: "X-Debug-Session-Id")
             req.httpBody = json
+            req.timeoutInterval = 2
             URLSession.shared.dataTask(with: req).resume()
         }
-
-        // Best-effort local file append (will not work from iOS simulator sandbox, but harmless).
-        let path = "/Users/manuelrm/Documents/GitHub/CTO/.cursor/debug.log"
-        guard let fh = FileHandle(forWritingAtPath: path) else {
-            try? (line + "\n").write(toFile: path, atomically: true, encoding: .utf8)
-            return
-        }
-        defer { try? fh.close() }
-        do {
-            try fh.seekToEnd()
-            if let data = (line + "\n").data(using: .utf8) {
-                try fh.write(contentsOf: data)
+        #endif
+        if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let logURL = docDir.appendingPathComponent("debug-6ff90b.log")
+            if !FileManager.default.fileExists(atPath: logURL.path) {
+                FileManager.default.createFile(atPath: logURL.path, contents: nil)
             }
-        } catch { }
+            if let handle = try? FileHandle(forWritingTo: logURL) {
+                handle.seekToEndOfFile()
+                handle.write((line + "\n").data(using: .utf8)!)
+                handle.closeFile()
+            }
+        }
+        print("[agent-log] \(line)")
+        #endif
     }
     // #endregion agent log
-    #endif
 
     private var loadFirstPageDataTask: URLSessionTask?
     private var loadNextPageDataTask: URLSessionTask?
@@ -76,8 +79,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
     private var chainByTransactionId: [String: Chain] = [:]
     private var safeByTransactionId: [String: Safe] = [:]
     private var isLoadingNextPages: Bool = false
-    private var batchLegTitleByTransactionId: [String: String] = [:]
+    private var batchLegResultByTransactionId: [String: BatchLegResult] = [:]
     private var batchLegTitleInFlight: Set<String> = []
+    private var collapsedCowSwapReceiveByTransactionId: [String: SCGModels.TokenMovement] = [:]
 
     internal var safe: Safe!
 
@@ -159,8 +163,19 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         safeByChainId = [:]
         chainByTransactionId = [:]
         safeByTransactionId = [:]
-        batchLegTitleByTransactionId = [:]
+        // #region agent log
+        let clearedRunId = "\(Int(Date().timeIntervalSince1970 * 1000))"
+        TransactionListViewController.agentAppendNDJSON(
+            runId: clearedRunId,
+            hypothesisId: "C,E",
+            location: "TransactionListViewController.swift:reloadData(clearing)",
+            message: "reloadData clearing batchLegResultByTransactionId and state",
+            data: ["runId": clearedRunId]
+        )
+        // #endregion agent log
+        batchLegResultByTransactionId = [:]
         batchLegTitleInFlight = []
+        collapsedCowSwapReceiveByTransactionId = [:]
         mergedTransactions = []
 
         safe = (try? Safe.getSelected())
@@ -442,7 +457,13 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         // Queue must reflect the latest actionable tx state from gateway.
         // Using cached summary here can hide freshly-created AWAITING_EXECUTION txs after refresh.
         let forceRefresh = transactionListStyle == .queue
-        loadSummaryTask = TransactionsSummaryStore.shared.fetchSummary(forceRefresh: forceRefresh) { [weak self] (result: Result<MultiVaultTransactionsSummaryResponse, Error>) in
+        let activeGroup: ActiveVaultGroup? = {
+            guard let address = safes.first?.address, !address.isEmpty else { return nil }
+            let chainIds = safes.compactMap { $0.chain?.id }
+            guard !chainIds.isEmpty else { return nil }
+            return ActiveVaultGroup(safeAddress: address, chainIds: chainIds)
+        }()
+        loadSummaryTask = TransactionsSummaryStore.shared.fetchSummary(forceRefresh: forceRefresh, activeVaultGroup: activeGroup) { [weak self] (result: Result<MultiVaultTransactionsSummaryResponse, Error>) in
             guard let self else { return }
             self.loadSummaryTask = nil
             switch result {
@@ -507,7 +528,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 LogService.shared.debug("[TxSummary] Set nonce=\(nonceValue) for safe=\(safeAddress)")
             }
 
-            let list = transactionListStyle == .history ? vault.history.results : vault.queue.results
+            let normalizedQueueResults = normalizeBatchListSummary(vault.queue.results, safe: safe)
+            let normalizedHistoryResults = normalizeBatchListSummary(vault.history.results, safe: safe)
+            let list = transactionListStyle == .history ? normalizedHistoryResults : normalizedQueueResults
             LogService.shared.debug("[TxSummary] List count - style=\(transactionListStyle) vaultId=\(vault.vaultId) count=\(list.count)")
             let transformer = TransactionDataTransformer(safe: safe, chain: chain)
             let transformed = transformer.transformed(list: list)
@@ -517,7 +540,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             transactions.forEach { safeByTxId[$0.transaction.id] = safe }
 
             if transactionListStyle == .history {
-                let queuedTransformed = transformer.transformed(list: vault.queue.results)
+                let queuedTransformed = transformer.transformed(list: normalizedQueueResults)
                 let queuedTransactions = transactionItems(from: queuedTransformed)
                 let onlyReplaced = queuedTransactions.filter { self.isReplacedTransaction(tx: $0.transaction, safe: safe) }
                 if !onlyReplaced.isEmpty {
@@ -539,6 +562,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             mergedTransactions.append(contentsOf: replaced)
             chainByTransactionId.merge(replacedMapping) { _, new in new }
         }
+        if transactionListStyle == .history {
+            mergedTransactions = collapseCowSwapSettlementTransfers(in: mergedTransactions)
+        }
 
         LogService.shared.debug("[TxSummary] Before prefetch/rebuild - mergedTransactions=\(mergedTransactions.count)")
         prefetchBatchLegTitlesIfNeeded(for: mergedTransactions) { [weak self] in
@@ -546,6 +572,213 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             self.rebuildMergedModel()
             LogService.shared.debug("[TxSummary] After rebuildMergedModel - model.items=\(self.model.items.count)")
             self.onSuccess()
+        }
+    }
+
+    /// Adjusts list-only summary for batch txs using backend-provided token movements.
+    /// - Keep details untouched (details still come from txData/tx details endpoint).
+    /// - Ignore fee leg to configured treasury for list amount resolution.
+    /// - If >2 outgoing legs remain after filtering, show "Multiple Destino" as method name.
+    private func normalizeBatchListSummary(
+        _ list: [SCGModels.TransactionSummaryItem],
+        safe: Safe
+    ) -> [SCGModels.TransactionSummaryItem] {
+        let feeTreasury = App.configuration.services.feeTreasuryAddress.lowercased()
+
+        return list.map { item in
+            guard case var .transaction(txItem) = item else { return item }
+            guard let tokenMovements = txItem.transaction.aconcagua?.tokenMovements else { return item }
+            guard tokenMovements.receivingTokens.isEmpty else { return item }
+
+            let outgoingNoFee = tokenMovements.sendingTokens.filter { movement in
+                guard !feeTreasury.isEmpty else { return true }
+                return (movement.to ?? "").lowercased() != feeTreasury
+            }
+
+            let isBatchCandidate: Bool = {
+                switch txItem.transaction.txInfo {
+                case .custom(let customInfo):
+                    return batchLegTitleResolver.isBatch(customInfo: customInfo)
+                case .transfer:
+                    // Backend may already collapse multiSend into Transfer with aggregated value.
+                    // tokenMovements lets us recover list-only net amount excluding fee leg.
+                    return tokenMovements.sendingTokens.count > 1
+                default:
+                    return false
+                }
+            }()
+            guard isBatchCandidate else { return item }
+
+            if outgoingNoFee.count == 1,
+               let transfer = transferInfoForList(from: outgoingNoFee[0], safe: safe) {
+                txItem.transaction.txInfo = .transfer(transfer)
+                return .transaction(txItem)
+            }
+
+            if outgoingNoFee.count > 2 {
+                switch txItem.transaction.txInfo {
+                case .custom(var customInfo):
+                    customInfo.methodName = "Multiple Destino"
+                    txItem.transaction.txInfo = .custom(customInfo)
+                case .transfer(let transferInfo):
+                    let customInfo = SCGModels.TxInfo.Custom(
+                        to: transferInfo.recipient,
+                        dataSize: UInt256String(0),
+                        value: UInt256String(0),
+                        methodName: "Multiple Destino",
+                        actionCount: UInt256String(UInt256(outgoingNoFee.count))
+                    )
+                    txItem.transaction.txInfo = .custom(customInfo)
+                default:
+                    break
+                }
+                return .transaction(txItem)
+            }
+
+            return item
+        }
+    }
+
+    private func transferInfoForList(
+        from movement: SCGModels.TokenMovement,
+        safe: Safe
+    ) -> SCGModels.TxInfo.Transfer? {
+        guard let tokenAddressRaw = movement.tokenAddress,
+              let tokenAddress = AddressString(tokenAddressRaw)
+        else {
+            return nil
+        }
+
+        let senderAddress = AddressString(movement.from ?? "") ?? AddressString(safe.addressValue)
+        let recipientAddress = AddressString(movement.to ?? "") ?? .zero
+        let rawValue = movement.value ?? "0"
+        let valueUInt256 = UInt256(rawValue) ?? .zero
+        let decimalsValue = movement.decimals.flatMap(UInt64.init)
+
+        return SCGModels.TxInfo.Transfer(
+            sender: SCGModels.AddressInfo(value: senderAddress, name: nil, logoUri: nil),
+            recipient: SCGModels.AddressInfo(value: recipientAddress, name: nil, logoUri: nil),
+            direction: .outgoing,
+            transferInfo: .erc20(
+                .init(
+                    tokenAddress: tokenAddress,
+                    tokenName: movement.tokenName,
+                    tokenSymbol: movement.tokenSymbol,
+                    logoUri: movement.logoUri,
+                    decimals: decimalsValue,
+                    value: UInt256String(valueUInt256)
+                )
+            )
+        )
+    }
+
+    private func collapseCowSwapSettlementTransfers(
+        in transactions: [SCGModels.TransactionSummaryItemTransaction]
+    ) -> [SCGModels.TransactionSummaryItemTransaction] {
+        guard !transactions.isEmpty else { return transactions }
+        let cowSettlementAddress = "0x9008d19f58aabd9ed0d60971565aa8510560ab41"
+
+        struct IncomingTransferCandidate {
+            let index: Int
+            let tokenAddress: String
+            let value: UInt256
+            let timestampMs: Int64
+            let movement: SCGModels.TokenMovement
+        }
+
+        let incomingCandidates: [IncomingTransferCandidate] = transactions.enumerated().compactMap { index, item in
+            guard case let .transfer(transferInfo) = item.transaction.txInfo,
+                  transferInfo.direction == .incoming,
+                  case let .erc20(erc20) = transferInfo.transferInfo
+            else {
+                return nil
+            }
+            let tokenAddress = erc20.tokenAddress.description.lowercased()
+            let value = erc20.value.value
+            let timestampMs = Int64(item.transaction.timestamp.timeIntervalSince1970 * 1000)
+            let movement = SCGModels.TokenMovement(
+                transferId: nil,
+                transactionHash: nil,
+                tokenAddress: erc20.tokenAddress.description,
+                tokenName: erc20.tokenName,
+                tokenSymbol: erc20.tokenSymbol,
+                logoUri: erc20.logoUri,
+                decimals: erc20.decimals.flatMap(Int.init),
+                value: erc20.value.description,
+                from: transferInfo.sender.value.description,
+                to: transferInfo.recipient.value.description
+            )
+            return IncomingTransferCandidate(
+                index: index,
+                tokenAddress: tokenAddress,
+                value: value,
+                timestampMs: timestampMs,
+                movement: movement
+            )
+        }
+
+        guard !incomingCandidates.isEmpty else { return transactions }
+
+        var removedIndices = Set<Int>()
+        var collapsedReceiveByTxId: [String: SCGModels.TokenMovement] = [:]
+        let maxMatchWindowMs: Int64 = 12 * 60 * 60 * 1000
+
+        for item in transactions {
+            let tx = item.transaction
+            let cowStatus = tx.aconcagua?.cowSwap?.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let isFulfilled = cowStatus == "fulfilled" || cowStatus == "filled" || cowStatus == "partiallyfilled"
+            guard isFulfilled,
+                  let receivingTokens = tx.aconcagua?.tokenMovements?.receivingTokens,
+                  !receivingTokens.isEmpty
+            else {
+                continue
+            }
+
+            let cowTimestampMs = Int64(tx.timestamp.timeIntervalSince1970 * 1000)
+            for movement in receivingTokens {
+                guard let tokenAddress = movement.tokenAddress?.lowercased(),
+                      let valueRaw = movement.value,
+                      let value = UInt256(valueRaw),
+                      value > 0
+                else { continue }
+
+                let best = incomingCandidates
+                    .filter { candidate in
+                        guard !removedIndices.contains(candidate.index) else { return false }
+                        guard candidate.tokenAddress == tokenAddress else { return false }
+                        guard candidate.value == value else { return false }
+                        let delta = abs(candidate.timestampMs - cowTimestampMs)
+                        return delta <= maxMatchWindowMs
+                    }
+                    .min(by: { abs($0.timestampMs - cowTimestampMs) < abs($1.timestampMs - cowTimestampMs) })
+
+                if let matched = best {
+                    removedIndices.insert(matched.index)
+                    collapsedReceiveByTxId[tx.id] = matched.movement
+                }
+            }
+
+            if collapsedReceiveByTxId[tx.id] == nil {
+                let fallback = incomingCandidates
+                    .filter { candidate in
+                        guard !removedIndices.contains(candidate.index) else { return false }
+                        let delta = abs(candidate.timestampMs - cowTimestampMs)
+                        guard delta <= maxMatchWindowMs else { return false }
+                        let fromAddress = (candidate.movement.from ?? "").lowercased()
+                        return fromAddress == cowSettlementAddress
+                    }
+                    .min(by: { abs($0.timestampMs - cowTimestampMs) < abs($1.timestampMs - cowTimestampMs) })
+                if let matched = fallback {
+                    removedIndices.insert(matched.index)
+                    collapsedReceiveByTxId[tx.id] = matched.movement
+                }
+            }
+        }
+
+        collapsedCowSwapReceiveByTransactionId = collapsedReceiveByTxId
+        guard !removedIndices.isEmpty else { return transactions }
+        return transactions.enumerated().compactMap { index, item in
+            removedIndices.contains(index) ? nil : item
         }
     }
 
@@ -557,7 +790,7 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         let batchTransactions: [SCGModels.TransactionSummaryItemTransaction] = uniqueTransactions.compactMap { item in
             guard case let .custom(customInfo) = item.transaction.txInfo,
                   batchLegTitleResolver.isBatch(customInfo: customInfo),
-                  batchLegTitleByTransactionId[item.transaction.id] == nil
+                  batchLegResultByTransactionId[item.transaction.id] == nil
             else {
                 return nil
             }
@@ -569,37 +802,179 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             return
         }
 
-        let group = DispatchGroup()
+        // #region agent log
+        let prefetchRunId = "\(Int(Date().timeIntervalSince1970 * 1000))"
+        let batchIds = batchTransactions.map { $0.transaction.id }
+        TransactionListViewController.agentAppendNDJSON(
+            runId: prefetchRunId,
+            hypothesisId: "A,B",
+            location: "TransactionListViewController.swift:prefetchBatchLegTitlesIfNeeded(start)",
+            message: "prefetchBatchLegTitles start",
+            data: ["batchCount": batchTransactions.count, "txIds": batchIds]
+        )
+        // #endregion agent log
+
+        // Fast path: resolve inline when txData is already embedded in the summary (single-request multivault API).
         for item in batchTransactions {
+            let tx = item.transaction
+            guard let txData = tx.txData,
+                  let chain = chainByTransactionId[tx.id] ?? safe?.chain,
+                  let chainId = chain.id
+            else { continue }
+            let safeAddress: AddressString = safeByTransactionId[tx.id].map { AddressString($0.addressValue) }
+                ?? (tx.id.split(separator: "_").count >= 2 ? (AddressString(String(tx.id.split(separator: "_")[1])) ?? .zero) : .zero)
+            let syntheticDetails = SCGModels.TransactionDetails(
+                txId: tx.id,
+                safeAddress: safeAddress,
+                txStatus: tx.txStatus,
+                txInfo: tx.txInfo,
+                txData: txData,
+                detailedExecutionInfo: nil,
+                txHash: nil,
+                executedAt: nil,
+                safeAppInfo: tx.safeAppInfo,
+                aconcagua: tx.aconcagua
+            )
+            if let richResult = batchLegTitleResolver.mainLegResult(from: syntheticDetails, chainId: chainId) {
+                batchLegResultByTransactionId[tx.id] = richResult
+            } else if let legTitle = batchLegTitleResolver.mainLegTitle(from: syntheticDetails), !legTitle.isEmpty {
+                batchLegResultByTransactionId[tx.id] = BatchLegResult(
+                    typeLabel: legTitle,
+                    sentAmount: nil,
+                    receivedAmount: nil
+                )
+            }
+        }
+
+        // Items that still need a detail fetch (no txData in summary, e.g. old API or non-multivault).
+        let needFetch = batchTransactions.filter { $0.transaction.txData == nil }
+        guard !needFetch.isEmpty else {
+            completion()
+            return
+        }
+
+        let maxAttempts = 5
+        func isRetryableRateLimitOrServerError(_ error: Error) -> Bool {
+            guard let e = error as? DetailedLocalizedError else { return false }
+            return e.code == 429 || [500, 502, 503, 504].contains(e.code)
+        }
+        func backoffDelaySeconds(attempt: Int) -> TimeInterval {
+            if attempt <= 1 { return 0 }
+            return min(30, pow(2, Double(attempt - 2)))
+        }
+
+        // Stagger requests in small concurrent windows to avoid saturating the rate limiter.
+        // Fire up to 4 requests per 500ms window.
+        let concurrentWindowSize = 4
+        let windowIntervalSeconds: TimeInterval = 0.5
+
+        let group = DispatchGroup()
+
+        let eligibleItems: [(item: SCGModels.TransactionSummaryItemTransaction, chainId: String, service: SafeClientGatewayService)] = needFetch.compactMap { item in
             let tx = item.transaction
             guard !batchLegTitleInFlight.contains(tx.id),
                   let chain = chainByTransactionId[tx.id] ?? safe?.chain,
                   let chainId = chain.id
-            else {
-                continue
-            }
+            else { return nil }
+            return (item: item, chainId: chainId, service: chain.gatewayService())
+        }
 
-            batchLegTitleInFlight.insert(tx.id)
-            group.enter()
-            let service = chain.gatewayService()
-            _ = service.asyncTransactionDetails(id: tx.id, chainId: chainId) { [weak self] result in
-                DispatchQueue.main.async {
-                    guard let self else {
-                        group.leave()
-                        return
+        for (windowIndex, windowStart) in stride(from: 0, to: eligibleItems.count, by: concurrentWindowSize).enumerated() {
+            let windowItems = eligibleItems[windowStart..<min(windowStart + concurrentWindowSize, eligibleItems.count)]
+            let windowDelay = TimeInterval(windowIndex) * windowIntervalSeconds
+
+            for entry in windowItems {
+                let tx = entry.item.transaction
+                batchLegTitleInFlight.insert(tx.id)
+                group.enter()
+                let service = entry.service
+                let chainId = entry.chainId
+
+                func fetchWithRetry(attempt: Int) {
+                    let retryDelay = attempt == 1 ? windowDelay : windowDelay + backoffDelaySeconds(attempt: attempt)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + retryDelay) { [weak self] in
+                        guard let self else {
+                            group.leave()
+                            return
+                        }
+                        _ = service.asyncTransactionDetails(id: tx.id, chainId: chainId) { [weak self] result in
+                            DispatchQueue.main.async {
+                                guard let self else {
+                                    group.leave()
+                                    return
+                                }
+                                switch result {
+                                case .success(let details):
+                                    self.batchLegTitleInFlight.remove(tx.id)
+                                    // #region agent log
+                                    let typeLabel: String? = self.batchLegTitleResolver.mainLegResult(from: details, chainId: chainId)?.typeLabel
+                                        ?? (self.batchLegTitleResolver.mainLegTitle(from: details)).flatMap { $0.isEmpty ? nil : $0 }
+                                    TransactionListViewController.agentAppendNDJSON(
+                                        runId: prefetchRunId,
+                                        hypothesisId: "A,D",
+                                        location: "TransactionListViewController.swift:prefetchBatchLegTitles(detailResult)",
+                                        message: "prefetch detail success",
+                                        data: ["txId": tx.id, "success": true, "typeLabel": typeLabel ?? ""]
+                                    )
+                                    // #endregion agent log
+                                    if let richResult = self.batchLegTitleResolver.mainLegResult(from: details, chainId: chainId) {
+                                        self.batchLegResultByTransactionId[tx.id] = richResult
+                                    } else if let legTitle = self.batchLegTitleResolver.mainLegTitle(from: details),
+                                              !legTitle.isEmpty {
+                                        self.batchLegResultByTransactionId[tx.id] = BatchLegResult(
+                                            typeLabel: legTitle,
+                                            sentAmount: nil,
+                                            receivedAmount: nil
+                                        )
+                                    }
+                                    group.leave()
+                                case .failure(let error):
+                                    // #region agent log
+                                    let nsErr = error as NSError
+                                    TransactionListViewController.agentAppendNDJSON(
+                                        runId: prefetchRunId,
+                                        hypothesisId: "A,D",
+                                        location: "TransactionListViewController.swift:prefetchBatchLegTitles(detailResult)",
+                                        message: "prefetch detail failure",
+                                        data: ["txId": tx.id, "success": false, "errorCode": nsErr.code, "errorDomain": nsErr.domain, "attempt": attempt]
+                                    )
+                                    // #endregion agent log
+                                    if isRetryableRateLimitOrServerError(error), attempt < maxAttempts {
+                                        #if DEBUG
+                                        let retryDelaySec = backoffDelaySeconds(attempt: attempt)
+                                        TransactionListViewController.agentAppendNDJSON(
+                                            runId: prefetchRunId,
+                                            hypothesisId: "A",
+                                            location: "TransactionListViewController.swift:prefetchBatchLegTitles(retry)",
+                                            message: "prefetch retry after rate limit/server error",
+                                            data: ["txId": tx.id, "attempt": attempt, "delaySeconds": retryDelaySec]
+                                        )
+                                        #endif
+                                        fetchWithRetry(attempt: attempt + 1)
+                                    } else {
+                                        self.batchLegTitleInFlight.remove(tx.id)
+                                        group.leave()
+                                    }
+                                }
+                            }
+                        }
                     }
-                    self.batchLegTitleInFlight.remove(tx.id)
-                    if case let .success(details) = result,
-                       let legTitle = self.batchLegTitleResolver.mainLegTitle(from: details),
-                       !legTitle.isEmpty {
-                        self.batchLegTitleByTransactionId[tx.id] = legTitle
-                    }
-                    group.leave()
                 }
+                fetchWithRetry(attempt: 1)
             }
         }
 
         group.notify(queue: .main) {
+            // #region agent log
+            let mapKeys = Array(self.batchLegResultByTransactionId.keys)
+            TransactionListViewController.agentAppendNDJSON(
+                runId: prefetchRunId,
+                hypothesisId: "A,B",
+                location: "TransactionListViewController.swift:prefetchBatchLegTitles(completed)",
+                message: "prefetchBatchLegTitles completed",
+                data: ["batchLegResultCount": self.batchLegResultByTransactionId.count, "txIdsWithResult": mapKeys]
+            )
+            // #endregion agent log
             completion()
         }
     }
@@ -1063,7 +1438,9 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
                 txData: nil,
                 detailedExecutionInfo: nil,
                 txHash: nil,
-                executedAt: tx.timestamp)
+                executedAt: tx.timestamp,
+                safeAppInfo: nil,
+                aconcagua: tx.aconcagua)
 
             vc = UnifiedTransactionDetailsViewController(transaction: detailsTx, safe: detailSafe)
         default:
@@ -1197,9 +1574,11 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             } else {
                 titleCandidates = [title]
             }
-            if let cachedLegTitle = batchLegTitleByTransactionId[tx.id], !cachedLegTitle.isEmpty {
-                title = cachedLegTitle
-                titleCandidates = [cachedLegTitle] + titleCandidates
+            if let legResult = batchLegResultByTransactionId[tx.id] {
+                if let typeLabel = legResult.typeLabel, !typeLabel.isEmpty {
+                    title = typeLabel
+                    titleCandidates = [typeLabel] + titleCandidates
+                }
             }
             if let methodName = customInfo.methodName, !methodName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let contractAddress = customInfo.to.value.description
@@ -1251,6 +1630,19 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             title = mapped
         }
 
+        // #region agent log
+        if case .custom = tx.txInfo {
+            let usedLeg = batchLegResultByTransactionId[tx.id] != nil
+            let displayTitle = (title as String).prefix(60)
+            TransactionListViewController.agentAppendNDJSON(
+                runId: "cell",
+                hypothesisId: "D",
+                location: "TransactionListViewController.swift:configure(cell) titleSource",
+                message: "cell title source for custom tx",
+                data: ["txId": tx.id, "source": usedLeg ? "leg" : "summary", "title": String(displayTitle)]
+            )
+        }
+        // #endregion agent log
         cell.set(title: title)
         if let imageURL = imageURL, let placeholderAddress = placeholderAddress {
             cell.set(contractImageUrl: imageURL, contractAddress: placeholderAddress)
@@ -1262,10 +1654,41 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
             cell.set(contractAddress: placeholderAddress)
         }
 
+        let cowSwapAuctionText: String? = {
+            if let label = tx.aconcagua?.cowSwap?.label?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !label.isEmpty {
+                return label
+            }
+            if let rawStatus = tx.aconcagua?.cowSwap?.status?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !rawStatus.isEmpty {
+                return "Auction (\(rawStatus))"
+            }
+            return nil
+        }()
+        #if DEBUG
+        if tx.id.hasPrefix("multisig_") {
+            let cowStatus = tx.aconcagua?.cowSwap?.status ?? "nil"
+            let cowSource = tx.aconcagua?.cowSwap?.source ?? "nil"
+            LogService.shared.debug("[CowSwapStatus] txId=\(tx.id) status=\(cowStatus) source=\(cowSource)")
+        }
+        #endif
+
         if isRequestedTx {
             cell.set(status: status, isReplaced: false, overrideStatusText: "Solicitado")
         } else {
-            cell.set(status: status, isReplaced: isReplaced)
+            let overrideStatusText: String? = {
+                guard let cowSwapAuctionText else { return nil }
+                let baseStatusText: String
+                if isReplaced {
+                    baseStatusText = "Replaced"
+                } else if status == .awaitingExecution {
+                    baseStatusText = "En ejecución"
+                } else {
+                    baseStatusText = status.title
+                }
+                return "\(baseStatusText) - \(cowSwapAuctionText)"
+            }()
+            cell.set(status: status, isReplaced: isReplaced, overrideStatusText: overrideStatusText)
         }
         let shouldShowNonce = App.configuration.services.environment.isDevelopment
         let chainPrefix = displayChain?.shortName ?? displayChain?.id
@@ -1277,7 +1700,54 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
         }
         cell.set(nonce: nonceText)
         cell.set(date: date)
-        cell.set(info: info, color: infoColor)
+        // If a rich batch result with token amounts is available: received on first row (right), sent on second row (right, small).
+        if let legResult = batchLegResultByTransactionId[tx.id],
+           legResult.sentAmount != nil || legResult.receivedAmount != nil {
+            let mergedLegResult = BatchLegResult(
+                typeLabel: legResult.typeLabel,
+                sentAmount: legResult.sentAmount,
+                receivedAmount: legResult.receivedAmount ?? cowSwapReceivedAmountText(tx)
+            )
+            // #region agent log
+            #if DEBUG
+            let payload: [String: Any] = [
+                "sessionId": "f9c73e",
+                "location": "TransactionListViewController.swift:configure(cell) batchAmounts",
+                "message": "cell using leg amounts",
+                "hypothesisId": "E",
+                "data": ["txId": tx.id, "hasSentAmount": mergedLegResult.sentAmount != nil, "hasReceivedAmount": mergedLegResult.receivedAmount != nil],
+                "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+            ]
+            if JSONSerialization.isValidJSONObject(payload), let body = try? JSONSerialization.data(withJSONObject: payload),
+               let url = URL(string: "http://127.0.0.1:7242/ingest/d4162b9c-1479-4960-b98b-c3af51f135e6") {
+                var req = URLRequest(url: url)
+                req.httpMethod = "POST"
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                req.setValue("f9c73e", forHTTPHeaderField: "X-Debug-Session-Id")
+                req.httpBody = body
+                req.timeoutInterval = 1
+                URLSession.shared.dataTask(with: req).resume()
+            }
+            #endif
+            // #endregion agent log
+            if let receivedAttributed = attributedReceivedInfo(mergedLegResult) {
+                cell.set(attributedInfo: receivedAttributed)
+            } else {
+                cell.set(info: "", color: infoColor)
+            }
+            cell.set(sentAmount: mergedLegResult.sentAmount, color: .systemRed)
+        } else if attributedCowSwapInfoIfAvailable(tx) != nil {
+            // CowSwap: received on first row, sent on second row (right, small).
+            if let receivedAttributed = attributedCowSwapReceivedIfAvailable(tx) {
+                cell.set(attributedInfo: receivedAttributed)
+            } else {
+                cell.set(info: "", color: infoColor)
+            }
+            cell.set(sentAmount: cowSwapSentAmount(tx), color: .systemRed)
+        } else {
+            cell.set(info: info, color: infoColor)
+            cell.set(sentAmount: nil)
+        }
         cell.set(conflictType: transaction.conflictType)
         cell.set(tag: tag)
         cell.separatorInset = transaction.conflictType == .hasNext ? UIEdgeInsets(top: 0, left: view.frame.size.width, bottom: 0, right: 0) : UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
@@ -1326,6 +1796,105 @@ class TransactionListViewController: LoadableViewController, UITableViewDelegate
 
     private func isRequestedTransaction(_ tx: SCGModels.TxSummary) -> Bool {
         tx.id.hasPrefix("txrequest_")
+    }
+
+    /// Received amount only (green), for the first row right side.
+    private func attributedReceivedInfo(_ result: BatchLegResult) -> NSAttributedString? {
+        guard let received = result.receivedAmount, !received.isEmpty else { return nil }
+        return NSAttributedString(
+            string: received,
+            attributes: [.foregroundColor: UIColor.baseSuccess]
+        )
+    }
+
+    /// Sent amount only (for second row). Returns nil if no sending token.
+    private func cowSwapSentAmount(_ tx: SCGModels.TxSummary) -> String? {
+        guard let movements = tx.aconcagua?.tokenMovements else { return nil }
+        let sending = movements.sendingTokens.first { movement in
+            guard let value = movement.value, let amount = UInt256(value) else { return false }
+            return amount > 0
+        }
+        return formatTokenMovementAmount(sending, sign: "-")
+    }
+
+    /// Received amount only (green), for the first row right side. Nil if CowSwap not fulfilled or no received.
+    private func attributedCowSwapReceivedIfAvailable(_ tx: SCGModels.TxSummary) -> NSAttributedString? {
+        let cowStatus = tx.aconcagua?.cowSwap?.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let isFulfilled = cowStatus == "fulfilled" || cowStatus == "filled" || cowStatus == "partiallyfilled"
+        guard isFulfilled else { return nil }
+        guard let receivedText = cowSwapReceivedAmountText(tx), !receivedText.isEmpty else { return nil }
+        return NSAttributedString(string: receivedText, attributes: [.foregroundColor: UIColor.baseSuccess])
+    }
+
+    private func attributedCowSwapInfoIfAvailable(_ tx: SCGModels.TxSummary) -> NSAttributedString? {
+        let cowStatus = tx.aconcagua?.cowSwap?.status?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let isFulfilled = cowStatus == "fulfilled" || cowStatus == "filled" || cowStatus == "partiallyfilled"
+        guard isFulfilled else { return nil }
+        guard let movements = tx.aconcagua?.tokenMovements else { return nil }
+
+        let sending = movements.sendingTokens.first { movement in
+            guard let value = movement.value, let amount = UInt256(value) else { return false }
+            return amount > 0
+        }
+        let receiving = movements.receivingTokens.first { movement in
+            guard let value = movement.value, let amount = UInt256(value) else { return false }
+            return amount > 0
+        }
+        let fallbackReceiving = collapsedCowSwapReceiveByTransactionId[tx.id]
+        guard sending != nil || receiving != nil || fallbackReceiving != nil else { return nil }
+
+        let attributed = NSMutableAttributedString()
+        if let sentText = formatTokenMovementAmount(sending, sign: "-") {
+            attributed.append(NSAttributedString(string: sentText, attributes: [.foregroundColor: UIColor.systemRed]))
+        }
+        if let receivedText = cowSwapReceivedAmountText(tx, explicitReceiving: receiving) {
+            if attributed.length > 0 {
+                attributed.append(NSAttributedString(string: " "))
+            }
+            attributed.append(NSAttributedString(string: receivedText, attributes: [.foregroundColor: UIColor.baseSuccess]))
+        }
+        return attributed.length > 0 ? attributed : nil
+    }
+
+    private func cowSwapReceivedAmountText(
+        _ tx: SCGModels.TxSummary,
+        explicitReceiving: SCGModels.TokenMovement? = nil
+    ) -> String? {
+        if let explicitReceiving {
+            return formatTokenMovementAmount(explicitReceiving, sign: "+")
+        }
+        let receiving = tx.aconcagua?.tokenMovements?.receivingTokens.first { movement in
+            guard let value = movement.value, let amount = UInt256(value) else { return false }
+            return amount > 0
+        }
+        if let text = formatTokenMovementAmount(receiving, sign: "+") {
+            return text
+        }
+        return formatTokenMovementAmount(collapsedCowSwapReceiveByTransactionId[tx.id], sign: "+")
+    }
+
+    private func formatTokenMovementAmount(_ movement: SCGModels.TokenMovement?, sign: String) -> String? {
+        guard let movement,
+              let valueRaw = movement.value,
+              let amount = UInt256(valueRaw),
+              amount > 0
+        else {
+            return nil
+        }
+        guard let decimals = movement.decimals,
+              let symbol = movement.tokenSymbol?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !symbol.isEmpty
+        else {
+            return nil
+        }
+
+        let decimalAmount = BigDecimal(Int256(amount), decimals)
+        let formatted = TokenFormatter().string(
+            from: decimalAmount,
+            decimalSeparator: Locale.autoupdatingCurrent.decimalSeparator ?? ".",
+            thousandSeparator: Locale.autoupdatingCurrent.groupingSeparator ?? ","
+        )
+        return "\(sign)\(formatted) \(symbol)"
     }
 
     func formattedAmount(transferInfo: SCGModels.TxInfo.Transfer, chain: Chain?) -> String {

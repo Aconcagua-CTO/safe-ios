@@ -64,7 +64,10 @@ class Theme: ObservableObject {
     }
 
     private func setDisplayMode() {
-        UIApplication.shared.windows.filter(\.isKeyWindow).first?.overrideUserInterfaceStyle = displayMode
+        if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene }) as? UIWindowScene,
+           let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+            keyWindow.overrideUserInterfaceStyle = displayMode
+        }
     }
 
     var displayMode: UIUserInterfaceStyle {

@@ -25,7 +25,7 @@ struct BottomOverlayView<Content>: View where Content: View {
         ZStack(alignment: .bottom) {
             SemitransparentBackgroundView()
                 .opacity(isPresented.wrappedValue ? 1 : 0)
-                .animation(.easeInOut)
+                .animation(.easeInOut, value: isPresented.wrappedValue)
                 .onTapGesture {
                     self.isPresented.wrappedValue.toggle()
                 }
@@ -34,7 +34,7 @@ struct BottomOverlayView<Content>: View where Content: View {
                 .background(cardBackgroundColor)
                 .opacity(isPresented.wrappedValue ? 1 : 0)
                 .offset(y: isPresented.wrappedValue ? 0 : contentHeight)
-                .animation(.spring())
+                .animation(.spring(), value: isPresented.wrappedValue)
         }
     }
 }

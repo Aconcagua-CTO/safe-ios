@@ -56,7 +56,7 @@ class AuthenticatedHTTPClient {
                 // Retain the underlying HTTPClient until the URLSessionTask completes.
                 // Otherwise, if the caller doesn't retain the service/client, `HTTPClient` can deinit
                 // and `invalidateAndCancel()` the session, producing NSURLErrorDomain -999.
-                let task = baseClient.asyncExecute(request: authenticatedHTTPRequest) { [baseClient] result in
+                _ = baseClient.asyncExecute(request: authenticatedHTTPRequest) { result in
                     switch result {
                     case .success(let data):
                         AuthLogger.network("Request successful")

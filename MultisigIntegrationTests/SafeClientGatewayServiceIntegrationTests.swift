@@ -49,7 +49,7 @@ class SafeClientGatewayServiceIntegrationTests: CoreDataTestCase {
         let safeAddress = "0x1230B3d59858296A31053C1b8562Ecf89A2f888b"
         let request = QueuedTransactionsSummaryListRequest(safeAddress: safeAddress, chainId: Chain.ChainID.rootstock)
 
-        XCTAssertEqual(request.urlPath, "/api/v1/safes/\(safeAddress)/multisig-transactions/")
+        XCTAssertEqual(request.urlPath, "/api/v2/safes/\(safeAddress)/multisig-transactions/")
         XCTAssertEqual(request.query, "executed=false&limit=20")
     }
 
@@ -65,7 +65,7 @@ class SafeClientGatewayServiceIntegrationTests: CoreDataTestCase {
         let safeAddress = "0x1230B3d59858296A31053C1b8562Ecf89A2f888b"
         let request = HistoryTransactionsSummaryListRequest(safeAddress: safeAddress, chainId: Chain.ChainID.rootstock)
 
-        XCTAssertEqual(request.urlPath, "/api/v1/safes/\(safeAddress)/multisig-transactions/")
+        XCTAssertEqual(request.urlPath, "/api/v2/safes/\(safeAddress)/multisig-transactions/")
         XCTAssertEqual(request.query, "executed=true&limit=20")
     }
 

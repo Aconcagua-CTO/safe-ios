@@ -151,7 +151,7 @@ struct Address: Hashable, ExpressibleByStringInterpolation, CustomStringConverti
     }
 }
 
-extension EthereumAddress.Error: LocalizedError {
+extension EthereumAddress.Error: @retroactive LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .addressMalformed:

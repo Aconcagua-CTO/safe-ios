@@ -15,6 +15,7 @@ import Foundation
 struct VaultResponse: Codable {
     let id: String                          // Vault address (hex string)
     let name: String                       // User-friendly name
+    let vaultName: String?                 // Optional custom vault name (stored in backend)
     let chainId: String                    // Numeric chain ID as string (137, 30, etc.)
     let contractVersion: String?           // Contract version (nullable)
     let state: Int                         // Vault state (1 = active, 0 = inactive, etc.)

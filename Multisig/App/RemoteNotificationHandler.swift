@@ -370,7 +370,7 @@ extension UNAuthorizationStatus {
     }
 }
 
-extension UNAuthorizationStatus: CustomStringConvertible {
+extension UNAuthorizationStatus: @retroactive CustomStringConvertible {
     public var description: String {
         switch self {
         case .authorized: return "Authorized (granted)"

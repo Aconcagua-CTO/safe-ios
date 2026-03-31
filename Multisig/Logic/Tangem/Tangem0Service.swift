@@ -127,10 +127,7 @@ final class Tangem0Service: TangemCardService {
         let uncompressed = publicKey.dropFirst()
         let hashBytes = try EthHasher.hash(Data(uncompressed))
         let addressBytes = Array(hashBytes.suffix(20))
-        guard let address = try? Address(exactly: Data(addressBytes)) else {
-            throw TangemSdkError.cryptoUtilsError("Failed to derive address from public key")
-        }
-        return address
+        return Address(exactly: Data(addressBytes))
     }
 
     func signHash(

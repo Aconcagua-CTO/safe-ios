@@ -546,7 +546,7 @@ extension Chain {
 
     /// Clear the gateway service cache for a specific chain
     static func clearGatewayServiceCache(for chainId: String) {
-        gatewayServiceQueue.sync {
+        _ = gatewayServiceQueue.sync {
             gatewayServiceCache.removeValue(forKey: chainId)
         }
     }

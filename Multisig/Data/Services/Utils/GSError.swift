@@ -553,7 +553,7 @@ enum GSError {
     }
 
     struct GenericPasscodeError: DetailedLocalizedError {
-        let description = "Failed to set passcode"
+        let description = "Failed to set PIN"
         let reason: String
         let howToFix = "Please try again later or contact Safe support if this issue persists"
         let domain = iOSErrorDomain
@@ -674,18 +674,18 @@ enum GSError {
     }
 
     struct RequiredPasscode: DetailedLocalizedError {
-        let description = "Failed to get passcode"
-        let reason = "Your passcode is required to perform this operation"
-        let howToFix = "Enter correct passcode and try again"
+        let description = "Failed to get PIN"
+        let reason = "Your PIN is required to perform this operation"
+        let howToFix = "Enter correct PIN and try again"
         let domain = iOSErrorDomain
         let code = 1325
         let loggable = false
     }
 
     struct FailedToChangePasscode: DetailedLocalizedError {
-        let description = "Failed to change passcode"
+        let description = "Failed to change PIN"
         let reason: String
-        let howToFix = "Enter correct passcode and try again"
+        let howToFix = "Enter correct PIN and try again"
         let domain = iOSErrorDomain
         let code = 1326
         let loggable = false

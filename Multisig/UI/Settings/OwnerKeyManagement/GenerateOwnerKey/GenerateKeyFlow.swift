@@ -145,15 +145,17 @@ class GenerateKeyFlow: AddKeyFlow {
 class GenerateKeyFactory: AddKeyFlowFactory {
     override func intro(completion: @escaping () -> Void) -> AddKeyOnboardingViewController {
         let introVC = super.intro(completion: completion)
+        let passkeyHeroImage = UIImage(named: "ico-mobile-key-passkey")?.withRenderingMode(.alwaysOriginal)
+        let lockImage = UIImage(named: "ico-lock")
         introVC.cards = [
-            .init(image: UIImage(named: "ico-lock"),
+            .init(image: passkeyHeroImage,
+                  topIconLayout: .widePasskey,
                   title: NSLocalizedString("ui_mobile_key_create_intro_title", comment: "Intro title for mobile key creation"),
                   body: NSLocalizedString("ui_mobile_key_create_intro_body", comment: "Intro body for mobile key creation")),
 
-                .init(image: UIImage(named: "ico-onboarding-import-key-2"),
-                      title: NSLocalizedString("ui_mobile_key_create_secure_title", comment: "Security title for mobile key creation"),
-                      body: NSLocalizedString("ui_mobile_key_create_secure_body", comment: "Security body for mobile key creation")),
-
+            .init(image: lockImage,
+                  title: NSLocalizedString("ui_mobile_key_create_secure_title", comment: "Security title for mobile key creation"),
+                  body: NSLocalizedString("ui_mobile_key_create_secure_body", comment: "Security body for mobile key creation")),
         ]
         introVC.viewTrackingEvent = .generateOwnerOnboarding
         introVC.navigationItem.title = NSLocalizedString("ui_owner_key_create_title", comment: "Title for the generate owner key flow")

@@ -96,7 +96,7 @@ extension PrivateKey {
     }
 
     static func key(address: Address, protectionClass: ProtectionClass = .sensitive, completion: @escaping (Result<PrivateKey?, Error>) -> ()) {
-        try key(id: identifier(address), protectionClass: protectionClass, completion: completion)
+        key(id: identifier(address), protectionClass: protectionClass, completion: completion)
     }
 
     //TODO: move access through security center to a separate function (preferrably outside of PrivateKey)
@@ -172,7 +172,7 @@ extension PrivateKey {
             //TODO: rewrite as App.securityCenter
             //TODO: make invocation async
             App.shared.securityCenter.import(id: DataID(id: id), data: keychainData, protectionClass: protectionClass) { result in
-                try! result.get()
+                _ = try! result.get()
             }
         } else {
             do {

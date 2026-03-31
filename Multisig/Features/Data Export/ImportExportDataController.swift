@@ -493,7 +493,7 @@ class ImportExportDataController {
                         
                         privateKey.mnemonic = key.mnemonic
                         
-                        var adjustedType = KeyType.socialKeyTypes.contains(keyType) ? KeyType.deviceImported : keyType
+                        let adjustedType = KeyType.socialKeyTypes.contains(keyType) ? KeyType.deviceImported : keyType
                         
                         didAdd = OwnerKeyController.importKey(privateKey, name: name, type: adjustedType, isDerivedFromSeedPhrase: privateKey.mnemonic != nil)
                         

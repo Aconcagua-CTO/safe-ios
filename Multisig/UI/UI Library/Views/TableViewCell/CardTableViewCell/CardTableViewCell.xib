@@ -21,14 +21,11 @@
                     <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="jyk-Fw-j7M" customClass="StyledView" customModule="Multisig" customModuleProvider="target">
                         <rect key="frame" x="20" y="11" width="531" height="431"/>
                         <subviews>
-                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="equalSpacing" alignment="center" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="ElP-Y4-luc">
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fill" alignment="center" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="ElP-Y4-luc">
                                 <rect key="frame" x="20" y="20" width="491" height="391"/>
                                 <subviews>
-                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="FE9-Wb-X2I">
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="FE9-Wb-X2I">
                                         <rect key="frame" x="220.5" y="0.0" width="50" height="50"/>
-                                        <constraints>
-                                            <constraint firstAttribute="width" secondItem="FE9-Wb-X2I" secondAttribute="height" multiplier="1:1" id="Psc-cT-hGb"/>
-                                        </constraints>
                                     </imageView>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="hhg-Hs-yIe">
                                         <rect key="frame" x="225" y="143" width="41.5" height="20.5"/>
@@ -36,6 +33,13 @@
                                         <nil key="textColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
+                                    <imageView hidden="YES" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="MiD-dIe-Iv2">
+                                        <rect key="frame" x="220.5" y="0.0" width="50" height="50"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="50" id="Mid-W-50"/>
+                                            <constraint firstAttribute="height" constant="50" id="Mid-H-50"/>
+                                        </constraints>
+                                    </imageView>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="1w6-z9-Pha">
                                         <rect key="frame" x="225" y="257" width="41.5" height="20.5"/>
                                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
@@ -92,6 +96,7 @@
             <connections>
                 <outlet property="bodyLabel" destination="1w6-z9-Pha" id="9J6-Kb-LSs"/>
                 <outlet property="iconImageView" destination="FE9-Wb-X2I" id="4NR-NZ-LNG"/>
+                <outlet property="middleIconImageView" destination="MiD-dIe-Iv2" id="Mid-icn-out"/>
                 <outlet property="linkButton" destination="UMA-YL-L5y" id="5DY-ms-IFh"/>
                 <outlet property="linkLabel" destination="WhD-6X-Vha" id="U3y-wP-8si"/>
                 <outlet property="titleLabel" destination="hhg-Hs-yIe" id="1sG-rO-XbD"/>

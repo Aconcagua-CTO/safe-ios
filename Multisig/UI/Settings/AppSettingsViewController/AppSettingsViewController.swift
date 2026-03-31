@@ -206,8 +206,7 @@ class AppSettingsViewController: UITableViewController, PasscodeProtecting {
     }
 
     private func presentVaultList() {
-        let nav = UINavigationController(rootViewController: GroupedSwitchSafesViewController())
-        present(nav, animated: true)
+        show(GroupedSwitchSafesViewController(), sender: self)
     }
 
     private func showAddressBook() {

@@ -49,9 +49,9 @@
                                         <constraint firstAttribute="height" constant="122" id="hCV-xM-a4Q"/>
                                     </constraints>
                                 </imageView>
-                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="0x9342446f11d3c46bc1f838100fef789c174a7db4147635d7f5709fc2ff72b2ba" textAlignment="center" lineBreakMode="middleTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" minimumFontSize="15" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="HiR-2U-6CV">
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="0x9342446f11d3c46bc1f838100fef789c174a7db4147635d7f5709fc2ff72b2ba" textAlignment="center" lineBreakMode="middleTruncation" numberOfLines="2" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" translatesAutoresizingMaskIntoConstraints="NO" id="HiR-2U-6CV">
                                     <rect key="frame" x="0.5" y="269.5" width="353.5" height="36"/>
-                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                    <fontDescription key="fontDescription" type="preferred" style="UICTFontDescriptorTextStyleBody"/>
                                     <nil key="textColor"/>
                                     <nil key="highlightedColor"/>
                                 </label>

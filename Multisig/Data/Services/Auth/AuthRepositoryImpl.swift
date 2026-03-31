@@ -183,7 +183,7 @@ class AuthRepositoryImpl: AuthRepository {
         let credential = appleOAuthCredential(idTokenString: idTokenString, rawNonce: rawNonce)
 
         firebaseAuth.signIn(with: credential) { [weak self] authResult, error in
-            guard let self = self else { return }
+            guard self != nil else { return }
 
             if let error = error {
                 AuthLogger.error("Apple sign-in failed", error: error)

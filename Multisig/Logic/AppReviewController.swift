@@ -8,6 +8,7 @@
 
 import Foundation
 import StoreKit
+import UIKit
 
 /// Encapsulates the app review triggering logic.
 class AppReviewController {
@@ -27,16 +28,18 @@ class AppReviewController {
     func pullAppReviewTrigger() {
         #if DEBUG
         return
-        #endif
+        #else
         guard AppSettings.termsAccepted && !startedFromNotification else { return }
 
         // will be 0 if never counted yet
         AppSettings.appReviewEventCount += 1
 
-        if AppSettings.appReviewEventCount >= 3 {
-            SKStoreReviewController.requestReview()
+        if AppSettings.appReviewEventCount >= 3,
+           let scene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
             AppSettings.appReviewEventCount = 0
         }
+        #endif
     }
 
 }

@@ -106,7 +106,7 @@ class AuthenticationController {
                 App.shared.snackbar.show(message: NSLocalizedString("ui_auth_passcode_disabled_message", comment: "Passcode disabled message"))
             } catch {
                 let uiError = GSError.error(
-                    description: "Failed to delete passcode",
+                    description: "Failed to delete PIN",
                     error: GSError.GenericPasscodeError(reason: error.localizedDescription))
                 App.shared.snackbar.show(error: uiError)
             }
@@ -410,9 +410,9 @@ extension AccessServiceError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .userAlreadyExists:
-            return "The passcode already set."
+            return "The PIN is already set."
         case .userDoesNotExist:
-            return "The passcode is not set."
+            return "The PIN is not set."
         }
     }
 }

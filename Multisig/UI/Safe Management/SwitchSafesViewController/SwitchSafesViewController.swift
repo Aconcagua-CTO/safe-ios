@@ -290,13 +290,17 @@ final class GroupedSwitchSafesViewController: UITableViewController {
     private let ownSection = 1
     private let delegateSection = 2
     private var isManualVaultRefreshInProgress = false
+    private var isVaultNameUpdateInProgress = false
+    private lazy var vaultsService = VaultsService(
+        authRepository: App.shared.authRepository,
+        logger: LogService.shared
+    )
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         title = NSLocalizedString("ui_safe_switch_title", comment: "Title for switching safes")
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .close, target: self, action: #selector(didTapCloseButton))
+        configureNavigationControls()
 
         if #unavailable(iOS 15) {
             // explicitly set background color to prevent transparent background in dark mode (iOS 14)
@@ -304,8 +308,13 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         }
         tableView.register(AddSafeTableViewCell.nib(), forCellReuseIdentifier: "AddSafe")
         tableView.register(SafeEntryTableViewCell.nib(), forCellReuseIdentifier: "SafeEntry")
+        tableView.registerCell(DetailAccountCell.self)
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 66
+
+        let pullToRefresh = UIRefreshControl()
+        pullToRefresh.addTarget(self, action: #selector(didPullToRefresh), for: .valueChanged)
+        refreshControl = pullToRefresh
 
         if #available(iOS 15.0, *) {
             tableView.sectionHeaderTopPadding = 0
@@ -317,6 +326,11 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             self, selector: #selector(reloadData), name: .selectedSafeUpdated, object: nil)
 
         reloadData()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        configureNavigationControls()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -332,12 +346,11 @@ final class GroupedSwitchSafesViewController: UITableViewController {
     }
 
     @objc override func closeModal() {
-        // this will close this controller when the load Safe Account modal is closed
-        presentingViewController?.dismiss(animated: true, completion: nil)
+        exitVaultList()
     }
 
     @objc private func didTapCloseButton() {
-        dismiss(animated: true, completion: nil)
+        exitVaultList()
     }
 
     // MARK: - UITableViewDataSource
@@ -367,34 +380,39 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             return cell
         }
 
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
         guard let entry = entryForListSection(at: indexPath) else {
-            return cell
+            return UITableViewCell()
         }
         let safe = entry.primarySafe
-        cell.setName(safe.displayName)
-        cell.setProgress(enabled: false)
         let isDelegateSection = indexPath.section == delegateSection
 
         switch safe.safeStatus {
         case .deployed:
-            cell.setAddress(entry.address)
-            cell.setDetail(text: detailText(for: entry, isDelegateSection: isDelegateSection), style: .bodyTertiary)
+            return deployedEntryCell(for: indexPath, entry: entry, isDelegateSection: isDelegateSection)
 
         case .deploying, .indexing:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
+            cell.setName(displayTitle(for: entry))
+            cell.setProgress(enabled: false)
             cell.setAddress(entry.address, grayscale: true)
             cell.setDetail(text: NSLocalizedString("ui_safe_creating_in_progress", comment: "Safe creation in progress"),
                            style: .bodyTertiary)
             cell.setProgress(enabled: true)
+            cell.setSelection(entry.isSelected)
+            cell.accessoryView = accessoryMenuView(for: entry, allowsRename: indexPath.section == ownSection)
+            return cell
 
         case .deploymentFailed:
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SafeEntry", for: indexPath) as! SafeEntryTableViewCell
+            cell.setName(displayTitle(for: entry))
+            cell.setProgress(enabled: false)
             cell.setAddress(entry.address, grayscale: true)
             cell.setDetail(text: NSLocalizedString("ui_safe_failed_to_create", comment: "Safe failed to create"),
                            style: .bodyError)
+            cell.setSelection(entry.isSelected)
+            cell.accessoryView = accessoryMenuView(for: entry, allowsRename: indexPath.section == ownSection)
+            return cell
         }
-
-        cell.setSelection(entry.isSelected)
-        return cell
     }
 
     // MARK: - UITableViewDelegate
@@ -414,7 +432,7 @@ final class GroupedSwitchSafesViewController: UITableViewController {
         } else if let entry = entryForListSection(at: indexPath) {
             AppSettings.activeVaultGroupAddress = entry.address.checksummed
             entry.primarySafe.select()
-            didTapCloseButton()
+            exitVaultList()
         }
     }
 
@@ -454,6 +472,15 @@ final class GroupedSwitchSafesViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard indexPath.section == ownSection, let entry = entryForListSection(at: indexPath) else { return nil }
+        
+        let editAction = UIContextualAction(
+            style: .normal,
+            title: NSLocalizedString("button_edit", comment: "Edit action title")
+        ) { [weak self] _, _, completion in
+            self?.showRename(for: entry)
+            completion(true)
+        }
+        editAction.backgroundColor = .primary
 
         let deleteAction = UIContextualAction(style: .destructive,
                                               title: NSLocalizedString("ui_safe_remove_action", comment: "Remove safe action")) { [weak self] _, _, completion in
@@ -461,7 +488,74 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             completion(true)
         }
 
-        return UISwipeActionsConfiguration(actions: [deleteAction])
+        return UISwipeActionsConfiguration(actions: [deleteAction, editAction])
+    }
+
+    private func showRename(for entry: GroupedVaultEntry) {
+        LogService.shared.info("[VaultRename] Opening rename screen for address=\(entry.address.checksummed)")
+        let editSafeNameViewController = EditSafeNameViewController()
+        editSafeNameViewController.name = initialVaultName(for: entry)
+        editSafeNameViewController.completion = { [weak self] name in
+            LogService.shared.info("[VaultRename] Rename completion received for address=\(entry.address.checksummed) value='\(name)'")
+            self?.renameVaultGroup(entry: entry, vaultName: name)
+        }
+        show(editSafeNameViewController, sender: self)
+    }
+
+    @objc private func didPullToRefresh() {
+        refreshVaultList()
+    }
+
+    private func renameVaultGroup(entry: GroupedVaultEntry, vaultName: String) {
+        let trimmed = vaultName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard !isVaultNameUpdateInProgress else {
+            SnackbarViewController.show("Vault name update in progress…", duration: 2.0)
+            return
+        }
+
+        let targets = entry.safes.map(vaultIdCandidates(for:)).filter { !$0.isEmpty }
+        LogService.shared.info("[VaultRename] Requested rename to '\(trimmed)' for address=\(entry.address.checksummed)")
+        LogService.shared.debug("[VaultRename] Candidate vault ids: \(targets.flatMap { $0 }.joined(separator: ", "))")
+        guard !targets.isEmpty else {
+            SnackbarViewController.show("Unable to identify vault for rename.", duration: 3.0)
+            return
+        }
+
+        isVaultNameUpdateInProgress = true
+
+        var firstError: Error?
+        let group = DispatchGroup()
+        for vaultIds in targets {
+            group.enter()
+            updateVaultNameWithFallback(vaultIds: vaultIds, vaultName: trimmed) { result in
+                if case .failure(let error) = result, firstError == nil {
+                    firstError = error
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            self.isVaultNameUpdateInProgress = false
+            if let error = firstError {
+                LogService.shared.error("[VaultRename] Failed to update vault name for group \(entry.address.checksummed)", error: error)
+                SnackbarViewController.show(
+                    "Failed to update vault name: \(error.localizedDescription)",
+                    duration: 4.0
+                )
+                return
+            }
+
+            entry.safes.forEach { $0.vaultName = trimmed }
+            App.shared.coreDataStack.saveContext()
+            self.notificationCenter.post(name: .selectedSafeUpdated, object: nil)
+            self.navigationController?.popViewController(animated: true)
+            SnackbarViewController.show("Vault name updated.", duration: 2.0)
+            LogService.shared.info("[VaultRename] Local vaultName updated for \(entry.safes.count) safe(s)")
+            self.reloadData()
+        }
     }
 
     private func remove(safes: [Safe], sourceIndexPath: IndexPath) {
@@ -497,6 +591,7 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             VaultLogger.warning("[Manual Refresh] User attempted to refresh vaults without authentication")
             SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_login_required", comment: "Login required to refresh vaults"),
                                         duration: 3.0)
+            refreshControl?.endRefreshing()
             return
         }
 
@@ -504,6 +599,7 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             VaultLogger.debug("[Manual Refresh] Ignoring duplicate refresh request – already refreshing")
             SnackbarViewController.show(NSLocalizedString("ui_safe_refresh_in_progress", comment: "Vault refresh in progress"),
                                         duration: 2.0)
+            refreshControl?.endRefreshing()
             return
         }
 
@@ -527,6 +623,7 @@ final class GroupedSwitchSafesViewController: UITableViewController {
                         guard let self = self else { return }
                         self.isManualVaultRefreshInProgress = false
                         self.updateRefreshCellAppearance()
+                        self.refreshControl?.endRefreshing()
 
                         switch result {
                         case .success:
@@ -569,6 +666,155 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             return
         }
         cell.configureForRefresh(isRefreshing: isManualVaultRefreshInProgress)
+    }
+
+    private func configureNavigationControls() {
+        if isPresentedAsModalRoot() {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .close,
+                target: self,
+                action: #selector(didTapCloseButton)
+            )
+        } else {
+            navigationItem.leftBarButtonItem = nil
+        }
+    }
+
+    private func isPresentedAsModalRoot() -> Bool {
+        guard let nav = navigationController else {
+            return presentingViewController != nil
+        }
+        return nav.viewControllers.first === self && nav.presentingViewController != nil
+    }
+
+    private func exitVaultList() {
+        if let nav = navigationController {
+            if nav.viewControllers.first === self {
+                if nav.presentingViewController != nil {
+                    nav.dismiss(animated: true)
+                    return
+                }
+            } else {
+                nav.popViewController(animated: true)
+                return
+            }
+        }
+        dismiss(animated: true)
+    }
+
+    private func deployedEntryCell(for indexPath: IndexPath, entry: GroupedVaultEntry, isDelegateSection: Bool) -> DetailAccountCell {
+        let cell = tableView.dequeueCell(DetailAccountCell.self, for: indexPath)
+        let networkLine = networkPrefixesLine(for: entry, isDelegateSection: isDelegateSection)
+        let browseURL = entry.primarySafe.chain?.browserURL(address: entry.address.checksummed)
+        cell.setAccount(address: entry.address,
+                        label: displayTitle(for: entry),
+                        copyEnabled: true,
+                        browseURL: browseURL,
+                        prefix: nil,
+                        networkPrefixes: networkLine,
+                        showAccessoryImage: false)
+        cell.accessoryView = accessoryMenuView(for: entry, allowsRename: !isDelegateSection)
+        return cell
+    }
+
+    private func accessoryMenuView(for entry: GroupedVaultEntry, allowsRename: Bool) -> UIView? {
+        let isSelected = entry.isSelected
+        guard allowsRename || isSelected else { return nil }
+        let containerWidth: CGFloat = allowsRename && isSelected ? 56 : 28
+        let containerHeight: CGFloat = 28
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: containerWidth, height: containerHeight))
+        container.backgroundColor = .clear
+
+        if isSelected {
+            let checkmarkView = UIImageView(frame: CGRect(x: 0, y: 4, width: 20, height: 20))
+            checkmarkView.image = UIImage(systemName: "checkmark")
+            checkmarkView.tintColor = .primary
+            checkmarkView.contentMode = .scaleAspectFit
+            container.addSubview(checkmarkView)
+        }
+
+        if allowsRename {
+            let renameAction = UIAction(title: NSLocalizedString("button_edit", comment: "Edit action title")) { [weak self] _ in
+                self?.showRename(for: entry)
+            }
+            let buttonX: CGFloat = isSelected ? 28 : 0
+            let button = UIButton(type: .system)
+            button.frame = CGRect(x: buttonX, y: 0, width: 28, height: 28)
+            button.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+            button.tintColor = .icon
+            button.menu = UIMenu(children: [renameAction])
+            button.showsMenuAsPrimaryAction = true
+            container.addSubview(button)
+        }
+
+        return container
+    }
+
+    private func networkPrefixesLine(for entry: GroupedVaultEntry, isDelegateSection: Bool) -> String? {
+        let networks = entry.networkShortNames.joined(separator: ", ")
+        let ownerText = isDelegateSection ? (entry.primarySafe.ownerName ?? entry.primarySafe.displayName) : nil
+
+        if let ownerText, !ownerText.isEmpty, !networks.isEmpty {
+            return "\(ownerText) · \(networks)"
+        }
+        if let ownerText, !ownerText.isEmpty {
+            return ownerText
+        }
+        return networks.isEmpty ? nil : networks
+    }
+
+    private func initialVaultName(for entry: GroupedVaultEntry) -> String {
+        if let current = entry.safes.first(where: { $0.chain?.id == "1" })?.vaultName,
+           !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return current
+        }
+        if let current = entry.primarySafe.vaultName,
+           !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return current
+        }
+        return displayTitle(for: entry)
+    }
+
+    private func vaultIdCandidates(for safe: Safe) -> [String] {
+        var candidates: [String] = []
+        let address = safe.addressValue
+        candidates.append(address.checksummed)
+        let lowercaseHex = address.hexadecimal.lowercased()
+        candidates.append(lowercaseHex.hasPrefix("0x") ? lowercaseHex : "0x\(lowercaseHex)")
+        if let rawAddress = safe.address, !rawAddress.isEmpty {
+            candidates.append(rawAddress)
+        }
+        if let chainId = safe.chain?.id,
+           let network = TransactionRequestsService.networkName(forChainId: chainId) {
+            candidates.append("\(network):\(lowercaseHex)")
+        }
+        var unique: [String] = []
+        for id in candidates where !unique.contains(id) {
+            unique.append(id)
+        }
+        return unique
+    }
+
+    private func updateVaultNameWithFallback(
+        vaultIds: [String],
+        vaultName: String,
+        completion: @escaping (Result<Void, Error>) -> Void
+    ) {
+        func attempt(_ index: Int, lastError: Error? = nil) {
+            guard index < vaultIds.count else {
+                completion(.failure(lastError ?? NSError(domain: "VaultRename", code: -1, userInfo: nil)))
+                return
+            }
+            vaultsService.updateVaultNameForCurrentSession(vaultId: vaultIds[index], vaultName: vaultName) { result in
+                switch result {
+                case .success:
+                    completion(.success(()))
+                case .failure(let error):
+                    attempt(index + 1, lastError: error)
+                }
+            }
+        }
+        attempt(0)
     }
 
     private func buildGroupedEntries(from safes: [Safe]) -> [GroupedVaultEntry] {
@@ -622,6 +868,29 @@ final class GroupedSwitchSafesViewController: UITableViewController {
             }
             return lhs.address.description.lowercased() < rhs.address.description.lowercased()
         }
+    }
+
+    /// Title for the vault group cell: "firstName - vaultName" when the Ethereum vault in the group has a custom vaultName; otherwise just the base display name.
+    /// When a custom vaultName exists, the base is the user's first name (from auth), not the Safe's name (which the backend sets to vaultName), to avoid showing the vault name twice.
+    private func displayTitle(for entry: GroupedVaultEntry) -> String {
+        guard let ethSafe = entry.safes.first(where: { $0.chain?.id == "1" }),
+              let vaultName = ethSafe.vaultName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !vaultName.isEmpty
+        else {
+            return entry.primarySafe.displayName
+        }
+        let firstName = currentUserFirstName() ?? entry.primarySafe.displayName
+        return "\(firstName) - \(vaultName)"
+    }
+
+    /// User's first name from auth display name (e.g. "Manuel R" → "Manuel"), for use as the base in "firstName - vaultName" when the vault has a custom name.
+    private func currentUserFirstName() -> String? {
+        guard let displayName = App.shared.authRepository.getCurrentUser()?.displayName else {
+            return nil
+        }
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return trimmed.split(whereSeparator: { $0.isWhitespace }).first.map(String.init)
     }
 
     private func detailText(for entry: GroupedVaultEntry, isDelegateSection: Bool) -> String {

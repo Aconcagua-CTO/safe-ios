@@ -20,7 +20,7 @@ struct HistoryTransactionsSummaryListRequest: JSONRequest {
         let path: String
         if Self.txServiceStyleChains.contains(chainId) {
             // Transaction Service style (matches backend usage for custom chains like Rootstock)
-            path = "/api/v1/safes/\(safeAddress)/multisig-transactions/"
+            path = "/api/v2/safes/\(safeAddress)/multisig-transactions/"
             #if DEBUG
             LogService.shared.debug("[HistoryTransactionsSummaryListRequest] Using Transaction Service style path for chainId: \(chainId), path: \(path)")
             #endif

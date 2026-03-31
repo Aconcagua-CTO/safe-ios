@@ -92,15 +92,15 @@ class RejectionConfirmationViewController: UIViewController {
         let vc = ChooseOwnerKeyViewController(
             owners: { rejectors },
             chainID: safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) { [weak self] keyInfo in
+            header: .text(description: descriptionText),
+            completionHandler: { [weak self] keyInfo in
             guard let `self` = self else { return }
             self.dismiss(animated: true) {
                 if let info = keyInfo {
                     self.rejectTransaction(info)
                 }
             }
-        }
+        } )
 
         let navigationController = UINavigationController(rootViewController: vc)
         present(navigationController, animated: true)

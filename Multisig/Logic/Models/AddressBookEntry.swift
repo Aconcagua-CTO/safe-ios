@@ -153,6 +153,17 @@ extension AddressBookEntry {
         return unique
     }
 
+    /// All chain short names (e.g. ["eth", "rsk", "bnb"]) for entries that share this address. Used to show network prefixes on a third row like the vault list.
+    static func chainShortNames(forAddress address: String) -> [String] {
+        let context = App.shared.coreDataStack.viewContext
+        guard let entries = try? context.fetch(AddressBookEntry.fetchRequest().by(address: address)) else { return [] }
+        var seen = Set<String>()
+        return entries.compactMap { entry -> String? in
+            guard let shortName = entry.chain?.shortName, !shortName.isEmpty, seen.insert(shortName).inserted else { return nil }
+            return shortName
+        }.sorted()
+    }
+
     static func update(_ address: String, chainId: String, name: String) {
         dispatchPrecondition(condition: .onQueue(.main))
 
@@ -295,6 +306,12 @@ extension NSFetchRequest where ResultType == AddressBookEntry {
     func by(chainId: String) -> Self {
         sortDescriptors = []
         predicate = NSPredicate(format: "chain.id == %@", chainId)
+        return self
+    }
+
+    func by(address: String) -> Self {
+        sortDescriptors = []
+        predicate = NSPredicate(format: "address ==[c] %@", address)
         return self
     }
 }

@@ -165,11 +165,20 @@
                                                     <constraint firstItem="dOW-we-W0s" firstAttribute="height" secondItem="jg5-X8-EMb" secondAttribute="height" id="u12-Qi-HGy"/>
                                                 </constraints>
                                             </stackView>
+                                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="sent-amt-lbl">
+                                                <rect key="frame" x="560" y="0.0" width="104.5" height="40"/>
+                                                <fontDescription key="fontDescription" type="system" weight="medium" pointSize="13"/>
+                                                <color key="textColor" name="labelSecondary"/>
+                                                <nil key="highlightedColor"/>
+                                            </label>
                                         </subviews>
                                         <constraints>
                                             <constraint firstItem="jvH-jf-c9l" firstAttribute="leading" secondItem="f4M-cR-XjB" secondAttribute="leading" id="Ad4-Q3-nKA"/>
                                             <constraint firstItem="jvH-jf-c9l" firstAttribute="top" secondItem="f4M-cR-XjB" secondAttribute="top" id="F5d-kW-D8L"/>
                                             <constraint firstAttribute="bottom" secondItem="jvH-jf-c9l" secondAttribute="bottom" id="G0x-HM-M0P"/>
+                                            <constraint firstAttribute="trailing" secondItem="sent-amt-lbl" secondAttribute="trailing" constant="8" id="sent-amt-trail"/>
+                                            <constraint firstItem="sent-amt-lbl" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="jvH-jf-c9l" secondAttribute="trailing" constant="8" id="sent-amt-lead"/>
+                                            <constraint firstItem="sent-amt-lbl" firstAttribute="centerY" secondItem="f4M-cR-XjB" secondAttribute="centerY" id="sent-amt-cy"/>
                                             <constraint firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="jvH-jf-c9l" secondAttribute="trailing" id="vRR-fX-7W8"/>
                                         </constraints>
                                     </view>
@@ -228,6 +237,7 @@
             <color key="backgroundColor" name="backgroundSecondary"/>
             <connections>
                 <outlet property="appendixLabel" destination="63A-6R-sMv" id="1Kb-Gg-VmD"/>
+                <outlet property="sentAmountLabel" destination="sent-amt-lbl" id="sent-amt-outlet"/>
                 <outlet property="bottomStackView" destination="kLe-co-Zv0" id="EU2-sO-64b"/>
                 <outlet property="confirmationsCountImageView" destination="wN8-tK-ifF" id="sKs-Gu-Wsd"/>
                 <outlet property="confirmationsCountLabel" destination="rgy-BN-ghR" id="qRS-nA-wBE"/>

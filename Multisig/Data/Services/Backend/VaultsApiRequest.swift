@@ -59,3 +59,21 @@ struct DelegateVaultsApiRequest: HTTPRequest {
     var headers: [String: String] { [:] }
 }
 
+struct UpdateVaultNameRequestBody: Encodable {
+    let vaultName: String
+}
+
+struct UpdateVaultNameApiRequest: HTTPRequest {
+    let companyId: String
+    let userId: String
+    let vaultId: String
+    let payload: UpdateVaultNameRequestBody
+
+    var httpMethod: String { "PATCH" }
+    var urlPath: String { "\(companyId)/\(userId)/\(vaultId)/vault-name" }
+    var query: String? { nil }
+    var body: Data? { (try? JSONEncoder().encode(payload)) ?? Data("{}".utf8) }
+    var url: URL? { nil }
+    var headers: [String: String] { [:] }
+}
+

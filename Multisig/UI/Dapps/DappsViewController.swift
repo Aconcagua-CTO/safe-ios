@@ -80,22 +80,16 @@ class DappsViewController: UIViewController, UITableViewDataSource, UITableViewD
     @objc private func update() {
         DispatchQueue.main.async { [unowned self] in
             var wcSessionItems: [SectionItem] = []
-            do {
-                if let selectedSafe = try? Safe.getSelected() {
-                    let walletConnectV2Sessions = WalletConnectManager.shared.getSessions(topics: selectedSafe.walletConnectSessiontopics)
+            if let selectedSafe = try? Safe.getSelected() {
+                let walletConnectV2Sessions = WalletConnectManager.shared.getSessions(topics: selectedSafe.walletConnectSessiontopics)
 
-                    wcSessionItems.append(contentsOf: walletConnectV2Sessions.compactMap {
-                        return Section.WalletConnect.activeSession($0)
-                    })
-                }
+                wcSessionItems.append(contentsOf: walletConnectV2Sessions.compactMap {
+                    return Section.WalletConnect.activeSession($0)
+                })
+            }
 
-                if wcSessionItems.isEmpty {
-                    wcSessionItems.append(Section.WalletConnect.noSessions("No active sessions"))
-                }
-            } catch {
-                wcSessionItems = [Section.WalletConnect.noSessions("No active sessions")]
-                App.shared.snackbar.show(
-                    error: GSError.error(description: "Could not load WalletConnect sessions", error: error))
+            if wcSessionItems.isEmpty {
+                wcSessionItems.append(Section.WalletConnect.noSessions("No active sessions"))
             }
 
             sections = [

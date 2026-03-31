@@ -55,6 +55,11 @@ class App {
         return TransactionNamesRepositoryImpl(service: service, authRepository: authRepository)
     }()
 
+    lazy var addressBookEntriesRepository: AddressBookEntriesRepository = {
+        let service = AddressBookEntriesService(authRepository: authRepository, logger: LogService.shared)
+        return AddressBookEntriesRepositoryImpl(service: service, authRepository: authRepository)
+    }()
+
     // MARK: - Data Layer
 
     var coreDataStack: CoreDataProtocol = CoreDataStack()

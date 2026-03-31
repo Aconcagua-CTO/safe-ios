@@ -40,10 +40,14 @@ class LoginViewController: UIViewController {
     private var appleButtonTopToSubtitleConstraint: NSLayoutConstraint?
     private var progressIndicatorTopToLoginConstraint: NSLayoutConstraint?
     private var progressIndicatorTopToAppleConstraint: NSLayoutConstraint?
+    private var isAppleSignInStarting = false
     
     private var shouldShowEmailPasswordLogin: Bool {
         App.configuration.app.showEmailPasswordLogin
     }
+
+    /// Matches list/card surfaces so spacer and safe-area regions are not darker than the form chrome.
+    private static let screenFillColor = UIColor.backgroundSecondary
     
     convenience init() {
         self.init(nibName: nil, bundle: nil)
@@ -68,6 +72,10 @@ class LoginViewController: UIViewController {
         configureLoginOptions()
         
         observeAuthState()
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        .lightContent
     }
 
     override func viewDidLayoutSubviews() {
@@ -104,18 +112,20 @@ class LoginViewController: UIViewController {
     }
     
     private func setupUIProgrammatically() {
-        view.backgroundColor = .backgroundPrimary
+        view.backgroundColor = Self.screenFillColor
         AuthLogger.debug("setupUIProgrammatically() start")
         NSLog("[AUTH][LoginVC] setupUIProgrammatically() start")
         
-        // Create scroll view
+        // Create scroll view (full-bleed under status bar; safe area via contentInsetAdjustment)
         let scrollView = UIScrollView()
+        scrollView.backgroundColor = Self.screenFillColor
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
         self.scrollView = scrollView
         
         // Create content view
         let contentView = UIView()
+        contentView.backgroundColor = Self.screenFillColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
         self.contentView = contentView
@@ -198,7 +208,6 @@ class LoginViewController: UIViewController {
         let appleButton = ASAuthorizationAppleIDButton(type: .signIn, style: .black)
         appleButton.translatesAutoresizingMaskIntoConstraints = false
         appleButton.addTarget(self, action: #selector(appleSignInTapped), for: .touchUpInside)
-        appleButton.addTarget(self, action: #selector(appleSignInTapped), for: .primaryActionTriggered)
         appleButton.addTarget(self, action: #selector(appleSignInTouchDown), for: .touchDown)
         appleButton.isUserInteractionEnabled = true
         appleButton.isExclusiveTouch = true
@@ -236,7 +245,7 @@ class LoginViewController: UIViewController {
         progressIndicatorTopToAppleConstraint = progressIndicator.topAnchor.constraint(equalTo: appleButton.bottomAnchor, constant: 12)
         
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -303,6 +312,8 @@ class LoginViewController: UIViewController {
         let balancedSpacerConstraint = topSpacerView.heightAnchor.constraint(equalTo: bottomSpacerView.heightAnchor)
         balancedSpacerConstraint.priority = .defaultHigh
         balancedSpacerConstraint.isActive = true
+
+        navigationController?.setNavigationBarHidden(true, animated: false)
         
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
         AuthLogger.debug("setupUIProgrammatically() done")
@@ -311,6 +322,8 @@ class LoginViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // Programmatic UI path never calls setupUI(); hide bar so layout isn’t inset under an empty nav bar.
+        navigationController?.setNavigationBarHidden(true, animated: animated)
         keyboardBehavior.start()
     }
     
@@ -320,8 +333,10 @@ class LoginViewController: UIViewController {
     }
     
     private func setupUI() {
-        // Setup navigation bar
-        navigationController?.navigationBar.isHidden = true
+        navigationController?.setNavigationBarHidden(true, animated: false)
+
+        view.backgroundColor = Self.screenFillColor
+        scrollView.backgroundColor = Self.screenFillColor
         
         // Setup keyboard behavior
         keyboardBehavior = KeyboardAvoidingBehavior(scrollView: scrollView)
@@ -410,6 +425,17 @@ class LoginViewController: UIViewController {
     
     private func handleAuthState(_ state: AuthState) {
         AuthLogger.debug("LoginViewController received auth state: \(state)")
+        let isLoadingState: Bool
+        if case .loading = state {
+            isLoadingState = true
+        } else {
+            isLoadingState = false
+        }
+        if !isLoadingState && isAppleSignInStarting {
+            isAppleSignInStarting = false
+            AuthLogger.debug("Apple sign-in start guard reset for terminal auth state")
+            NSLog("[AUTH][LoginVC] apple guard reset state=%@", String(describing: state))
+        }
         
         switch state {
         case .idle:
@@ -493,6 +519,11 @@ class LoginViewController: UIViewController {
     }
 
     @objc private func appleSignInTapped() {
+        if isAppleSignInStarting {
+            AuthLogger.warning("Apple Sign In tap ignored while request is already starting")
+            NSLog("[AUTH][LoginVC] appleSignInTapped ignored (already starting)")
+            return
+        }
         AuthLogger.info("Apple Sign In button clicked")
         NSLog("[AUTH][LoginVC] appleSignInTapped()")
 
@@ -512,6 +543,9 @@ class LoginViewController: UIViewController {
             return
         }
 
+        isAppleSignInStarting = true
+        AuthLogger.debug("Apple sign-in start guard armed")
+        NSLog("[AUTH][LoginVC] apple guard armed")
         viewModel.signInWithApple(presentationAnchor: anchor)
     }
 

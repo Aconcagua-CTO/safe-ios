@@ -40,7 +40,16 @@ class EditSafeNameViewController: UIViewController {
     }
 
     @objc private func didTapSaveButton() {
-        completion(name)
+        view.endEditing(true)
+        let currentName = textField.textField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        LogService.shared.info("[VaultRename] Save tapped in EditSafeNameViewController with value='\(currentName)'")
+        guard !currentName.isEmpty else {
+            LogService.shared.debug("[VaultRename] Ignoring empty vault name from EditSafeNameViewController")
+            saveButton.isEnabled = false
+            return
+        }
+        name = currentName
+        completion(currentName)
     }
 
     @objc fileprivate func validateName() {

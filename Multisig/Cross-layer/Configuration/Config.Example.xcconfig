@@ -142,8 +142,8 @@ KEY_SECURITY_URL = https:/$()/help.safe.global/en/articles/40829-how-signer-keys
 SOCIAL_LOGIN_INFO_URL = https:/$()/help.safe.global/en/articles/82471-how-does-onboarding-with-your-social-logins-work-on-ios
 ONRAMPING_INFO_URL = https:/$()/help.safe.global/en/articles/...
 
-// Legal URLs
-TERMS_URL       = https:/$()/app.safe.global/terms
+// Legal URLs (TERMS_URL: onboarding + Settings › Licencias y Términos)
+TERMS_URL       = https:/$()/boveda.ai/licenses.html
 PRIVACY_URL     = https:/$()/boveda.ai/privacy.html
 LICENSES_URL    = https:/$()/boveda.ai/licenses.html
 
@@ -161,10 +161,10 @@ SAFE_DAO_URL            = https:/$()/snapshot.org/#/safe.eth
 GNOSIS_SAFE_WEB_URL_PROD     = https:/$()/app.safe.global/
 GNOSIS_SAFE_WEB_URL_STAGING     =  https:/$()/safe-wallet-web.staging.5afe.dev/
 
-// App Review URLs
-_APP_STORE_REVIEW_URL_DEV        = https:/$()/apps.apple.com/app/id1515758190?action=write-review
-_APP_STORE_REVIEW_URL_STAGING    = https:/$()/apps.apple.com/app/id1518013939?action=write-review
-_APP_STORE_REVIEW_URL_PROD       = https:/$()/apps.apple.com/app/id1515759131?action=write-review
+// App Review / rate-app URL (APP_STORE_REVIEW_URL)
+_APP_STORE_REVIEW_URL_DEV        = https:/$()/boveda.ai
+_APP_STORE_REVIEW_URL_STAGING    = https:/$()/boveda.ai
+_APP_STORE_REVIEW_URL_PROD       = https:/$()/boveda.ai
 
 APP_STORE_REVIEW_URL = $(_APP_STORE_REVIEW_URL_$(SERVICE_ENV):default=$(_APP_STORE_REVIEW_URL_PROD))
 

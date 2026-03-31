@@ -325,7 +325,6 @@ extension JsonRpc2.Params: EncodableConvertible, DecodableConvertible {}
 
 
 // utility to create requests and responses for the same rpc call
-@available(*, deprecated: 13, message: "Use JsonRpc2MethodCall or JsonRpc2MethodWithCompletion")
 public protocol JsonRpc2Method {
     static var name: String { get }
     associatedtype Return

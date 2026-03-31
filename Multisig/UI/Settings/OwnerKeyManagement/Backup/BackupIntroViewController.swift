@@ -46,7 +46,7 @@ class BackupIntroViewController: UIViewController, UIGestureRecognizerDelegate {
         Tracker.trackEvent(.backupIntro)
     }
     
-    func gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer) -> Bool {
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
     

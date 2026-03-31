@@ -8,6 +8,7 @@
 
 import UIKit
 import MobileCoreServices
+import UniformTypeIdentifiers
 
 class AddressBookListTableViewController: LoadableViewController, UITableViewDelegate, UITableViewDataSource {
     private var entries: [AddressBookEntry] = []
@@ -35,7 +36,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         tableView.registerCell(DetailAccountCell.self)
 
         tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = 48
+        tableView.estimatedRowHeight = 64
 
         emptyView.setTitle(NSLocalizedString("ui_address_book_empty_title", comment: "Address book empty title"))
         emptyView.setImage(UIImage(named: "ico-no-address-book")!)
@@ -78,7 +79,7 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         alertController.addAction(addEntityButton)
 
         let importEntryButton = UIAlertAction(title: "Import entries", style: .default) { [unowned self] _ in
-            let pricker = UIDocumentPickerViewController(documentTypes: [String(kUTTypeCommaSeparatedText)], in: .import)
+            let pricker = UIDocumentPickerViewController(forOpeningContentTypes: [.commaSeparatedText], asCopy: true)
             pricker.delegate = self
             pricker.allowsMultipleSelection = false
             self.present(pricker, animated: true, completion: nil)
@@ -151,12 +152,15 @@ class AddressBookListTableViewController: LoadableViewController, UITableViewDel
         let cell = tableView.dequeueCell(DetailAccountCell.self)
         let entry = entries[indexPath.row]
         let displayChain = (try? Safe.getSelected()?.chain) ?? entry.chain!
+        let networkShortNames = AddressBookEntry.chainShortNames(forAddress: entry.displayAddress)
+        let networkPrefixes: String? = networkShortNames.isEmpty ? nil : networkShortNames.joined(separator: ", ")
 
         cell.setAccount(address: entry.addressValue,
                         label: entry.name,
                         copyEnabled: false,
                         browseURL: displayChain.browserURL(address: entry.displayAddress),
-                        prefix: displayChain.shortName)
+                        prefix: nil,
+                        networkPrefixes: networkPrefixes)
         return cell
     }
 

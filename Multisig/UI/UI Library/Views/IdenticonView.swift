@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Kingfisher
 
 class IdenticonView: UINibView {
     @IBOutlet private weak var identiconImageView: UIImageView!
@@ -62,6 +63,18 @@ class IdenticonView: UINibView {
             ownerCountFrameView.isHidden = true
         }
     }
+
+    /// Owner keys list: single white-background key-type artwork at identicon size (no address placeholder, no badge overlay).
+    func setOwnerKeyListIcon(keyType: KeyType) {
+        isHidden = false
+        identiconImageView.kf.cancelDownloadTask()
+        let asset = keyType.ownerKeysListIconAssetName
+        let image = UIImage(named: asset) ?? UIImage(named: keyType.imageName)
+        identiconImageView.image = image?.withRenderingMode(.alwaysOriginal)
+        badgeImageView.image = nil
+        badgeFrameView.isHidden = true
+        ownerCountFrameView.isHidden = true
+    }
 }
 
 extension KeyType {
@@ -82,6 +95,26 @@ extension KeyType {
             return "ico-nfc"
         default:
             return "bdg-" + imageSuffix
+        }
+    }
+
+    /// White-background variant for owner-keys list (full icon at identicon size).
+    var ownerKeysListIconAssetName: String {
+        switch self {
+        case .deviceImported, .deviceGenerated:
+            return "ico-mobile-white"
+        case .tangem, .tangem0, .burner:
+            return "ico-nfc-white"
+        case .walletConnect:
+            return "bdg-key-type-walletconnect-white"
+        case .ledgerNanoX:
+            return "bdg-key-type-ledger-white"
+        case .keystone:
+            return "bdg-key-type-keystone-white"
+        case .web3AuthApple:
+            return "ico-key-type-apple-white"
+        case .web3AuthGoogle:
+            return "ico-key-type-google-white"
         }
     }
 

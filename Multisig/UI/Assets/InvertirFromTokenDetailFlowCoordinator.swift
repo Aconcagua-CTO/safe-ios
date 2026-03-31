@@ -86,7 +86,7 @@ final class InvertirFromTokenDetailFlowCoordinator {
             vaultEvmAddress: vaultId,
             chainId: selected.chain?.id,
             payload: payload
-        ) { [service] result in
+        ) { result in
             switch result {
             case .success:
                 LogService.shared.info("[TransactionRequests][invest] created")

@@ -298,7 +298,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
             return tableView.basicCell(name: name, indexPath: indexPath)
 
         case Section.Advanced.removeSafe:
-            guard let safe = safe else { return UITableViewCell() }
+            guard safe != nil else { return UITableViewCell() }
             return tableView.removeCell(indexPath: indexPath, title: "Remove Safe") { [weak self] in
                 guard let `self` = self else { return }
                 let alertController = UIAlertController(
@@ -432,8 +432,7 @@ class SafeSettingsViewController: LoadableViewController, UITableViewDelegate, U
     }
 
     private func presentVaultList() {
-        let nav = UINavigationController(rootViewController: GroupedSwitchSafesViewController())
-        present(nav, animated: true)
+        show(GroupedSwitchSafesViewController(), sender: self)
     }
 
     private func refreshTokenWhitelist() {

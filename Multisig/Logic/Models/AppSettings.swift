@@ -409,9 +409,12 @@ enum BiometryType {
 
     var name: String {
         switch self {
-        case .faceID: return "Face ID"
-        case .touchID: return "Touch ID"
-        case .passcode: return "Device Passcode"
+        case .faceID:
+            return NSLocalizedString("ui_biometry_face_id", comment: "Biometry display name")
+        case .touchID:
+            return NSLocalizedString("ui_biometry_touch_id", comment: "Biometry display name")
+        case .passcode:
+            return NSLocalizedString("ui_biometry_device_passcode", comment: "Device passcode display name")
         }
     }
 }

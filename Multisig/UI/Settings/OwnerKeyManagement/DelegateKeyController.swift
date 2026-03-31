@@ -124,19 +124,15 @@ class DelegateKeyController {
                     guard let self = self else { return }
                     switch sendResult {
                     case .success:
-                        do {
-                            self.keyInfo.delegateAddressString = nil
-                            try delegateKey.remove(protectionClass: .data)
-                            self.keyInfo.save()
-                            DispatchQueue.main.async {
-                                NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil)
-                                App.shared.notificationHandler.signingKeyUpdated()
-                            }
-
-                            Tracker.trackEvent(.deleteDelegateKeySuccess)
-                        } catch {
-                            self.keyInfo.rollback()
+                        self.keyInfo.delegateAddressString = nil
+                        delegateKey.remove(protectionClass: .data)
+                        self.keyInfo.save()
+                        DispatchQueue.main.async {
+                            NotificationCenter.default.post(name: .ownerKeyUpdated, object: nil)
+                            App.shared.notificationHandler.signingKeyUpdated()
                         }
+
+                        Tracker.trackEvent(.deleteDelegateKeySuccess)
 
                         DispatchQueue.main.async {
                             self.completionHandler()

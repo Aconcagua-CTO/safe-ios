@@ -13,6 +13,9 @@ import UIKit
 class AddKeyOnboardingViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     struct Card {
         var image: UIImage?
+        /// Shown between title and body (e.g. lock) while `image` is the top hero (e.g. passkey).
+        var middleImage: UIImage? = nil
+        var topIconLayout: CardTableViewCell.TopIconLayout = .square50
         var title: String
         var body: String
         var link: Link?
@@ -51,6 +54,8 @@ class AddKeyOnboardingViewController: UIViewController, UITableViewDelegate, UIT
         tableView.registerCell(CardTableViewCell.self)
         tableView.backgroundColor = .backgroundPrimary
         tableView.separatorStyle = .none
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 320
         tableView.translatesAutoresizingMaskIntoConstraints = false
 
         nextButton.setText(NSLocalizedString("button_next", comment: "Next button title"), .filled)
@@ -91,7 +96,7 @@ class AddKeyOnboardingViewController: UIViewController, UITableViewDelegate, UIT
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueCell(CardTableViewCell.self, for: indexPath)
         let card = cards[indexPath.row]
-        cell.set(image: card.image)
+        cell.set(image: card.image, middleImage: card.middleImage, topIconLayout: card.topIconLayout)
         cell.set(title: card.title)
         cell.set(body: card.body)
         cell.set(linkTitle: card.link?.title, url: card.link?.url)

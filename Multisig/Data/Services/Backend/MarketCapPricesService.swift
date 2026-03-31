@@ -67,7 +67,7 @@ final class MarketCapPricesService {
 
     private func mergeCache(prices: [String: Double]) {
         let now = Date()
-        if var existing = cache, now.timeIntervalSince(existing.fetchedAt) <= cacheTTL {
+        if let existing = cache, now.timeIntervalSince(existing.fetchedAt) <= cacheTTL {
             var merged = existing.prices
             prices.forEach { merged[$0.key] = $0.value }
             cache = (fetchedAt: now, prices: merged)

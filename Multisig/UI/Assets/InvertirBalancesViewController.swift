@@ -89,11 +89,10 @@ class InvertirBalancesViewController: BalancesViewController {
         do {
             let all = TokenWhitelist.all
             let enabledFalse = all.filter { $0.enabled == false }.count
-            let enabledNil = all.filter { $0.enabled == nil }.count
             let missingChainId = all.filter { (($0.chainId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty }.count
             let missingNetwork = all.filter { (($0.network ?? "").trimmingCharacters(in: .whitespacesAndNewlines)).isEmpty }.count
             let uniqueSymbols = Set(all.compactMap { ($0.tokenSymbol ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }.filter { !$0.isEmpty }).count
-            LogService.shared.debug("[InvertirMarkets] rawWhitelist total=\(all.count) uniqueSymbols=\(uniqueSymbols) enabledFalse=\(enabledFalse) enabledNil=\(enabledNil) missing(chainId=\(missingChainId), network=\(missingNetwork)) chainId=\(chainId) network=\(network ?? "nil")")
+            LogService.shared.debug("[InvertirMarkets] rawWhitelist total=\(all.count) uniqueSymbols=\(uniqueSymbols) enabledFalse=\(enabledFalse) missing(chainId=\(missingChainId), network=\(missingNetwork)) chainId=\(chainId) network=\(network ?? "nil")")
         }
 
         if totalWhitelist == 0, !isWhitelistSyncInProgress {

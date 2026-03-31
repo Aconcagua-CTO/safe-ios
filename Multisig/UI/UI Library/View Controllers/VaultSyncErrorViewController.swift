@@ -13,6 +13,9 @@ class VaultSyncErrorViewController: UIViewController {
     private let showsSignOut: Bool
     private var messageLabel: UILabel!
     private var signOutButton: UIButton?
+    #if DEBUG
+    private var signOutDeleteKeysButton: UIButton?
+    #endif
     
     init(message: String, showsSignOut: Bool = false) {
         self.message = message
@@ -57,12 +60,45 @@ class VaultSyncErrorViewController: UIViewController {
             view.addSubview(button)
             signOutButton = button
 
+            #if DEBUG
+            let deleteKeysButton = UIButton(type: .system)
+            deleteKeysButton.translatesAutoresizingMaskIntoConstraints = false
+            deleteKeysButton.setText(
+                NSLocalizedString("ui_settings_sign_out_delete_keys_title", comment: "Sign out and delete keys button title"),
+                .filledError
+            )
+            deleteKeysButton.addTarget(self, action: #selector(signOutAndDeleteKeysTapped), for: .touchUpInside)
+            view.addSubview(deleteKeysButton)
+            signOutDeleteKeysButton = deleteKeysButton
+            #endif
+
+            #if DEBUG
+            let signOutBottomConstraint = button.bottomAnchor.constraint(
+                equalTo: deleteKeysButton.topAnchor,
+                constant: -12
+            )
+            #else
+            let signOutBottomConstraint = button.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -24
+            )
+            #endif
+
             constraints.append(contentsOf: [
                 button.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
                 button.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-                button.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+                signOutBottomConstraint,
                 button.heightAnchor.constraint(equalToConstant: 50)
             ])
+
+            #if DEBUG
+            constraints.append(contentsOf: [
+                deleteKeysButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+                deleteKeysButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+                deleteKeysButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+                deleteKeysButton.heightAnchor.constraint(equalToConstant: 50)
+            ])
+            #endif
         }
 
         NSLayoutConstraint.activate(constraints)
@@ -84,6 +120,42 @@ class VaultSyncErrorViewController: UIViewController {
 
         present(alert, animated: true)
     }
+
+    #if DEBUG
+    @objc private func signOutAndDeleteKeysTapped() {
+        let alert = UIAlertController(
+            title: NSLocalizedString("ui_settings_sign_out_delete_keys_title", comment: "Sign out and delete keys alert title"),
+            message: "Esto va a borrar las llaves locales y cerrar sesión. Continuar?",
+            preferredStyle: .alert
+        )
+
+        alert.addAction(UIAlertAction(title: NSLocalizedString("cancel", comment: "Cancel action title"), style: .cancel))
+        alert.addAction(
+            UIAlertAction(
+                title: NSLocalizedString("ui_settings_sign_out_delete_keys_title", comment: "Sign out and delete keys action title"),
+                style: .destructive
+            ) { [weak self] _ in
+                self?.performDeleteKeysAndSignOut()
+            }
+        )
+
+        present(alert, animated: true)
+    }
+
+    private func performDeleteKeysAndSignOut() {
+        do {
+            try OwnerKeyController.deleteAllKeys(showingMessage: false)
+        } catch {
+            SnackbarViewController.show(
+                "No se pudieron borrar las llaves locales: \(error.localizedDescription)",
+                duration: 4.0
+            )
+            return
+        }
+
+        performSignOut()
+    }
+    #endif
 
     private func performSignOut() {
         App.shared.authRepository.signOut { [weak self] result in

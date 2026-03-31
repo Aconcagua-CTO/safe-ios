@@ -394,6 +394,12 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
                   !safeOwnerKeys.isEmpty
             else { return false }
 
+            // When self-hosted execution is enabled, the backend handles execution
+            // automatically for awaiting-execution txs, so there is nothing to reject.
+            if status == .awaitingExecution && AppSettings.selfHostedExecuteEnabled {
+                return false
+            }
+
             if status == .awaitingExecution && !multisigInfo.isRejected() && !pendingExecution {
                 return true
             } else if status.isAwatingConfiramtions {
@@ -404,10 +410,15 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
     }
 
     private var showsConfirmButton: Bool {
+        // When self-hosted execution is enabled, a tx that already has enough signatures
+        // will be executed automatically — no manual confirmation button needed.
+        if tx?.txStatus == .awaitingExecution && AppSettings.selfHostedExecuteEnabled {
+            return false
+        }
         switch self.tx?.txInfo {
         case .rejection(_):
             if tx!.txStatus.isAwatingConfiramtions,
-               let multisigInfo = tx!.multisigInfo,
+               tx!.multisigInfo != nil,
                !safeOwnerKeys.isEmpty {
                 return true
             }
@@ -634,19 +645,9 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
             signature: signature,
             chainId: safe.chain!.id!
         ) { [weak self] result in
-            guard let self = self else { return }
-            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) {
-                DispatchQueue.main.async {
-                    switch result {
-                    case .failure(let error):
-                        #if DEBUG
-                        LogService.shared.debug("[DualSignatureFlow] Card signature confirm failed: \(error.localizedDescription)")
-                        #endif
-                        App.shared.snackbar.show(error: GSError.error(
-                            description: NSLocalizedString("ui_tx_failed_add_card_signature_error", comment: "Failed to add card signature error"),
-                            error: error))
-                        self.reloadData()
-                    case .success:
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(600)) { [weak self] in
+                if case Result.success(_) = result {
+                    DispatchQueue.main.async {
                         #if DEBUG
                         LogService.shared.debug("[DualSignatureFlow] Card signature confirmed successfully")
                         #endif
@@ -656,9 +657,18 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
                             .userTransactionConfirmed,
                             parameters: TrackingEvent.keyTypeParameters(keyInfo, parameters: ["source": "tx_details"])
                         )
-                        self.reloadData()
+                    }
+                } else if case Result.failure(let error) = result {
+                    DispatchQueue.main.async {
+                        #if DEBUG
+                        LogService.shared.debug("[DualSignatureFlow] Card signature confirm failed: \(error.localizedDescription)")
+                        #endif
+                        App.shared.snackbar.show(error: GSError.error(
+                            description: NSLocalizedString("ui_tx_failed_add_card_signature_error", comment: "Failed to add card signature error"),
+                            error: error))
                     }
                 }
+                self?.onLoadingCompleted(result: result, triggerAutoExecution: true)
             }
         }
     }
@@ -672,8 +682,8 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
         let vc = ChooseOwnerKeyViewController(
             owners: { candidates },
             chainID: safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) { [weak self] keyInfo in
+            header: .text(description: descriptionText),
+            completionHandler: { [weak self] keyInfo in
             self?.dismiss(animated: true) {
                 guard let keyInfo = keyInfo else {
                     #if DEBUG
@@ -686,7 +696,7 @@ final class UnifiedTransactionDetailsViewController: LoadableViewController, UIT
                 #endif
                 self?.sign(keyInfo)
             }
-        }
+        } )
         let navigationController = UINavigationController(rootViewController: vc)
         present(navigationController, animated: true)
     }

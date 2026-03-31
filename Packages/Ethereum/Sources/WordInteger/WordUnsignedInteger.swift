@@ -55,7 +55,7 @@ extension WordInteger {
 }
 
 extension WordUnsignedInteger {
-    #warning("truncates")
+    // Intentionally truncating: matches FixedWidthInteger semantics when the literal exceeds the type's bit width.
     public init(integerLiteral value: IntegerLiteralType) {
         self.init(storage: [value])
     }

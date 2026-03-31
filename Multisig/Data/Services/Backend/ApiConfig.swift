@@ -148,7 +148,15 @@ struct ApiConfig {
         }
         return url
     }()
-    
+
+    /// Address book (agenda) entries API URL (served by Aconcagua-API `addressBookEntries` cloud function).
+    static let addressBookEntriesApiURL: URL = {
+        guard let url = URL(string: "\(firebaseBaseURL)addressBookEntries/") else {
+            fatalError("Invalid addressBookEntries API URL")
+        }
+        return url
+    }()
+
     // API Version header
     static let appVersion = "1"
     

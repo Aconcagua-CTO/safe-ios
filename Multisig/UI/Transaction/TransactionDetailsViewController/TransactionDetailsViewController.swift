@@ -286,7 +286,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         switch self.tx?.txInfo {
         case .rejection(_):
             if tx!.txStatus.isAwatingConfiramtions,
-               let multisigInfo = tx!.multisigInfo,
+               tx!.multisigInfo != nil,
                !safeOwnerKeys.isEmpty {
                 return true
             }
@@ -359,10 +359,8 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
         let vc = ChooseOwnerKeyViewController(
             owners: { signers },
             chainID: safe.chain!.id,
-            header: .text(description: descriptionText)
-        ) {
-            [weak self] keyInfo in
-
+            header: .text(description: descriptionText),
+            completionHandler: { [weak self] keyInfo in
             // dismiss presented ChooseOwnerKeyViewController right after receiving the completion
             self?.dismiss(animated: true) {
                 guard let keyInfo = keyInfo else {
@@ -376,7 +374,7 @@ class TransactionDetailsViewController: LoadableViewController, UITableViewDataS
                 #endif
                 self?.sign(keyInfo)
             }
-        }
+        } )
 
         let navigationController = UINavigationController(rootViewController: vc)
         present(navigationController, animated: true)

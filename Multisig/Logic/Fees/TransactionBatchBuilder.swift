@@ -1207,7 +1207,7 @@ final class TransactionBatchBuilder {
         let multiSendAddress = Address(solAddress)
 
         let contractVersion = safe.contractVersion ?? safe.semVer?.description ?? "1.3.0"
-        let nonce = transaction.nonce ?? "0"
+        let nonce = transaction.nonce
 
         guard let metaTransaction = Transaction(safeAddress: safe.addressValue,
                                                 chainId: chainId,
